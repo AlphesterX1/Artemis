@@ -18,6 +18,49 @@ const C = {
 const FONT =
   "ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, 'Liberation Mono', Menlo, monospace";
 
+/* ---------- phosphor themes (swap the "ink" colors) ---------- */
+const THEMES = {
+  amber: {
+    amber: "#ffb200",
+    amberDim: "#a97a1f",
+    amberFaint: "#6b4c17",
+    glow: "rgba(255,178,0,0.45)",
+    border: "#4a3311",
+    borderHi: "#7a5619",
+  },
+  green: {
+    amber: "#33ff66",
+    amberDim: "#1f9e42",
+    amberFaint: "#155c29",
+    glow: "rgba(51,255,102,0.45)",
+    border: "#123a1c",
+    borderHi: "#1d5c2c",
+  },
+  cyan: {
+    amber: "#4ee7ff",
+    amberDim: "#2b93a8",
+    amberFaint: "#1a5866",
+    glow: "rgba(78,231,255,0.45)",
+    border: "#0f3138",
+    borderHi: "#175160",
+  },
+  paper: {
+    amber: "#f2ead8",
+    amberDim: "#a89d84",
+    amberFaint: "#5f5748",
+    glow: "rgba(242,234,216,0.35)",
+    border: "#3a352a",
+    borderHi: "#585141",
+  },
+};
+
+function applyTheme(name) {
+  const t = THEMES[name];
+  if (!t) return false;
+  Object.assign(C, t);
+  return true;
+}
+
 /* ---------- helpers ---------- */
 let uidCounter = 0;
 const uid = (p) => {
@@ -51,36 +94,46 @@ function padName(name, width) {
 /* ---------- help text ---------- */
 const HELP_LINES = [
   "commands:",
-  "  board -add <name>          create a new board",
-  "  board -del <name>          delete a board",
-  "  board -rename <a> -> <b>   rename a board",
-  "  board @show                list tasks in the current board",
-  "  board <name> -show         list tasks in any board, by name",
-  "  ls                         list boards, or tasks if inside one",
-  "  cd <name>                  enter a board",
-  "  cd .                       leave the current board",
-  "  pwd                        show where you are",
-  "  task -add <name>           add a task to the current board",
-  "  task -check <name>         mark a task done",
-  "  task -uncheck <name>       mark a task not done",
-  "  task -del <name>           delete a task",
-  "  task -rename <a> -> <b>    rename a task",
-  "  task -clear                remove completed tasks in this board",
-  "  sort -az | -za | -done     sort tasks in the current board",
-  "  find <term>                search task names across all boards",
-  "  stats                      show overall progress across boards",
-  "  history                    show recently run commands",
-  "  date                       show the current date and time",
-  "  vis <name>                 open a graphical view of a board",
-  "  vis #                      open a graphical view of all boards",
-  "  clear                      clear the screen",
-  "  help                       show this list",
+  "  board -add <name>            create a new board",
+  "  board -del <name>            delete a board",
+  "  board -rename <old> -> <new> rename a board",
+  "  board @show                  list tasks in the current board",
+  "  board <name> -show           list tasks in any board, by name",
+  "  ls                           list boards, or tasks if inside one",
+  "  cd <name>                    enter a board",
+  "  cd .                         leave the current board",
+  "  pwd                          show where you are",
+  "",
+  "  task -add <name>             add a task to the current board",
+  "  task -check <name>           mark a task done",
+  "  task -uncheck <name>         mark a task not done",
+  "  task -check-all              mark every task in the board done",
+  "  task -uncheck-all            mark every task in the board not done",
+  "  task -del <name>             delete a task",
+  "  task -clear                  delete all completed tasks",
+  "  task -rename <old> -> <new>  rename a task",
+  "  task -move <task> -> <board> move a task to another board",
+  "",
+  "  vis <name>                   open a graphical view of a board",
+  "  vis #                        open a graphical view of all boards",
+  "  vis -close <name>|#          close a graphical window",
+  "",
+  "  find <text>                  search task names across all boards",
+  "  stats                        show overall progress",
+  "  history                      show recently run commands",
+  "  theme <name>                 amber | green | cyan | paper",
+  "  date                         show the current date and time",
+  "  clear                        clear the screen",
+  "  help                         show this list",
+  "",
+  "  aliases: mkdir = board -add   touch = task -add",
+  "           rmdir = board -del  rm = task -del / board -del",
 ];
 
 const BOOT_LINES = [
   "╔════════════════════════════════╗",
   "║           TODO SHELL           ║",
-  "║        v1.1 — type help        ║",
+  "║        v1.0 — type help        ║",
   "╚════════════════════════════════╝",
   "",
   "type `help` to see available commands.",
@@ -98,6 +151,11 @@ export default function TodoTerminalApp() {
   const [cmdPtr, setCmdPtr] = useState(-1);
   const [windows, setWindows] = useState([]);
   const [booted, setBooted] = useState(false);
+  const [themeName, setThemeName] = useState("amber");
+
+  const changeTheme = (name) => {
+    if (applyTheme(name)) setThemeName(name);
+  };
 
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
@@ -282,70 +340,8 @@ export default function TodoTerminalApp() {
     });
   };
 
-  const renameTaskIn = (boardKey, taskId, newName) => {
-    setBoards((b) => {
-      const board = b[boardKey];
-      return {
-        ...b,
-        [boardKey]: {
-          ...board,
-          tasks: board.tasks.map((t) =>
-            t.id === taskId ? { ...t, name: newName } : t
-          ),
-        },
-      };
-    });
-  };
-
-  const clearDoneTasks = (boardKey) => {
-    setBoards((b) => {
-      const board = b[boardKey];
-      return {
-        ...b,
-        [boardKey]: {
-          ...board,
-          tasks: board.tasks.filter((t) => !t.done),
-        },
-      };
-    });
-  };
-
-  const sortTasksIn = (boardKey, mode) => {
-    setBoards((b) => {
-      const board = b[boardKey];
-      const tasks = [...board.tasks];
-      if (mode === "-az") {
-        tasks.sort((a, c) => a.name.localeCompare(c.name));
-      } else if (mode === "-za") {
-        tasks.sort((a, c) => c.name.localeCompare(a.name));
-      } else if (mode === "-done") {
-        tasks.sort((a, c) => Number(a.done) - Number(c.done));
-      }
-      return { ...b, [boardKey]: { ...board, tasks } };
-    });
-  };
-
   const addBoard = (name) => {
     setBoards((b) => ({ ...b, [name]: { tasks: [] } }));
-  };
-
-  const renameBoard = (oldKey, newName) => {
-    setBoards((b) => {
-      if (!(oldKey in b)) return b;
-      const next = {};
-      Object.keys(b).forEach((k) => {
-        next[k === oldKey ? newName : k] = b[k];
-      });
-      return next;
-    });
-    setCurrentBoard((cb) => (cb === oldKey ? newName : cb));
-    setWindows((ws) =>
-      ws.map((w) =>
-        w.kind === "board" && w.boardName === oldKey
-          ? { ...w, boardName: newName }
-          : w
-      )
-    );
   };
 
   /* ---------- command execution ---------- */
@@ -421,87 +417,31 @@ export default function TodoTerminalApp() {
         break;
       }
 
-      case "sort": {
-        if (!currentBoard) {
-          print("you're not inside a board — try `cd <board>` first", "err");
-          break;
-        }
-        const mode = tokens[1];
-        if (!["-az", "-za", "-done"].includes(mode)) {
-          print("usage: sort -az | -za | -done", "err");
-          break;
-        }
-        sortTasksIn(currentBoard, mode);
-        print(`sorted '${currentBoard}' by ${mode.slice(1)}`);
-        break;
-      }
-
-      case "find": {
-        const term = tokens.slice(1).join(" ");
-        if (!term) {
-          print("usage: find <term>", "err");
-          break;
-        }
-        const q = norm(term);
-        const hits = [];
-        Object.keys(boards).forEach((k) => {
-          boards[k].tasks.forEach((t) => {
-            if (norm(t.name).includes(q)) {
-              hits.push(`  ${padName(k, 14)}[${t.done ? "x" : " "}] ${t.name}`);
-            }
-          });
-        });
-        if (hits.length === 0) {
-          print(`no tasks matching '${term}'`);
-        } else {
-          print([`${hits.length} match${hits.length === 1 ? "" : "es"} for '${term}':`, ...hits].join("\n"));
-        }
-        break;
-      }
-
-      case "stats": {
-        const keys = Object.keys(boards);
-        if (keys.length === 0) {
-          print("no boards yet — try `board -add <name>`");
-          break;
-        }
-        let totalTasks = 0;
-        let totalDone = 0;
-        const lines = ["overall progress:"];
-        keys.forEach((k) => {
-          const { total, done } = boardStats(boards[k]);
-          totalTasks += total;
-          totalDone += done;
-          const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-          lines.push(`  ${padName(k, 14)}${done}/${total}  (${pct}%)`);
-        });
-        const overallPct =
-          totalTasks === 0 ? 0 : Math.round((totalDone / totalTasks) * 100);
-        lines.push("");
-        lines.push(
-          `  ${keys.length} board${keys.length === 1 ? "" : "s"}, ${totalDone}/${totalTasks} tasks done (${overallPct}%)`
-        );
-        print(lines.join("\n"));
-        break;
-      }
-
-      case "history": {
-        if (cmdLog.length === 0) {
-          print("no commands run yet");
-          break;
-        }
-        const recent = cmdLog.slice(-15);
-        const lines = recent.map((c, i) => `  ${cmdLog.length - recent.length + i + 1}  ${c}`);
-        print(lines.join("\n"));
-        break;
-      }
-
-      case "date": {
-        print(new Date().toString());
-        break;
-      }
-
       case "vis": {
+        if (tokens[1] === "-close") {
+          const arg = tokens.slice(2).join(" ");
+          if (arg === "#") {
+            const win = windows.find((w) => w.kind === "overview");
+            if (!win) {
+              print("no overview window is open", "err");
+              break;
+            }
+            closeWindow(win.id);
+            print("closed board overview");
+            break;
+          }
+          const key = findBoardKey(boards, arg);
+          const win = key
+            ? windows.find((w) => w.kind === "board" && w.boardName === key)
+            : null;
+          if (!win) {
+            print(`no open window for '${arg}'`, "err");
+            break;
+          }
+          closeWindow(win.id);
+          print(`closed '${key}'`);
+          break;
+        }
         const arg = tokens.slice(1).join(" ");
         if (arg === "#") {
           openOverviewWindow();
@@ -519,6 +459,170 @@ export default function TodoTerminalApp() {
         }
         openBoardWindow(key);
         print(`opened '${key}'`);
+        break;
+      }
+
+      case "find": {
+        const query = tokens.slice(1).join(" ");
+        if (!query) {
+          print("usage: find <text>", "err");
+          break;
+        }
+        const q = query.toLowerCase();
+        const lines = [`results for '${query}':`];
+        let matches = 0;
+        Object.keys(boards).forEach((k) => {
+          const hits = boards[k].tasks.filter((t) =>
+            t.name.toLowerCase().includes(q)
+          );
+          if (hits.length) {
+            lines.push(`  ${k}:`);
+            hits.forEach((t) => {
+              lines.push(`    [${t.done ? "x" : " "}] ${t.name}`);
+              matches += 1;
+            });
+          }
+        });
+        print(matches ? lines.join("\n") : `no tasks match '${query}'`);
+        break;
+      }
+
+      case "stats": {
+        const boardKeys = Object.keys(boards);
+        let total = 0;
+        let done = 0;
+        boardKeys.forEach((k) => {
+          const s = boardStats(boards[k]);
+          total += s.total;
+          done += s.done;
+        });
+        const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+        print(
+          [
+            `boards: ${boardKeys.length}`,
+            `tasks:  ${done}/${total} done (${pct}%)`,
+            `open windows: ${windows.length}`,
+          ].join("\n")
+        );
+        break;
+      }
+
+      case "history": {
+        if (cmdLog.length === 0) {
+          print("no commands yet");
+          break;
+        }
+        print(
+          cmdLog.map((c, i) => `  ${i + 1}  ${c}`).join("\n")
+        );
+        break;
+      }
+
+      case "theme": {
+        const arg = (tokens[1] || "").toLowerCase();
+        const names = Object.keys(THEMES);
+        if (!arg) {
+          print(`current theme: ${themeName}\navailable: ${names.join(", ")}`);
+          break;
+        }
+        if (!names.includes(arg)) {
+          print(`unknown theme '${arg}' — try: ${names.join(", ")}`, "err");
+          break;
+        }
+        changeTheme(arg);
+        print(`theme set to '${arg}'`);
+        break;
+      }
+
+      case "date": {
+        print(new Date().toString());
+        break;
+      }
+
+      case "mkdir": {
+        const name = tokens.slice(1).join(" ");
+        if (!name) {
+          print("usage: mkdir <board name>", "err");
+          break;
+        }
+        if (findBoardKey(boards, name)) {
+          print(`board '${name}' already exists`, "err");
+          break;
+        }
+        addBoard(name);
+        print(`created board '${name}'`);
+        break;
+      }
+
+      case "rmdir": {
+        const name = tokens.slice(1).join(" ");
+        const key = findBoardKey(boards, name);
+        if (!key) {
+          print(`no board named '${name}'`, "err");
+          break;
+        }
+        setBoards((b) => {
+          const next = { ...b };
+          delete next[key];
+          return next;
+        });
+        if (currentBoard && norm(currentBoard) === norm(key)) {
+          setCurrentBoard(null);
+        }
+        setWindows((ws) => ws.filter((w) => w.boardName !== key));
+        print(`deleted board '${key}'`);
+        break;
+      }
+
+      case "touch": {
+        if (!currentBoard) {
+          print("you're not inside a board — try `cd <board>` first", "err");
+          break;
+        }
+        const name = tokens.slice(1).join(" ");
+        if (!name) {
+          print("usage: touch <task name>", "err");
+          break;
+        }
+        const board = boards[currentBoard];
+        if (findTaskIndex(board.tasks, name) !== -1) {
+          print(`task '${name}' already exists`, "err");
+          break;
+        }
+        addTaskTo(currentBoard, name);
+        print(`added task '${name}'`);
+        break;
+      }
+
+      case "rm": {
+        const name = tokens.slice(1).join(" ");
+        if (!name) {
+          print("usage: rm <name>", "err");
+          break;
+        }
+        if (currentBoard) {
+          const board = boards[currentBoard];
+          const idx = findTaskIndex(board.tasks, name);
+          if (idx === -1) {
+            print(`no task named '${name}'`, "err");
+            break;
+          }
+          removeTask(currentBoard, board.tasks[idx].id);
+          print(`deleted task '${name}'`);
+        } else {
+          const key = findBoardKey(boards, name);
+          if (!key) {
+            print(`no board named '${name}'`, "err");
+            break;
+          }
+          setBoards((b) => {
+            const next = { ...b };
+            delete next[key];
+            return next;
+          });
+          setWindows((ws) => ws.filter((w) => w.boardName !== key));
+          print(`deleted board '${key}'`);
+        }
         break;
       }
 
@@ -598,13 +702,13 @@ export default function TodoTerminalApp() {
     }
     if (sub === "-rename") {
       const rest = tokens.slice(2).join(" ");
-      const arrowIdx = rest.indexOf("->");
+      const arrowIdx = rest.indexOf(" -> ");
       if (arrowIdx === -1) {
         print("usage: board -rename <old name> -> <new name>", "err");
         return;
       }
       const oldName = rest.slice(0, arrowIdx).trim();
-      const newName = rest.slice(arrowIdx + 2).trim();
+      const newName = rest.slice(arrowIdx + 4).trim();
       const key = findBoardKey(boards, oldName);
       if (!key) {
         print(`no board named '${oldName}'`, "err");
@@ -614,11 +718,28 @@ export default function TodoTerminalApp() {
         print("usage: board -rename <old name> -> <new name>", "err");
         return;
       }
-      if (findBoardKey(boards, newName)) {
+      const clash = findBoardKey(boards, newName);
+      if (clash && norm(clash) !== norm(key)) {
         print(`board '${newName}' already exists`, "err");
         return;
       }
-      renameBoard(key, newName);
+      setBoards((b) => {
+        const next = { ...b };
+        const data = next[key];
+        delete next[key];
+        next[newName] = data;
+        return next;
+      });
+      if (currentBoard && norm(currentBoard) === norm(key)) {
+        setCurrentBoard(newName);
+      }
+      setWindows((ws) =>
+        ws.map((w) =>
+          w.kind === "board" && w.boardName === key
+            ? { ...w, boardName: newName }
+            : w
+        )
+      );
       print(`renamed '${key}' to '${newName}'`);
       return;
     }
@@ -685,14 +806,40 @@ export default function TodoTerminalApp() {
       print(`deleted task '${name}'`);
       return;
     }
+    if (sub === "-check-all" || sub === "-uncheck-all") {
+      const mark = sub === "-check-all";
+      setBoards((b) => ({
+        ...b,
+        [currentBoard]: {
+          ...b[currentBoard],
+          tasks: b[currentBoard].tasks.map((t) => ({ ...t, done: mark })),
+        },
+      }));
+      print(mark ? "checked every task" : "unchecked every task");
+      return;
+    }
+    if (sub === "-clear") {
+      const before = board.tasks.length;
+      setBoards((b) => ({
+        ...b,
+        [currentBoard]: {
+          ...b[currentBoard],
+          tasks: b[currentBoard].tasks.filter((t) => !t.done),
+        },
+      }));
+      const removed = before - board.tasks.filter((t) => !t.done).length;
+      print(`cleared ${removed} completed task${removed === 1 ? "" : "s"}`);
+      return;
+    }
     if (sub === "-rename") {
-      const arrowIdx = name.indexOf("->");
+      const rest = name;
+      const arrowIdx = rest.indexOf(" -> ");
       if (arrowIdx === -1) {
         print("usage: task -rename <old name> -> <new name>", "err");
         return;
       }
-      const oldName = name.slice(0, arrowIdx).trim();
-      const newName = name.slice(arrowIdx + 2).trim();
+      const oldName = rest.slice(0, arrowIdx).trim();
+      const newName = rest.slice(arrowIdx + 4).trim();
       const idx = findTaskIndex(board.tasks, oldName);
       if (idx === -1) {
         print(`no task named '${oldName}'`, "err");
@@ -702,22 +849,66 @@ export default function TodoTerminalApp() {
         print("usage: task -rename <old name> -> <new name>", "err");
         return;
       }
-      if (findTaskIndex(board.tasks, newName) !== -1) {
+      if (
+        findTaskIndex(board.tasks, newName) !== -1 &&
+        norm(newName) !== norm(oldName)
+      ) {
         print(`task '${newName}' already exists`, "err");
         return;
       }
-      renameTaskIn(currentBoard, board.tasks[idx].id, newName);
+      const taskId = board.tasks[idx].id;
+      setBoards((b) => ({
+        ...b,
+        [currentBoard]: {
+          ...b[currentBoard],
+          tasks: b[currentBoard].tasks.map((t) =>
+            t.id === taskId ? { ...t, name: newName } : t
+          ),
+        },
+      }));
       print(`renamed '${oldName}' to '${newName}'`);
       return;
     }
-    if (sub === "-clear") {
-      const doneCount = board.tasks.filter((t) => t.done).length;
-      if (doneCount === 0) {
-        print("no completed tasks to clear");
+    if (sub === "-move") {
+      const rest = name;
+      const arrowIdx = rest.indexOf(" -> ");
+      if (arrowIdx === -1) {
+        print("usage: task -move <task name> -> <board name>", "err");
         return;
       }
-      clearDoneTasks(currentBoard);
-      print(`cleared ${doneCount} completed task${doneCount === 1 ? "" : "s"}`);
+      const taskName = rest.slice(0, arrowIdx).trim();
+      const targetName = rest.slice(arrowIdx + 4).trim();
+      const idx = findTaskIndex(board.tasks, taskName);
+      if (idx === -1) {
+        print(`no task named '${taskName}'`, "err");
+        return;
+      }
+      const targetKey = findBoardKey(boards, targetName);
+      if (!targetKey) {
+        print(`no board named '${targetName}'`, "err");
+        return;
+      }
+      if (norm(targetKey) === norm(currentBoard)) {
+        print(`'${taskName}' is already in '${currentBoard}'`, "err");
+        return;
+      }
+      const task = board.tasks[idx];
+      if (findTaskIndex(boards[targetKey].tasks, task.name) !== -1) {
+        print(`'${targetKey}' already has a task named '${task.name}'`, "err");
+        return;
+      }
+      setBoards((b) => ({
+        ...b,
+        [currentBoard]: {
+          ...b[currentBoard],
+          tasks: b[currentBoard].tasks.filter((t) => t.id !== task.id),
+        },
+        [targetKey]: {
+          ...b[targetKey],
+          tasks: [...b[targetKey].tasks, task],
+        },
+      }));
+      print(`moved '${task.name}' to '${targetKey}'`);
       return;
     }
     print(`unknown task command: '${sub}' — try 'help'`, "err");
@@ -762,8 +953,12 @@ export default function TodoTerminalApp() {
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full overflow-hidden select-none"
+      className="relative overflow-hidden select-none"
       style={{
+        position: "fixed",
+        inset: 0,
+        width: "100vw",
+        height: "100vh",
         background: `radial-gradient(ellipse at 50% 20%, ${C.bg2} 0%, ${C.bg} 70%)`,
         fontFamily: FONT,
       }}
@@ -825,6 +1020,31 @@ export default function TodoTerminalApp() {
             todo://
           </span>
           <span className="ml-2">{currentBoard ? `/${currentBoard}` : "/"}</span>
+          <div className="ml-auto flex items-center gap-1.5">
+            {Object.keys(THEMES).map((name) => (
+              <button
+                key={name}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  changeTheme(name);
+                }}
+                aria-label={`${name} theme`}
+                title={name}
+                style={{
+                  width: 11,
+                  height: 11,
+                  borderRadius: "50%",
+                  background: THEMES[name].amber,
+                  border:
+                    themeName === name
+                      ? `1.5px solid ${C.amber}`
+                      : "1.5px solid transparent",
+                  boxShadow:
+                    themeName === name ? `0 0 5px ${THEMES[name].glow}` : "none",
+                }}
+              />
+            ))}
+          </div>
         </div>
 
         <div
