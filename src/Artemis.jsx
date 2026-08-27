@@ -61,14 +61,14 @@ function applyTheme(name) {
   return true;
 }
 
-/* ---------- helpers ---------- */
+/* ---------- generic helpers ---------- */
 let uidCounter = 0;
 const uid = (p) => {
   uidCounter += 1;
   return `${p}-${uidCounter}-${Date.now().toString(36)}`;
 };
 
-const norm = (s) => s.trim().toLowerCase();
+const norm = (s) => (s || "").trim().toLowerCase();
 
 function findBoardKey(boards, name) {
   const n = norm(name);
@@ -91,40 +91,160 @@ function padName(name, width) {
   return name + " ".repeat(width - name.length);
 }
 
+function useElementSize() {
+  const ref = useRef(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    if (!ref.current) return undefined;
+    const el = ref.current;
+    const update = () =>
+      setSize({ width: el.clientWidth, height: el.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, size];
+}
+
+/* ---------- tree helpers (tasks, keyed by id) ---------- */
+function buildTree(items) {
+  const byId = new Map();
+  items.forEach((it) => byId.set(it.id, { ...it, children: [] }));
+  const roots = [];
+  items.forEach((it) => {
+    const node = byId.get(it.id);
+    if (it.parentId && byId.has(it.parentId)) {
+      byId.get(it.parentId).children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+  return roots;
+}
+
+function flattenTreeWithDepth(nodes, depth = 0, out = []) {
+  nodes.forEach((n) => {
+    const { children, ...rest } = n;
+    out.push({ ...rest, depth });
+    if (children && children.length) {
+      flattenTreeWithDepth(children, depth + 1, out);
+    }
+  });
+  return out;
+}
+
+function collectDescendantIds(tasks, rootId) {
+  const ids = [rootId];
+  let frontier = [rootId];
+  while (frontier.length) {
+    const next = [];
+    tasks.forEach((t) => {
+      if (t.parentId && frontier.includes(t.parentId) && !ids.includes(t.id)) {
+        ids.push(t.id);
+        next.push(t.id);
+      }
+    });
+    frontier = next;
+  }
+  return ids;
+}
+
+/* ---------- tree helpers (boards, keyed by name) ---------- */
+function boardChildren(boards, key) {
+  return Object.keys(boards).filter(
+    (k) => boards[k].parent && norm(boards[k].parent) === norm(key)
+  );
+}
+
+function isAncestorBoard(boards, candidateAncestorKey, key) {
+  let cur = boards[key] ? boards[key].parent : null;
+  let guard = 0;
+  while (cur && guard < 500) {
+    if (norm(cur) === norm(candidateAncestorKey)) return true;
+    cur = boards[cur] ? boards[cur].parent : null;
+    guard += 1;
+  }
+  return false;
+}
+
+function layoutBoardForest(boards, w, h) {
+  const keys = Object.keys(boards);
+  const isRoot = (k) => !boards[k].parent || !boards[boards[k].parent];
+  const rootKeys = keys.filter(isRoot);
+  const childrenOf = (k) => keys.filter((kk) => boards[kk].parent === k);
+  const cx = w / 2;
+  const cy = h / 2;
+  const ringGap = Math.max(58, Math.min(w, h) / 5.4);
+  const positions = {};
+
+  function place(key, depth, aFrom, aTo) {
+    const angle = (aFrom + aTo) / 2;
+    const r = depth * ringGap;
+    const rad = ((angle - 90) * Math.PI) / 180;
+    positions[key] = {
+      x: cx + r * Math.cos(rad),
+      y: cy + r * Math.sin(rad),
+      depth,
+    };
+    const kids = childrenOf(key);
+    if (kids.length) {
+      const span = aTo - aFrom;
+      const step = span / kids.length;
+      kids.forEach((ck, i) =>
+        place(ck, depth + 1, aFrom + i * step, aFrom + (i + 1) * step)
+      );
+    }
+  }
+
+  const angleStep = 360 / Math.max(rootKeys.length, 1);
+  rootKeys.forEach((k, i) => place(k, 1, i * angleStep, (i + 1) * angleStep));
+  return positions;
+}
+
 /* ---------- help text ---------- */
 const HELP_LINES = [
   "commands:",
-  "  board -add <name>            create a new board",
-  "  board -del <name>            delete a board",
-  "  board -rename <old> -> <new> rename a board",
-  "  board @show                  list tasks in the current board",
-  "  board <name> -show           list tasks in any board, by name",
-  "  ls                           list boards, or tasks if inside one",
-  "  cd <name>                    enter a board",
-  "  cd .                         leave the current board",
-  "  pwd                          show where you are",
+  "  board -add <name>                  create a new board",
+  "  board -add <name> | <parent>       create it as a subboard",
+  "  board -parent <board> | <parent>   move a board under a parent",
+  "  board -unparent <board>            make a board top-level again",
+  "  board -del <name>                  delete a board",
+  "  board -rename <old> -> <new>       rename a board",
+  "  board @show                        show tasks + subboards here",
+  "  board <name> -show                 show tasks in any board",
+  "  ls                                 list boards, or tasks if inside one",
+  "  cd <name>                          enter a board",
+  "  cd .                               leave the current board",
+  "  pwd                                show where you are",
   "",
-  "  task -add <name>             add a task to the current board",
-  "  task -check <name>           mark a task done",
-  "  task -uncheck <name>         mark a task not done",
-  "  task -check-all              mark every task in the board done",
-  "  task -uncheck-all            mark every task in the board not done",
-  "  task -del <name>             delete a task",
-  "  task -clear                  delete all completed tasks",
-  "  task -rename <old> -> <new>  rename a task",
-  "  task -move <task> -> <board> move a task to another board",
+  "  task -add <name>                   add a task to the current board",
+  "  task -add <name> | <parent task>   add it as a subtask",
+  "  task -parent <task> | <parent>     move a task under a parent task",
+  "  task -unparent <task>              make a task top-level again",
+  "  task -check <name>                 mark a task (+ subtasks) done",
+  "  task -uncheck <name>               mark a task (+ subtasks) not done",
+  "  task -check-all / -uncheck-all     mark every task in the board",
+  "  task -del <name>                   delete a task (subtasks move up)",
+  "  task -clear                        delete all completed tasks",
+  "  task -rename <old> -> <new>        rename a task",
+  "  task -move <task> -> <board>       move a task (+ subtasks) to another board",
   "",
-  "  vis <name>                   open a graphical view of a board",
-  "  vis #                        open a graphical view of all boards",
-  "  vis -close <name>|#          close a graphical window",
+  "  vis <name>                         open a board window",
+  "  vis -node                          show how boards connect (or vis #)",
+  "  vis -close <name>|#                close a window",
+  "  drag the ⇢ handle on a board window onto another to link them",
   "",
-  "  find <text>                  search task names across all boards",
-  "  stats                        show overall progress",
-  "  history                      show recently run commands",
-  "  theme <name>                 amber | green | cyan | paper",
-  "  date                         show the current date and time",
-  "  clear                        clear the screen",
-  "  help                         show this list",
+  "  find <text>                        search task names across all boards",
+  "  stats                              show overall progress",
+  "  history                            show recently run commands",
+  "  theme <name>                       amber | green | cyan | paper",
+  "  date                               show the current date and time",
+  "  clear                              clear the screen",
+  "  reset -yes                        erase every board, task & saved file",
+  "  help                               show this list",
+  "",
+  "  boards and tasks are saved automatically as you go.",
   "",
   "  aliases: mkdir = board -add   touch = task -add",
   "           rmdir = board -del  rm = task -del / board -del",
@@ -140,11 +260,13 @@ const BOOT_LINES = [
   "",
 ];
 
+const STORAGE_KEY = "todo-shell-state-v1";
+
 /* ================================================================== */
 
 export default function TodoTerminalApp() {
   const [boards, setBoards] = useState({});
-  const [currentBoard, setCurrentBoard] = useState(null); // key or null
+  const [currentBoard, setCurrentBoard] = useState(null);
   const [history, setHistory] = useState([]);
   const [input, setInput] = useState("");
   const [cmdLog, setCmdLog] = useState([]);
@@ -152,6 +274,12 @@ export default function TodoTerminalApp() {
   const [windows, setWindows] = useState([]);
   const [booted, setBooted] = useState(false);
   const [themeName, setThemeName] = useState("amber");
+  const [draggingId, setDraggingId] = useState(null);
+  const [linkPos, setLinkPos] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("idle");
+  const storageAvailable =
+    typeof window !== "undefined" && !!window.storage;
 
   const changeTheme = (name) => {
     if (applyTheme(name)) setThemeName(name);
@@ -160,6 +288,7 @@ export default function TodoTerminalApp() {
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const dragRef = useRef(null);
+  const linkDragRef = useRef(null);
   const containerRef = useRef(null);
   const zCounter = useRef(10);
 
@@ -180,6 +309,72 @@ export default function TodoTerminalApp() {
     }, 70);
     return () => clearInterval(t);
   }, []);
+
+  /* load saved state once, on mount */
+  useEffect(() => {
+    let cancelled = false;
+    if (!storageAvailable) {
+      setLoaded(true);
+      return undefined;
+    }
+    (async () => {
+      try {
+        const result = await window.storage.get(STORAGE_KEY, false);
+        if (!cancelled && result && result.value) {
+          const data = JSON.parse(result.value);
+          if (data.boards) setBoards(data.boards);
+          if (typeof data.currentBoard !== "undefined") {
+            setCurrentBoard(data.currentBoard);
+          }
+          if (data.themeName) {
+            applyTheme(data.themeName);
+            setThemeName(data.themeName);
+          }
+          if (Array.isArray(data.windows)) setWindows(data.windows);
+          if (Array.isArray(data.cmdLog)) setCmdLog(data.cmdLog);
+          if (typeof data.zCounter === "number") {
+            zCounter.current = data.zCounter;
+          }
+          if (typeof data.uidCounter === "number") {
+            uidCounter = Math.max(uidCounter, data.uidCounter);
+          }
+        }
+      } catch (e) {
+        // nothing saved yet, or storage unavailable — start fresh
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* save state whenever it changes (debounced), after the initial load */
+  useEffect(() => {
+    if (!loaded || !storageAvailable) return undefined;
+    setSaveStatus("saving");
+    const t = setTimeout(async () => {
+      try {
+        const payload = JSON.stringify({
+          boards,
+          currentBoard,
+          themeName,
+          windows,
+          cmdLog,
+          zCounter: zCounter.current,
+          uidCounter,
+        });
+        await window.storage.set(STORAGE_KEY, payload, false);
+        setSaveStatus("saved");
+      } catch (e) {
+        setSaveStatus("error");
+      }
+    }, 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boards, currentBoard, themeName, windows, cmdLog, loaded]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -207,12 +402,8 @@ export default function TodoTerminalApp() {
   };
 
   const nextPos = (w = 420, h = 480) => {
-    const vw = containerRef.current
-      ? containerRef.current.clientWidth
-      : 1000;
-    const vh = containerRef.current
-      ? containerRef.current.clientHeight
-      : 700;
+    const vw = containerRef.current ? containerRef.current.clientWidth : 1000;
+    const vh = containerRef.current ? containerRef.current.clientHeight : 700;
     const count = windows.length;
     const x = Math.min(60 + (count % 6) * 34, Math.max(20, vw - w - 20));
     const y = Math.min(50 + (count % 6) * 30, Math.max(20, vh - h - 20));
@@ -244,29 +435,29 @@ export default function TodoTerminalApp() {
     ]);
   };
 
-  const openOverviewWindow = () => {
-    const existing = windows.find((w) => w.kind === "overview");
+  const openGraphWindow = () => {
+    const existing = windows.find((w) => w.kind === "graph");
     if (existing) {
       bringToFront(existing.id);
       return;
     }
     zCounter.current += 1;
-    const pos = nextPos(440, 500);
+    const pos = nextPos(460, 500);
     setWindows((ws) => [
       ...ws,
       {
         id: uid("win"),
-        kind: "overview",
+        kind: "graph",
         x: pos.x,
         y: pos.y,
-        width: 440,
+        width: 460,
         height: 500,
         z: zCounter.current,
       },
     ]);
   };
 
-  /* dragging */
+  /* ---------- window dragging ---------- */
   const onDragMove = useCallback((e) => {
     if (!dragRef.current) return;
     const { id, offsetX, offsetY } = dragRef.current;
@@ -280,6 +471,7 @@ export default function TodoTerminalApp() {
 
   const onDragEnd = useCallback(() => {
     dragRef.current = null;
+    setDraggingId(null);
     document.removeEventListener("mousemove", onDragMove);
     document.removeEventListener("mouseup", onDragEnd);
   }, [onDragMove]);
@@ -287,6 +479,7 @@ export default function TodoTerminalApp() {
   const startDrag = (e, win) => {
     e.preventDefault();
     bringToFront(win.id);
+    setDraggingId(win.id);
     dragRef.current = {
       id: win.id,
       offsetX: e.clientX - win.x,
@@ -296,8 +489,60 @@ export default function TodoTerminalApp() {
     document.addEventListener("mouseup", onDragEnd);
   };
 
+  /* ---------- link dragging: connect board windows to set parent/child ---------- */
+  const onLinkMove = useCallback((e) => {
+    if (!linkDragRef.current || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setLinkPos((p) => (p ? { ...p, x2: x, y2: y } : p));
+  }, []);
+
+  const onLinkEnd = useCallback(
+    (e) => {
+      document.removeEventListener("mousemove", onLinkMove);
+      document.removeEventListener("mouseup", onLinkEnd);
+      const source = linkDragRef.current ? linkDragRef.current.sourceKey : null;
+      linkDragRef.current = null;
+      setLinkPos(null);
+      if (!source) return;
+
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const targetEl = el ? el.closest("[data-vis-board]") : null;
+      if (!targetEl) return;
+      const targetKey = targetEl.getAttribute("data-vis-board");
+      if (!targetKey || norm(targetKey) === norm(source)) return;
+
+      setBoards((b) => {
+        if (isAncestorBoard(b, targetKey, source)) {
+          print(
+            `can't link — '${targetKey}' is already inside '${source}'`,
+            "err"
+          );
+          return b;
+        }
+        print(`linked '${targetKey}' as a subboard of '${source}'`);
+        return { ...b, [targetKey]: { ...b[targetKey], parent: source } };
+      });
+    },
+    [onLinkMove, print]
+  );
+
+  const startLink = (e, boardKey) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    linkDragRef.current = { sourceKey: boardKey };
+    setLinkPos({ x1: x, y1: y, x2: x, y2: y });
+    document.addEventListener("mousemove", onLinkMove);
+    document.addEventListener("mouseup", onLinkEnd);
+  };
+
   /* ---------- data ops (used by both terminal + windows) ---------- */
-  const addTaskTo = (boardKey, name) => {
+  const addTaskTo = (boardKey, name, parentId = null) => {
     if (!name) return;
     setBoards((b) => {
       const board = b[boardKey];
@@ -306,7 +551,10 @@ export default function TodoTerminalApp() {
         ...b,
         [boardKey]: {
           ...board,
-          tasks: [...board.tasks, { id: uid("task"), name, done: false }],
+          tasks: [
+            ...board.tasks,
+            { id: uid("task"), name, done: false, parentId: parentId || null },
+          ],
         },
       };
     });
@@ -315,12 +563,13 @@ export default function TodoTerminalApp() {
   const toggleTask = (boardKey, taskId, done) => {
     setBoards((b) => {
       const board = b[boardKey];
+      const affected = new Set(collectDescendantIds(board.tasks, taskId));
       return {
         ...b,
         [boardKey]: {
           ...board,
           tasks: board.tasks.map((t) =>
-            t.id === taskId ? { ...t, done } : t
+            affected.has(t.id) ? { ...t, done } : t
           ),
         },
       };
@@ -330,18 +579,24 @@ export default function TodoTerminalApp() {
   const removeTask = (boardKey, taskId) => {
     setBoards((b) => {
       const board = b[boardKey];
+      const task = board.tasks.find((t) => t.id === taskId);
+      const grandParentId = task ? task.parentId : null;
       return {
         ...b,
         [boardKey]: {
           ...board,
-          tasks: board.tasks.filter((t) => t.id !== taskId),
+          tasks: board.tasks
+            .filter((t) => t.id !== taskId)
+            .map((t) =>
+              t.parentId === taskId ? { ...t, parentId: grandParentId } : t
+            ),
         },
       };
     });
   };
 
-  const addBoard = (name) => {
-    setBoards((b) => ({ ...b, [name]: { tasks: [] } }));
+  const addBoard = (name, parent = null) => {
+    setBoards((b) => ({ ...b, [name]: { tasks: [], parent } }));
   };
 
   /* ---------- command execution ---------- */
@@ -421,13 +676,13 @@ export default function TodoTerminalApp() {
         if (tokens[1] === "-close") {
           const arg = tokens.slice(2).join(" ");
           if (arg === "#") {
-            const win = windows.find((w) => w.kind === "overview");
+            const win = windows.find((w) => w.kind === "graph");
             if (!win) {
-              print("no overview window is open", "err");
+              print("no graph window is open", "err");
               break;
             }
             closeWindow(win.id);
-            print("closed board overview");
+            print("closed board graph");
             break;
           }
           const key = findBoardKey(boards, arg);
@@ -442,14 +697,15 @@ export default function TodoTerminalApp() {
           print(`closed '${key}'`);
           break;
         }
-        const arg = tokens.slice(1).join(" ");
-        if (arg === "#") {
-          openOverviewWindow();
-          print("opened board overview");
+
+        const arg = tokens.slice(1).join(" ").trim();
+        if (arg === "#" || arg === "-node") {
+          openGraphWindow();
+          print("opened board graph");
           break;
         }
         if (!arg) {
-          print("usage: vis <board name>   or   vis #", "err");
+          print("usage: vis <board name>   or   vis -node", "err");
           break;
         }
         const key = findBoardKey(boards, arg);
@@ -512,9 +768,7 @@ export default function TodoTerminalApp() {
           print("no commands yet");
           break;
         }
-        print(
-          cmdLog.map((c, i) => `  ${i + 1}  ${c}`).join("\n")
-        );
+        print(cmdLog.map((c, i) => `  ${i + 1}  ${c}`).join("\n"));
         break;
       }
 
@@ -536,6 +790,25 @@ export default function TodoTerminalApp() {
 
       case "date": {
         print(new Date().toString());
+        break;
+      }
+
+      case "reset": {
+        if (tokens[1] !== "-yes") {
+          print(
+            "this deletes every board, task, and saved file — type `reset -yes` to confirm",
+            "err"
+          );
+          break;
+        }
+        setBoards({});
+        setCurrentBoard(null);
+        setWindows([]);
+        setCmdLog([]);
+        if (storageAvailable) {
+          window.storage.delete(STORAGE_KEY, false).catch(() => {});
+        }
+        print("everything cleared");
         break;
       }
 
@@ -561,15 +834,7 @@ export default function TodoTerminalApp() {
           print(`no board named '${name}'`, "err");
           break;
         }
-        setBoards((b) => {
-          const next = { ...b };
-          delete next[key];
-          return next;
-        });
-        if (currentBoard && norm(currentBoard) === norm(key)) {
-          setCurrentBoard(null);
-        }
-        setWindows((ws) => ws.filter((w) => w.boardName !== key));
+        deleteBoard(key);
         print(`deleted board '${key}'`);
         break;
       }
@@ -615,12 +880,7 @@ export default function TodoTerminalApp() {
             print(`no board named '${name}'`, "err");
             break;
           }
-          setBoards((b) => {
-            const next = { ...b };
-            delete next[key];
-            return next;
-          });
-          setWindows((ws) => ws.filter((w) => w.boardName !== key));
+          deleteBoard(key);
           print(`deleted board '${key}'`);
         }
         break;
@@ -632,17 +892,50 @@ export default function TodoTerminalApp() {
     }
   };
 
+  function deleteBoard(key) {
+    const children = boardChildren(boards, key);
+    const grandParent = boards[key] ? boards[key].parent : null;
+    setBoards((b) => {
+      const next = { ...b };
+      delete next[key];
+      children.forEach((ck) => {
+        next[ck] = { ...next[ck], parent: grandParent };
+      });
+      return next;
+    });
+    if (currentBoard && norm(currentBoard) === norm(key)) {
+      setCurrentBoard(null);
+    }
+    setWindows((ws) => ws.filter((w) => w.boardName !== key));
+  }
+
   function printBoardList() {
-    const keys = Object.keys(boards);
-    if (keys.length === 0) {
+    const allKeys = Object.keys(boards);
+    const rootKeys = allKeys.filter((k) => !boards[k].parent);
+    if (allKeys.length === 0) {
       print("no boards yet — try `board -add <name>`");
       return;
     }
-    const width = Math.max(...keys.map((k) => k.length)) + 2;
-    const lines = [`${keys.length} board${keys.length === 1 ? "" : "s"}:`];
-    keys.forEach((k) => {
+    if (rootKeys.length === 0) {
+      print("no top-level boards — every board is nested somewhere");
+      return;
+    }
+    const width = Math.max(...rootKeys.map((k) => k.length)) + 2;
+    const lines = [
+      `${rootKeys.length} board${rootKeys.length === 1 ? "" : "s"}` +
+        (allKeys.length !== rootKeys.length
+          ? ` (+${allKeys.length - rootKeys.length} nested)`
+          : "") +
+        ":",
+    ];
+    rootKeys.forEach((k) => {
       const { total, done } = boardStats(boards[k]);
-      lines.push(`  ${padName(k, width)}${done}/${total} done`);
+      const kids = boardChildren(boards, k).length;
+      lines.push(
+        `  ${padName(k, width)}${done}/${total} done${
+          kids ? `  (${kids} sub)` : ""
+        }`
+      );
     });
     print(lines.join("\n"));
   }
@@ -654,9 +947,16 @@ export default function TodoTerminalApp() {
     if (total === 0) {
       lines.push("  (no tasks yet — try `task -add <name>`)");
     } else {
-      board.tasks.forEach((t) => {
-        lines.push(`  [${t.done ? "x" : " "}] ${t.name}`);
+      const flat = flattenTreeWithDepth(buildTree(board.tasks));
+      flat.forEach((t) => {
+        lines.push(
+          `  ${"  ".repeat(t.depth)}[${t.done ? "x" : " "}] ${t.name}`
+        );
       });
+    }
+    const kids = boardChildren(boards, key);
+    if (kids.length) {
+      lines.push(`subboards: ${kids.join(", ")}`);
     }
     print(lines.join("\n"));
   }
@@ -664,21 +964,39 @@ export default function TodoTerminalApp() {
   function handleBoardCommand(tokens) {
     const sub = tokens[1];
     if (!sub) {
-      print("usage: board -add|-del <name>   board @show   board <name> -show", "err");
+      print(
+        "usage: board -add|-del|-parent|-unparent <name>   board @show   board <name> -show",
+        "err"
+      );
       return;
     }
     if (sub === "-add") {
-      const name = tokens.slice(2).join(" ");
+      const rest = tokens.slice(2).join(" ");
+      const pipeIdx = rest.indexOf(" | ");
+      const name = (pipeIdx === -1 ? rest : rest.slice(0, pipeIdx)).trim();
+      const parentName = pipeIdx === -1 ? "" : rest.slice(pipeIdx + 3).trim();
       if (!name) {
-        print("usage: board -add <name>", "err");
+        print("usage: board -add <name> [| <parent board>]", "err");
         return;
       }
       if (findBoardKey(boards, name)) {
         print(`board '${name}' already exists`, "err");
         return;
       }
-      addBoard(name);
-      print(`created board '${name}'`);
+      let parentKey = null;
+      if (parentName) {
+        parentKey = findBoardKey(boards, parentName);
+        if (!parentKey) {
+          print(`no board named '${parentName}'`, "err");
+          return;
+        }
+      }
+      addBoard(name, parentKey);
+      print(
+        parentKey
+          ? `created board '${name}' under '${parentKey}'`
+          : `created board '${name}'`
+      );
       return;
     }
     if (sub === "-del") {
@@ -688,16 +1006,60 @@ export default function TodoTerminalApp() {
         print(`no board named '${name}'`, "err");
         return;
       }
-      setBoards((b) => {
-        const next = { ...b };
-        delete next[key];
-        return next;
-      });
-      if (currentBoard && norm(currentBoard) === norm(key)) {
-        setCurrentBoard(null);
-      }
-      setWindows((ws) => ws.filter((w) => w.boardName !== key));
+      deleteBoard(key);
       print(`deleted board '${key}'`);
+      return;
+    }
+    if (sub === "-parent") {
+      const rest = tokens.slice(2).join(" ");
+      const pipeIdx = rest.indexOf(" | ");
+      if (pipeIdx === -1) {
+        print("usage: board -parent <board> | <parent board>", "err");
+        return;
+      }
+      const childName = rest.slice(0, pipeIdx).trim();
+      const parentName = rest.slice(pipeIdx + 3).trim();
+      const childKey = findBoardKey(boards, childName);
+      const parentKey = findBoardKey(boards, parentName);
+      if (!childKey) {
+        print(`no board named '${childName}'`, "err");
+        return;
+      }
+      if (!parentKey) {
+        print(`no board named '${parentName}'`, "err");
+        return;
+      }
+      if (norm(childKey) === norm(parentKey)) {
+        print("a board can't be its own parent", "err");
+        return;
+      }
+      if (isAncestorBoard(boards, childKey, parentKey)) {
+        print(
+          `can't link — '${parentKey}' is already inside '${childKey}'`,
+          "err"
+        );
+        return;
+      }
+      setBoards((b) => ({
+        ...b,
+        [childKey]: { ...b[childKey], parent: parentKey },
+      }));
+      print(`'${childKey}' is now a subboard of '${parentKey}'`);
+      return;
+    }
+    if (sub === "-unparent") {
+      const name = tokens.slice(2).join(" ");
+      const key = findBoardKey(boards, name);
+      if (!key) {
+        print(`no board named '${name}'`, "err");
+        return;
+      }
+      if (!boards[key].parent) {
+        print(`'${key}' is already top-level`, "err");
+        return;
+      }
+      setBoards((b) => ({ ...b, [key]: { ...b[key], parent: null } }));
+      print(`'${key}' is now top-level`);
       return;
     }
     if (sub === "-rename") {
@@ -728,6 +1090,11 @@ export default function TodoTerminalApp() {
         const data = next[key];
         delete next[key];
         next[newName] = data;
+        Object.keys(next).forEach((k) => {
+          if (next[k].parent && norm(next[k].parent) === norm(key)) {
+            next[k] = { ...next[k], parent: newName };
+          }
+        });
         return next;
       });
       if (currentBoard && norm(currentBoard) === norm(key)) {
@@ -774,16 +1141,98 @@ export default function TodoTerminalApp() {
     const board = boards[currentBoard];
 
     if (sub === "-add") {
-      if (!name) {
-        print("usage: task -add <name>", "err");
+      const pipeIdx = name.indexOf(" | ");
+      const taskName = (pipeIdx === -1 ? name : name.slice(0, pipeIdx)).trim();
+      const parentName = pipeIdx === -1 ? "" : name.slice(pipeIdx + 3).trim();
+      if (!taskName) {
+        print("usage: task -add <name> [| <parent task>]", "err");
         return;
       }
-      if (findTaskIndex(board.tasks, name) !== -1) {
-        print(`task '${name}' already exists`, "err");
+      if (findTaskIndex(board.tasks, taskName) !== -1) {
+        print(`task '${taskName}' already exists`, "err");
         return;
       }
-      addTaskTo(currentBoard, name);
-      print(`added task '${name}'`);
+      let parentId = null;
+      if (parentName) {
+        const pIdx = findTaskIndex(board.tasks, parentName);
+        if (pIdx === -1) {
+          print(`no task named '${parentName}'`, "err");
+          return;
+        }
+        parentId = board.tasks[pIdx].id;
+      }
+      addTaskTo(currentBoard, taskName, parentId);
+      print(
+        parentId
+          ? `added subtask '${taskName}' under '${parentName}'`
+          : `added task '${taskName}'`
+      );
+      return;
+    }
+    if (sub === "-parent") {
+      const pipeIdx = name.indexOf(" | ");
+      if (pipeIdx === -1) {
+        print("usage: task -parent <task> | <parent task>", "err");
+        return;
+      }
+      const childName = name.slice(0, pipeIdx).trim();
+      const parentName = name.slice(pipeIdx + 3).trim();
+      const childIdx = findTaskIndex(board.tasks, childName);
+      const parentIdx = findTaskIndex(board.tasks, parentName);
+      if (childIdx === -1) {
+        print(`no task named '${childName}'`, "err");
+        return;
+      }
+      if (parentIdx === -1) {
+        print(`no task named '${parentName}'`, "err");
+        return;
+      }
+      const childTask = board.tasks[childIdx];
+      const parentTask = board.tasks[parentIdx];
+      if (childTask.id === parentTask.id) {
+        print("a task can't be its own parent", "err");
+        return;
+      }
+      if (collectDescendantIds(board.tasks, childTask.id).includes(parentTask.id)) {
+        print(
+          `can't link — '${parentName}' is already inside '${childName}'`,
+          "err"
+        );
+        return;
+      }
+      setBoards((b) => ({
+        ...b,
+        [currentBoard]: {
+          ...b[currentBoard],
+          tasks: b[currentBoard].tasks.map((t) =>
+            t.id === childTask.id ? { ...t, parentId: parentTask.id } : t
+          ),
+        },
+      }));
+      print(`'${childName}' is now a subtask of '${parentName}'`);
+      return;
+    }
+    if (sub === "-unparent") {
+      const idx = findTaskIndex(board.tasks, name);
+      if (idx === -1) {
+        print(`no task named '${name}'`, "err");
+        return;
+      }
+      if (!board.tasks[idx].parentId) {
+        print(`'${name}' is already top-level`, "err");
+        return;
+      }
+      const taskId = board.tasks[idx].id;
+      setBoards((b) => ({
+        ...b,
+        [currentBoard]: {
+          ...b[currentBoard],
+          tasks: b[currentBoard].tasks.map((t) =>
+            t.id === taskId ? { ...t, parentId: null } : t
+          ),
+        },
+      }));
+      print(`'${name}' is now top-level`);
       return;
     }
     if (sub === "-check" || sub === "-uncheck") {
@@ -819,15 +1268,25 @@ export default function TodoTerminalApp() {
       return;
     }
     if (sub === "-clear") {
-      const before = board.tasks.length;
+      const doneIds = new Set(board.tasks.filter((t) => t.done).map((t) => t.id));
+      const resolveParent = (pid) => {
+        let cur = pid;
+        while (cur && doneIds.has(cur)) {
+          const parentTask = board.tasks.find((t) => t.id === cur);
+          cur = parentTask ? parentTask.parentId : null;
+        }
+        return cur || null;
+      };
       setBoards((b) => ({
         ...b,
         [currentBoard]: {
           ...b[currentBoard],
-          tasks: b[currentBoard].tasks.filter((t) => !t.done),
+          tasks: b[currentBoard].tasks
+            .filter((t) => !doneIds.has(t.id))
+            .map((t) => ({ ...t, parentId: resolveParent(t.parentId) })),
         },
       }));
-      const removed = before - board.tasks.filter((t) => !t.done).length;
+      const removed = doneIds.size;
       print(`cleared ${removed} completed task${removed === 1 ? "" : "s"}`);
       return;
     }
@@ -897,18 +1356,28 @@ export default function TodoTerminalApp() {
         print(`'${targetKey}' already has a task named '${task.name}'`, "err");
         return;
       }
-      setBoards((b) => ({
-        ...b,
-        [currentBoard]: {
-          ...b[currentBoard],
-          tasks: b[currentBoard].tasks.filter((t) => t.id !== task.id),
-        },
-        [targetKey]: {
-          ...b[targetKey],
-          tasks: [...b[targetKey].tasks, task],
-        },
-      }));
-      print(`moved '${task.name}' to '${targetKey}'`);
+      const subtreeIds = collectDescendantIds(board.tasks, task.id);
+      setBoards((b) => {
+        const src = b[currentBoard];
+        const tgt = b[targetKey];
+        const moving = src.tasks
+          .filter((t) => subtreeIds.includes(t.id))
+          .map((t) => (t.id === task.id ? { ...t, parentId: null } : t));
+        return {
+          ...b,
+          [currentBoard]: {
+            ...src,
+            tasks: src.tasks.filter((t) => !subtreeIds.includes(t.id)),
+          },
+          [targetKey]: { ...tgt, tasks: [...tgt.tasks, ...moving] },
+        };
+      });
+      const extra = subtreeIds.length - 1;
+      print(
+        `moved '${task.name}'${
+          extra > 0 ? ` (+${extra} subtask${extra === 1 ? "" : "s"})` : ""
+        } to '${targetKey}'`
+      );
       return;
     }
     print(`unknown task command: '${sub}' — try 'help'`, "err");
@@ -924,8 +1393,7 @@ export default function TodoTerminalApp() {
     if (e.key === "ArrowUp") {
       e.preventDefault();
       if (cmdLog.length === 0) return;
-      const idx =
-        cmdPtr === -1 ? cmdLog.length - 1 : Math.max(0, cmdPtr - 1);
+      const idx = cmdPtr === -1 ? cmdLog.length - 1 : Math.max(0, cmdPtr - 1);
       setCmdPtr(idx);
       setInput(cmdLog[idx]);
       return;
@@ -979,6 +1447,27 @@ export default function TodoTerminalApp() {
           40% { opacity: 1; clip-path: inset(0 0 0% 0); }
           100% { opacity: 1; transform: scale(1); clip-path: inset(0 0 0% 0); }
         }
+        @keyframes tt-line-in {
+          0% { opacity: 0; transform: translateY(3px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes tt-pop {
+          0% { transform: scale(1); }
+          40% { transform: scale(1.35); }
+          100% { transform: scale(1); }
+        }
+        @keyframes tt-node-pulse {
+          0%,100% { filter: drop-shadow(0 0 2px var(--tt-glow)); }
+          50% { filter: drop-shadow(0 0 7px var(--tt-glow)); }
+        }
+        @keyframes tt-fade-in {
+          0% { opacity: 0; transform: translateY(6px) scale(0.98); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes tt-draw {
+          from { stroke-dashoffset: var(--tt-len); }
+          to { stroke-dashoffset: 0; }
+        }
         .tt-scanlines::before {
           content: "";
           position: absolute; inset: 0;
@@ -997,9 +1486,27 @@ export default function TodoTerminalApp() {
         .tt-scroll::-webkit-scrollbar-track { background: transparent; }
         .tt-scroll::-webkit-scrollbar-thumb { background: ${C.amberFaint}; border-radius: 0; }
         .tt-win { animation: tt-materialize 260ms ease-out; }
+        .tt-win.tt-dragging { box-shadow: 0 22px 50px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,0,0,0.4) !important; }
+        .tt-line-in { animation: tt-line-in 180ms ease-out; }
+        .tt-pop { animation: tt-pop 260ms ease-out; }
+        .tt-node { transition: transform 150ms ease, filter 150ms ease; cursor: pointer; }
+        .tt-node:hover { transform: scale(1.12); }
+        .tt-node-glow { animation: tt-node-pulse 2.4s ease-in-out infinite; }
+        .tt-card-hover { transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease; }
+        .tt-card-hover:hover { transform: translateY(-2px); border-color: ${C.borderHi}; }
+        .tt-fade-in { animation: tt-fade-in 220ms ease-out; }
+        .tt-edge { animation: tt-draw 500ms ease-out forwards; }
+        .tt-link-handle { transition: color 150ms ease, border-color 150ms ease, transform 150ms ease; }
+        .tt-link-handle:hover { transform: scale(1.15); }
+        .tt-theme-fade, .tt-theme-fade * {
+          transition: color 260ms ease, background-color 260ms ease,
+            border-color 260ms ease, box-shadow 260ms ease, fill 260ms ease,
+            stroke 260ms ease;
+        }
         @media (prefers-reduced-motion: reduce) {
           .tt-flicker { animation: none !important; }
           .tt-win { animation: none !important; }
+          .tt-line-in, .tt-pop, .tt-node-glow, .tt-fade-in, .tt-edge { animation: none !important; }
         }
         .tt-flicker { animation: tt-flicker 6s infinite; }
         input.tt-input { caret-color: ${C.amber}; }
@@ -1007,7 +1514,7 @@ export default function TodoTerminalApp() {
       `}</style>
 
       {/* terminal layer */}
-      <div className="tt-scanlines tt-flicker absolute inset-0 flex flex-col">
+      <div className="tt-scanlines tt-flicker tt-theme-fade absolute inset-0 flex flex-col">
         <div
           className="flex items-center px-4 py-2 text-xs"
           style={{
@@ -1020,6 +1527,21 @@ export default function TodoTerminalApp() {
             todo://
           </span>
           <span className="ml-2">{currentBoard ? `/${currentBoard}` : "/"}</span>
+          {storageAvailable && (
+            <span
+              className="ml-3"
+              style={{ color: C.amberFaint, fontSize: 10 }}
+              title={
+                saveStatus === "error"
+                  ? "couldn't save — your changes may not persist"
+                  : "boards and tasks are saved automatically"
+              }
+            >
+              {saveStatus === "saving" && "· saving…"}
+              {saveStatus === "saved" && "· saved"}
+              {saveStatus === "error" && "· save failed"}
+            </span>
+          )}
           <div className="ml-auto flex items-center gap-1.5">
             {Object.keys(THEMES).map((name) => (
               <button
@@ -1053,7 +1575,7 @@ export default function TodoTerminalApp() {
           style={{ color: C.amber }}
         >
           {history.map((line) => (
-            <div key={line.id} className="whitespace-pre-wrap tt-glow">
+            <div key={line.id} className="whitespace-pre-wrap tt-glow tt-line-in">
               {line.kind === "cmd" ? (
                 <span>
                   <span style={{ color: C.amberDim }}>{line.prompt}</span>{" "}
@@ -1099,20 +1621,23 @@ export default function TodoTerminalApp() {
               key={w.id}
               win={w}
               board={boards[w.boardName]}
+              isDragging={draggingId === w.id}
               onClose={() => closeWindow(w.id)}
               onDragStart={(e) => startDrag(e, w)}
               onFocus={() => bringToFront(w.id)}
-              onAddTask={(name) => addTaskTo(w.boardName, name)}
+              onLinkStart={(e) => startLink(e, w.boardName)}
+              onAddTask={(taskName) => addTaskTo(w.boardName, taskName)}
               onToggleTask={(taskId, done) =>
                 toggleTask(w.boardName, taskId, done)
               }
               onRemoveTask={(taskId) => removeTask(w.boardName, taskId)}
             />
           ) : (
-            <OverviewWindow
+            <GraphWindow
               key={w.id}
               win={w}
               boards={boards}
+              isDragging={draggingId === w.id}
               onClose={() => closeWindow(w.id)}
               onDragStart={(e) => startDrag(e, w)}
               onFocus={() => bringToFront(w.id)}
@@ -1124,6 +1649,25 @@ export default function TodoTerminalApp() {
           )
         )}
       </div>
+
+      {/* live link-drag overlay */}
+      {linkPos && (
+        <svg
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: 9999, width: "100%", height: "100%" }}
+        >
+          <line
+            x1={linkPos.x1}
+            y1={linkPos.y1}
+            x2={linkPos.x2}
+            y2={linkPos.y2}
+            stroke={C.amber}
+            strokeWidth={1.5}
+            strokeDasharray="5 4"
+          />
+          <circle cx={linkPos.x2} cy={linkPos.y2} r={4} fill={C.amber} />
+        </svg>
+      )}
     </div>
   );
 }
@@ -1135,10 +1679,25 @@ function getPromptStr(currentBoard) {
 /* ================================================================== */
 /* window chrome shared styling                                        */
 
-function WindowShell({ win, title, onClose, onDragStart, onFocus, children, minW = 280, minH = 220 }) {
+function WindowShell({
+  win,
+  title,
+  onClose,
+  onDragStart,
+  onFocus,
+  children,
+  minW = 280,
+  minH = 220,
+  isDragging = false,
+  dataBoardKey,
+  onLinkStart,
+}) {
   return (
     <div
-      className="tt-win pointer-events-auto absolute flex flex-col"
+      className={`tt-win pointer-events-auto absolute flex flex-col${
+        isDragging ? " tt-dragging" : ""
+      }`}
+      {...(dataBoardKey ? { "data-vis-board": dataBoardKey } : {})}
       style={{
         left: win.x,
         top: win.y,
@@ -1152,6 +1711,8 @@ function WindowShell({ win, title, onClose, onDragStart, onFocus, children, minW
         background: C.surface,
         border: `1px solid ${C.borderHi}`,
         boxShadow: `0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.4)`,
+        transform: isDragging ? "scale(1.012)" : "scale(1)",
+        transition: "transform 120ms ease",
       }}
       onClick={(e) => {
         e.stopPropagation();
@@ -1172,23 +1733,44 @@ function WindowShell({ win, title, onClose, onDragStart, onFocus, children, minW
         >
           {title}
         </span>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }}
-          className="text-xs px-2 leading-none"
-          style={{
-            color: C.amberDim,
-            border: `1px solid ${C.border}`,
-            fontFamily: FONT,
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = C.danger)}
-          onMouseLeave={(e) => (e.currentTarget.style.color = C.amberDim)}
-          aria-label="close"
-        >
-          ×
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {onLinkStart && (
+            <button
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                onLinkStart(e);
+              }}
+              className="tt-link-handle text-xs px-1.5 leading-none"
+              style={{
+                color: C.amberDim,
+                border: `1px solid ${C.border}`,
+                fontFamily: FONT,
+                cursor: "crosshair",
+              }}
+              title="drag onto another board window to link them"
+              aria-label="link board"
+            >
+              ⇢
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="text-xs px-2 leading-none"
+            style={{
+              color: C.amberDim,
+              border: `1px solid ${C.border}`,
+              fontFamily: FONT,
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = C.danger)}
+            onMouseLeave={(e) => (e.currentTarget.style.color = C.amberDim)}
+            aria-label="close"
+          >
+            ×
+          </button>
+        </div>
       </div>
       <div className="flex-1 min-h-0 flex flex-col">{children}</div>
     </div>
@@ -1212,19 +1794,23 @@ function ProgressBar({ done, total }) {
   );
 }
 
-function Checkbox({ checked, onChange }) {
+function Checkbox({ checked, onChange, size = 16 }) {
   return (
     <button
       onClick={onChange}
-      className="shrink-0 flex items-center justify-center"
+      className={`shrink-0 flex items-center justify-center${
+        checked ? " tt-pop" : ""
+      }`}
+      key={checked ? "on" : "off"}
       style={{
-        width: 16,
-        height: 16,
+        width: size,
+        height: size,
         border: `1px solid ${checked ? C.amber : C.amberDim}`,
         background: checked ? C.amber : "transparent",
         color: C.bg,
-        fontSize: 11,
+        fontSize: Math.round(size * 0.7),
         lineHeight: 1,
+        transition: "background-color 150ms ease, border-color 150ms ease",
       }}
       aria-label={checked ? "mark as not done" : "mark as done"}
     >
@@ -1233,13 +1819,15 @@ function Checkbox({ checked, onChange }) {
   );
 }
 
-/* ---------- single board graphical window ---------- */
+/* ---------- single board graphical window (dual: pending / done) ---------- */
 function BoardWindow({
   win,
   board,
+  isDragging,
   onClose,
   onDragStart,
   onFocus,
+  onLinkStart,
   onAddTask,
   onToggleTask,
   onRemoveTask,
@@ -1262,8 +1850,12 @@ function BoardWindow({
       onClose={onClose}
       onDragStart={onDragStart}
       onFocus={onFocus}
+      onLinkStart={onLinkStart}
+      dataBoardKey={win.boardName}
+      isDragging={isDragging}
+      minW={340}
     >
-      <div className="px-3 pt-2 pb-2" style={{ borderBottom: `1px solid ${C.border}` }}>
+      <div className="px-3 pt-2 pb-2 shrink-0" style={{ borderBottom: `1px solid ${C.border}` }}>
         <div className="flex items-center justify-between text-xs mb-1" style={{ color: C.amberDim }}>
           <span>{win.boardName}</span>
           <span>{done}/{total} done</span>
@@ -1271,37 +1863,8 @@ function BoardWindow({
         <ProgressBar done={done} total={total} />
       </div>
 
-      <div className="flex-1 overflow-y-auto tt-scroll px-3 py-2 space-y-1.5">
-        {board.tasks.length === 0 && (
-          <div className="text-xs italic" style={{ color: C.amberFaint }}>
-            no tasks yet — add one below
-          </div>
-        )}
-        {board.tasks.map((t) => (
-          <div key={t.id} className="group flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={t.done}
-              onChange={() => onToggleTask(t.id, !t.done)}
-            />
-            <span
-              className="flex-1 truncate"
-              style={{
-                color: t.done ? C.amberFaint : C.amber,
-                textDecoration: t.done ? "line-through" : "none",
-              }}
-            >
-              {t.name}
-            </span>
-            <button
-              onClick={() => onRemoveTask(t.id)}
-              className="opacity-0 group-hover:opacity-100 text-xs px-1"
-              style={{ color: C.danger }}
-              aria-label="delete task"
-            >
-              ×
-            </button>
-          </div>
-        ))}
+      <div className="flex-1 min-h-0 relative">
+        <DualView tasks={board.tasks} onToggle={onToggleTask} onRemove={onRemoveTask} />
       </div>
 
       <div
@@ -1323,9 +1886,106 @@ function BoardWindow({
   );
 }
 
-/* ---------- overview window: all boards ---------- */
-function OverviewWindow({ win, boards, onClose, onDragStart, onFocus, onOpenBoard, onAddBoard }) {
+/* ---------- dual view: pending / done, tree-aware ---------- */
+function DualView({ tasks, onToggle, onRemove }) {
+  if (tasks.length === 0) return <EmptyHint />;
+
+  const Column = ({ label, doneFlag }) => {
+    const items = tasks.filter((t) => t.done === doneFlag);
+    const flat = flattenTreeWithDepth(buildTree(items));
+    return (
+      <div className="flex-1 min-w-0 flex flex-col h-full">
+        <div
+          className="px-2 py-1.5 text-xs shrink-0 flex items-center justify-between"
+          style={{ color: C.amberDim, borderBottom: `1px solid ${C.border}` }}
+        >
+          <span>{label}</span>
+          <span>{items.length}</span>
+        </div>
+        <div className="flex-1 overflow-y-auto tt-scroll px-2 py-2 space-y-1.5">
+          {items.length === 0 && (
+            <div className="text-xs italic" style={{ color: C.amberFaint }}>
+              —
+            </div>
+          )}
+          {flat.map((t) => {
+            const realParent = t.parentId
+              ? tasks.find((x) => x.id === t.parentId)
+              : null;
+            const crossColumnParent =
+              realParent && realParent.done !== doneFlag ? realParent : null;
+            return (
+              <div
+                key={t.id}
+                className="tt-fade-in tt-card-hover group px-2 py-1.5 text-xs flex items-center gap-2"
+                style={{
+                  marginLeft: t.depth * 14,
+                  background: C.surfaceHi,
+                  border: `1px solid ${C.border}`,
+                }}
+              >
+                <Checkbox
+                  checked={doneFlag}
+                  onChange={() => onToggle(t.id, !doneFlag)}
+                  size={14}
+                />
+                <div className="flex-1 min-w-0 flex flex-col">
+                  <span
+                    className="truncate"
+                    style={{
+                      color: doneFlag ? C.amberFaint : C.amber,
+                      textDecoration: doneFlag ? "line-through" : "none",
+                    }}
+                  >
+                    {t.name}
+                  </span>
+                  {crossColumnParent && (
+                    <span
+                      className="truncate"
+                      style={{ color: C.amberFaint, fontSize: 10 }}
+                    >
+                      ↳ under {crossColumnParent.name}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => onRemove(t.id)}
+                  className="opacity-0 group-hover:opacity-100 text-xs px-1"
+                  style={{ color: C.danger }}
+                  aria-label="delete task"
+                >
+                  ×
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="h-full flex">
+      <Column label="pending" doneFlag={false} />
+      <div style={{ width: 1, background: C.border }} />
+      <Column label="done" doneFlag={true} />
+    </div>
+  );
+}
+
+/* ---------- graph window: how boards & subboards connect ---------- */
+function GraphWindow({
+  win,
+  boards,
+  isDragging,
+  onClose,
+  onDragStart,
+  onFocus,
+  onOpenBoard,
+  onAddBoard,
+}) {
   const [draft, setDraft] = useState("");
+  const [ref, size] = useElementSize();
   const keys = Object.keys(boards);
 
   const submit = () => {
@@ -1335,45 +1995,91 @@ function OverviewWindow({ win, boards, onClose, onDragStart, onFocus, onOpenBoar
     setDraft("");
   };
 
+  const w = size.width || 400;
+  const h = size.height || 360;
+  const positions = keys.length ? layoutBoardForest(boards, w, h) : {};
+
   return (
     <WindowShell
       win={win}
-      title="boards / overview"
+      title="boards / graph"
       onClose={onClose}
       onDragStart={onDragStart}
       onFocus={onFocus}
-      minW={320}
+      isDragging={isDragging}
+      minW={340}
     >
-      <div className="flex-1 overflow-y-auto tt-scroll px-3 py-3 space-y-2">
+      <div ref={ref} className="flex-1 min-h-0 relative overflow-hidden">
         {keys.length === 0 && (
-          <div className="text-xs italic" style={{ color: C.amberFaint }}>
+          <div
+            className="h-full flex items-center justify-center text-xs italic"
+            style={{ color: C.amberFaint }}
+          >
             no boards yet — create one below
           </div>
         )}
-        {keys.map((k) => {
-          const { total, done } = boardStats(boards[k]);
-          return (
-            <button
-              key={k}
-              onClick={() => onOpenBoard(k)}
-              className="w-full text-left px-3 py-2"
-              style={{
-                background: C.surfaceHi,
-                border: `1px solid ${C.border}`,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = C.borderHi)}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.border)}
-            >
-              <div className="flex items-center justify-between text-sm mb-1">
-                <span style={{ color: C.amber }}>{k}</span>
-                <span style={{ color: C.amberDim, fontSize: 11 }}>
-                  {done}/{total}
-                </span>
-              </div>
-              <ProgressBar done={done} total={total} />
-            </button>
-          );
-        })}
+
+        {keys.length > 0 && (
+          <>
+            <svg width={w} height={h} className="absolute inset-0">
+              {keys.map((k) => {
+                const parent = boards[k].parent;
+                if (!parent || !positions[parent] || !positions[k]) return null;
+                const p1 = positions[parent];
+                const p2 = positions[k];
+                const len = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+                return (
+                  <line
+                    key={`edge-${k}`}
+                    className="tt-edge"
+                    x1={p1.x}
+                    y1={p1.y}
+                    x2={p2.x}
+                    y2={p2.y}
+                    style={{
+                      stroke: C.amberFaint,
+                      strokeWidth: 1.2,
+                      "--tt-len": len,
+                      strokeDasharray: len,
+                    }}
+                  />
+                );
+              })}
+            </svg>
+
+            {keys.map((k) => {
+              const p = positions[k];
+              if (!p) return null;
+              const { total, done } = boardStats(boards[k]);
+              return (
+                <button
+                  key={k}
+                  onClick={() => onOpenBoard(k)}
+                  className="tt-node absolute flex flex-col items-center justify-center text-center px-1"
+                  style={{
+                    left: p.x,
+                    top: p.y,
+                    transform: "translate(-50%,-50%)",
+                    width: 62,
+                    height: 62,
+                    borderRadius: "50%",
+                    background: p.depth === 1 ? C.surfaceHi : C.surface,
+                    border: `1.5px solid ${p.depth === 1 ? C.amber : C.amberDim}`,
+                    color: C.amber,
+                    fontSize: 9,
+                    boxShadow: p.depth === 1 ? `0 0 10px ${C.glow}` : "none",
+                  }}
+                  title={k}
+                >
+                  <span className="truncate w-full">{k}</span>
+                  <span style={{ color: C.amberDim, fontSize: 8 }}>
+                    {done}/{total}
+                  </span>
+                </button>
+              );
+            })}
+          </>
+        )}
       </div>
 
       <div
@@ -1392,5 +2098,16 @@ function OverviewWindow({ win, boards, onClose, onDragStart, onFocus, onOpenBoar
         />
       </div>
     </WindowShell>
+  );
+}
+
+function EmptyHint() {
+  return (
+    <div
+      className="h-full flex items-center justify-center text-xs italic"
+      style={{ color: C.amberFaint }}
+    >
+      no tasks yet — add one below
+    </div>
   );
 }
