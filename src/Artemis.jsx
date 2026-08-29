@@ -1962,7 +1962,34 @@ function Clock24() {
   );
 }
 
-function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow }) {
+function SaveIndicator({ status }) {
+  const meta = {
+    restoring: { label: "Restoring…", dot: "bg-violet-400 animate-pulse" },
+    saving: { label: "Saving…", dot: "bg-amber-400 animate-pulse" },
+    saved: { label: "Saved", dot: "bg-emerald-500" },
+    error: { label: "Save failed", dot: "bg-rose-500" },
+    unavailable: { label: "Autosave off", dot: "bg-violet-300" },
+    idle: { label: "", dot: "bg-violet-300" },
+  }[status] || { label: "", dot: "bg-violet-300" };
+  if (!meta.label) return null;
+  return (
+    <div
+      className="flex items-center gap-1.5 text-[10px] font-medium text-violet-500"
+      title={
+        status === "unavailable"
+          ? "Persistent storage isn't available in this environment — progress won't survive a refresh."
+          : status === "error"
+          ? "The last save attempt failed — your changes are still here, but may not persist."
+          : "Boards, tasks, and projects are saved automatically."
+      }
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+      {meta.label}
+    </div>
+  );
+}
+
+function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow, saveStatus }) {
   const [startOpen, setStartOpen] = useState(false);
 
   const label = (w) => {
@@ -2062,7 +2089,8 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow 
         })}
 
         <div className="mx-1 h-6 w-px bg-violet-200" />
-        <div className="px-2">
+        <div className="flex items-center gap-2 px-2">
+          <SaveIndicator status={saveStatus} />
           <Clock24 />
         </div>
       </div>
@@ -2097,6 +2125,7 @@ export default function ArtemisOS() {
   const dragRef = useRef(null);
   const zRef = useRef(0);
   const [loaded, setLoaded] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("idle"); // idle | restoring | saving | saved | error | unavailable
   const storageAvailable = typeof window !== "undefined" && !!window.storage;
 
   const getRect = () => desktopRef.current?.getBoundingClientRect() || { width: 1200, height: 700 };
@@ -2109,9 +2138,11 @@ export default function ArtemisOS() {
   useEffect(() => {
     let cancelled = false;
     if (!storageAvailable) {
+      setSaveStatus("unavailable");
       setLoaded(true);
       return undefined;
     }
+    setSaveStatus("restoring");
     (async () => {
       try {
         const result = await window.storage.get(STORAGE_KEY, false);
@@ -2129,9 +2160,12 @@ export default function ArtemisOS() {
           if (data.theme) setTheme(data.theme);
         }
       } catch (e) {
-        /* nothing saved yet */
+        /* nothing saved yet, or the saved data was corrupt — start fresh */
       } finally {
-        if (!cancelled) setLoaded(true);
+        if (!cancelled) {
+          setSaveStatus("saved");
+          setLoaded(true);
+        }
       }
     })();
     return () => {
@@ -2150,9 +2184,10 @@ export default function ArtemisOS() {
   /* debounced save */
   useEffect(() => {
     if (!loaded || !storageAvailable) return undefined;
-    const t = setTimeout(() => {
-      window.storage
-        .set(
+    setSaveStatus("saving");
+    const t = setTimeout(async () => {
+      try {
+        await window.storage.set(
           STORAGE_KEY,
           JSON.stringify({
             boards: state.boards,
@@ -2162,8 +2197,11 @@ export default function ArtemisOS() {
             theme,
           }),
           false
-        )
-        .catch(() => {});
+        );
+        setSaveStatus("saved");
+      } catch (e) {
+        setSaveStatus("error");
+      }
     }, 400);
     return () => clearTimeout(t);
   }, [state.boards, state.projects, state.windows, state.activeBoard, theme, loaded, storageAvailable]);
@@ -2302,6 +2340,7 @@ export default function ArtemisOS() {
         focusWindow={(id) => dispatch({ type: "FOCUS_WINDOW", id })}
         restoreWindow={(id) => dispatch({ type: "RESTORE_WINDOW", id })}
         minimizeWindow={(id) => dispatch({ type: "MINIMIZE_WINDOW", id })}
+        saveStatus={saveStatus}
       />
 
       <CustomCursor containerRef={desktopRef} />
