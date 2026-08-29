@@ -75,6 +75,11 @@ function findBoardKey(boards, name) {
   return Object.keys(boards).find((k) => norm(k) === n) || null;
 }
 
+function findProjectKey(projects, name) {
+  const n = norm(name);
+  return projects.find((p) => norm(p) === n) || null;
+}
+
 function findTaskIndex(tasks, name) {
   const n = norm(name);
   return tasks.findIndex((t) => norm(t.name) === n);
@@ -89,6 +94,18 @@ function boardStats(board) {
 function padName(name, width) {
   if (name.length >= width) return name + " ";
   return name + " ".repeat(width - name.length);
+}
+
+/* splits the terminal input into "already-typed context tokens" and the
+   partial word currently being completed, plus the string to prepend
+   any accepted suggestion with */
+function splitInputContext(val) {
+  const trailingSpace = /\s$/.test(val);
+  const rawTokens = val.split(/\s+/).filter(Boolean);
+  const currentToken = trailingSpace ? "" : rawTokens[rawTokens.length - 1] || "";
+  const ctx = trailingSpace ? rawTokens : rawTokens.slice(0, -1);
+  const basePrefix = ctx.length ? ctx.join(" ") + " " : "";
+  return { ctx, currentToken, basePrefix };
 }
 
 function useElementSize() {
@@ -230,6 +247,17 @@ const HELP_LINES = [
   "  task -rename <old> -> <new>        rename a task",
   "  task -move <task> -> <board>       move a task (+ subtasks) to another board",
   "",
+  "  init <project>                     create a project tag",
+  "  init -rename <old> -> <new>        rename a project",
+  "  init -del <project>                remove a project (untags its boards)",
+  "  board -add <name> @<project>       tag a new board with a project",
+  "  <project> -add <name>              same thing, project name as the verb",
+  "  board -tag <board> @<project>      tag an existing board",
+  "  board -untag <board> @<project>    remove a tag from a board",
+  "  projects                           list projects and their board counts",
+  "  open -project <name>               open every board tagged with a project",
+  "  open -close -project <name>        close that window",
+  "",
   "  vis <name>                         open a board window",
   "  vis -node                          show how boards connect (or vis #)",
   "  vis -close <name>|#                close a window",
@@ -244,6 +272,8 @@ const HELP_LINES = [
   "  reset -yes                        erase every board, task & saved file",
   "  help                               show this list",
   "",
+  "  press tab to accept a suggestion — ↑↓ to pick one, esc to dismiss",
+  "",
   "  boards and tasks are saved automatically as you go.",
   "",
   "  aliases: mkdir = board -add   touch = task -add",
@@ -252,8 +282,8 @@ const HELP_LINES = [
 
 const BOOT_LINES = [
   "╔════════════════════════════════╗",
-  "║           TODO SHELL           ║",
-  "║        v1.0 — type help        ║",
+  "║          ☜(⌒▽⌒)☞            ║",
+  "║             TODO               ║",
   "╚════════════════════════════════╝",
   "",
   "type `help` to see available commands.",
@@ -266,6 +296,7 @@ const STORAGE_KEY = "todo-shell-state-v1";
 
 export default function TodoTerminalApp() {
   const [boards, setBoards] = useState({});
+  const [projects, setProjects] = useState([]);
   const [currentBoard, setCurrentBoard] = useState(null);
   const [history, setHistory] = useState([]);
   const [input, setInput] = useState("");
@@ -276,6 +307,8 @@ export default function TodoTerminalApp() {
   const [themeName, setThemeName] = useState("amber");
   const [draggingId, setDraggingId] = useState(null);
   const [linkPos, setLinkPos] = useState(null);
+  const [suggestIndex, setSuggestIndex] = useState(0);
+  const [suggestOpen, setSuggestOpen] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const [saveStatus, setSaveStatus] = useState("idle");
   const storageAvailable =
@@ -323,6 +356,7 @@ export default function TodoTerminalApp() {
         if (!cancelled && result && result.value) {
           const data = JSON.parse(result.value);
           if (data.boards) setBoards(data.boards);
+          if (Array.isArray(data.projects)) setProjects(data.projects);
           if (typeof data.currentBoard !== "undefined") {
             setCurrentBoard(data.currentBoard);
           }
@@ -359,6 +393,7 @@ export default function TodoTerminalApp() {
       try {
         const payload = JSON.stringify({
           boards,
+          projects,
           currentBoard,
           themeName,
           windows,
@@ -374,7 +409,7 @@ export default function TodoTerminalApp() {
     }, 350);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boards, currentBoard, themeName, windows, cmdLog, loaded]);
+  }, [boards, projects, currentBoard, themeName, windows, cmdLog, loaded]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -452,6 +487,31 @@ export default function TodoTerminalApp() {
         y: pos.y,
         width: 460,
         height: 500,
+        z: zCounter.current,
+      },
+    ]);
+  };
+
+  const openProjectWindow = (projectKey) => {
+    const existing = windows.find(
+      (w) => w.kind === "project" && w.projectName === projectKey
+    );
+    if (existing) {
+      bringToFront(existing.id);
+      return;
+    }
+    zCounter.current += 1;
+    const pos = nextPos(400, 460);
+    setWindows((ws) => [
+      ...ws,
+      {
+        id: uid("win"),
+        kind: "project",
+        projectName: projectKey,
+        x: pos.x,
+        y: pos.y,
+        width: 400,
+        height: 460,
         z: zCounter.current,
       },
     ]);
@@ -595,9 +655,33 @@ export default function TodoTerminalApp() {
     });
   };
 
-  const addBoard = (name, parent = null) => {
-    setBoards((b) => ({ ...b, [name]: { tasks: [], parent } }));
+  const addBoard = (name, parent = null, tags = []) => {
+    setBoards((b) => ({ ...b, [name]: { tasks: [], parent, tags } }));
   };
+
+  function doCreateBoard(name, parentName, tagKey) {
+    if (!name) {
+      print("usage: board -add <name> [| <parent>] [@<project>]", "err");
+      return;
+    }
+    if (findBoardKey(boards, name)) {
+      print(`board '${name}' already exists`, "err");
+      return;
+    }
+    let parentKey = null;
+    if (parentName) {
+      parentKey = findBoardKey(boards, parentName);
+      if (!parentKey) {
+        print(`no board named '${parentName}'`, "err");
+        return;
+      }
+    }
+    addBoard(name, parentKey, tagKey ? [tagKey] : []);
+    const bits = [];
+    if (parentKey) bits.push(`under '${parentKey}'`);
+    if (tagKey) bits.push(`tagged @${tagKey}`);
+    print(`created board '${name}'${bits.length ? " " + bits.join(" ") : ""}`);
+  }
 
   /* ---------- command execution ---------- */
   const runCommand = (raw) => {
@@ -788,6 +872,135 @@ export default function TodoTerminalApp() {
         break;
       }
 
+      case "init": {
+        if (tokens[1] === "-del") {
+          const name = tokens.slice(2).join(" ");
+          const key = findProjectKey(projects, name);
+          if (!key) {
+            print(`no project named '${name}'`, "err");
+            break;
+          }
+          setProjects((p) => p.filter((x) => norm(x) !== norm(key)));
+          setBoards((b) => {
+            const next = { ...b };
+            Object.keys(next).forEach((k) => {
+              const tags = next[k].tags || [];
+              if (tags.some((t) => norm(t) === norm(key))) {
+                next[k] = {
+                  ...next[k],
+                  tags: tags.filter((t) => norm(t) !== norm(key)),
+                };
+              }
+            });
+            return next;
+          });
+          print(`removed project '${key}'`);
+          break;
+        }
+        if (tokens[1] === "-rename") {
+          const rest = tokens.slice(2).join(" ");
+          const arrowIdx = rest.indexOf(" -> ");
+          if (arrowIdx === -1) {
+            print("usage: init -rename <old> -> <new>", "err");
+            break;
+          }
+          const oldName = rest.slice(0, arrowIdx).trim();
+          const newName = rest.slice(arrowIdx + 4).trim();
+          const key = findProjectKey(projects, oldName);
+          if (!key) {
+            print(`no project named '${oldName}'`, "err");
+            break;
+          }
+          if (!newName) {
+            print("usage: init -rename <old> -> <new>", "err");
+            break;
+          }
+          if (findProjectKey(projects, newName)) {
+            print(`project '${newName}' already exists`, "err");
+            break;
+          }
+          setProjects((p) => p.map((x) => (norm(x) === norm(key) ? newName : x)));
+          setBoards((b) => {
+            const next = { ...b };
+            Object.keys(next).forEach((k) => {
+              const tags = next[k].tags || [];
+              if (tags.some((t) => norm(t) === norm(key))) {
+                next[k] = {
+                  ...next[k],
+                  tags: tags.map((t) => (norm(t) === norm(key) ? newName : t)),
+                };
+              }
+            });
+            return next;
+          });
+          print(`renamed project '${key}' to '${newName}'`);
+          break;
+        }
+        const name = tokens.slice(1).join(" ");
+        if (!name) {
+          print("usage: init <project name>", "err");
+          break;
+        }
+        if (findProjectKey(projects, name)) {
+          print(`project '${name}' already exists`, "err");
+          break;
+        }
+        setProjects((p) => [...p, name]);
+        print(
+          `initialized project '${name}' — try 'board -add <name> @${name}' or '${name} -add <name>'`
+        );
+        break;
+      }
+
+      case "projects": {
+        if (projects.length === 0) {
+          print("no projects yet — try `init <project name>`");
+          break;
+        }
+        const width = Math.max(...projects.map((p) => p.length)) + 2;
+        const lines = [
+          `${projects.length} project${projects.length === 1 ? "" : "s"}:`,
+        ];
+        projects.forEach((p) => {
+          const count = Object.keys(boards).filter((k) =>
+            (boards[k].tags || []).some((t) => norm(t) === norm(p))
+          ).length;
+          lines.push(`  ${padName(p, width)}${count} board${count === 1 ? "" : "s"}`);
+        });
+        print(lines.join("\n"));
+        break;
+      }
+
+      case "open": {
+        if (tokens[1] === "-project") {
+          const name = tokens.slice(2).join(" ");
+          const key = findProjectKey(projects, name);
+          if (!key) {
+            print(`no project named '${name}' — try 'init ${name}' first`, "err");
+            break;
+          }
+          openProjectWindow(key);
+          print(`opened project '${key}'`);
+          break;
+        }
+        if (tokens[1] === "-close" && tokens[2] === "-project") {
+          const name = tokens.slice(3).join(" ");
+          const key = findProjectKey(projects, name);
+          const win = key
+            ? windows.find((w) => w.kind === "project" && w.projectName === key)
+            : null;
+          if (!win) {
+            print(`no open window for project '${name}'`, "err");
+            break;
+          }
+          closeWindow(win.id);
+          print(`closed project '${key}'`);
+          break;
+        }
+        print("usage: open -project <name>", "err");
+        break;
+      }
+
       case "date": {
         print(new Date().toString());
         break;
@@ -887,7 +1100,17 @@ export default function TodoTerminalApp() {
       }
 
       default: {
-        print(`unknown command: '${tokens[0]}' — try 'help'`, "err");
+        const projKey = findProjectKey(projects, tokens[0]);
+        if (projKey && tokens[1] === "-add") {
+          const rest = tokens.slice(2).join(" ");
+          const pipeIdx = rest.indexOf(" | ");
+          const name = (pipeIdx === -1 ? rest : rest.slice(0, pipeIdx)).trim();
+          const parentName =
+            pipeIdx === -1 ? "" : rest.slice(pipeIdx + 3).trim();
+          doCreateBoard(name, parentName, projKey);
+        } else {
+          print(`unknown command: '${tokens[0]}' — try 'help'`, "err");
+        }
       }
     }
   };
@@ -931,10 +1154,12 @@ export default function TodoTerminalApp() {
     rootKeys.forEach((k) => {
       const { total, done } = boardStats(boards[k]);
       const kids = boardChildren(boards, k).length;
+      const tags = boards[k].tags || [];
+      const tagBits = tags.length ? `  ${tags.map((t) => `@${t}`).join(" ")}` : "";
       lines.push(
         `  ${padName(k, width)}${done}/${total} done${
           kids ? `  (${kids} sub)` : ""
-        }`
+        }${tagBits}`
       );
     });
     print(lines.join("\n"));
@@ -958,6 +1183,9 @@ export default function TodoTerminalApp() {
     if (kids.length) {
       lines.push(`subboards: ${kids.join(", ")}`);
     }
+    if (board.tags && board.tags.length) {
+      lines.push(`tags: ${board.tags.map((t) => `@${t}`).join(", ")}`);
+    }
     print(lines.join("\n"));
   }
 
@@ -971,31 +1199,60 @@ export default function TodoTerminalApp() {
       return;
     }
     if (sub === "-add") {
-      const rest = tokens.slice(2).join(" ");
+      const argTokens = tokens.slice(2);
+      let tagKey = null;
+      const tagIdx = argTokens.findIndex((t) => t.startsWith("@") && t.length > 1);
+      if (tagIdx !== -1) {
+        const tagName = argTokens[tagIdx].slice(1);
+        const foundProject = findProjectKey(projects, tagName);
+        if (!foundProject) {
+          print(`no project named '${tagName}' — try 'init ${tagName}' first`, "err");
+          return;
+        }
+        tagKey = foundProject;
+        argTokens.splice(tagIdx, 1);
+      }
+      const rest = argTokens.join(" ");
       const pipeIdx = rest.indexOf(" | ");
       const name = (pipeIdx === -1 ? rest : rest.slice(0, pipeIdx)).trim();
       const parentName = pipeIdx === -1 ? "" : rest.slice(pipeIdx + 3).trim();
-      if (!name) {
-        print("usage: board -add <name> [| <parent board>]", "err");
+      doCreateBoard(name, parentName, tagKey);
+      return;
+    }
+    if (sub === "-tag" || sub === "-untag") {
+      const argTokens = tokens.slice(2);
+      const tagIdx = argTokens.findIndex((t) => t.startsWith("@") && t.length > 1);
+      if (tagIdx === -1) {
+        print(`usage: board ${sub} <board> @<project>`, "err");
         return;
       }
-      if (findBoardKey(boards, name)) {
-        print(`board '${name}' already exists`, "err");
+      const tagName = argTokens[tagIdx].slice(1);
+      argTokens.splice(tagIdx, 1);
+      const boardName = argTokens.join(" ").trim();
+      const key = findBoardKey(boards, boardName);
+      if (!key) {
+        print(`no board named '${boardName}'`, "err");
         return;
       }
-      let parentKey = null;
-      if (parentName) {
-        parentKey = findBoardKey(boards, parentName);
-        if (!parentKey) {
-          print(`no board named '${parentName}'`, "err");
-          return;
-        }
+      const projKey = findProjectKey(projects, tagName);
+      if (!projKey) {
+        print(`no project named '${tagName}' — try 'init ${tagName}' first`, "err");
+        return;
       }
-      addBoard(name, parentKey);
+      setBoards((b) => {
+        const cur = b[key].tags || [];
+        const nextTags =
+          sub === "-tag"
+            ? cur.some((t) => norm(t) === norm(projKey))
+              ? cur
+              : [...cur, projKey]
+            : cur.filter((t) => norm(t) !== norm(projKey));
+        return { ...b, [key]: { ...b[key], tags: nextTags } };
+      });
       print(
-        parentKey
-          ? `created board '${name}' under '${parentKey}'`
-          : `created board '${name}'`
+        sub === "-tag"
+          ? `tagged '${key}' @${projKey}`
+          : `untagged '${key}' from @${projKey}`
       );
       return;
     }
@@ -1384,14 +1641,159 @@ export default function TodoTerminalApp() {
   }
 
   /* ---------- input handlers ---------- */
+  const COMMAND_WORDS = [
+    "board",
+    "task",
+    "vis",
+    "open",
+    "init",
+    "projects",
+    "ls",
+    "cd",
+    "pwd",
+    "whoami",
+    "clear",
+    "help",
+    "find",
+    "stats",
+    "history",
+    "theme",
+    "date",
+    "reset",
+    "mkdir",
+    "touch",
+    "rm",
+    "rmdir",
+  ];
+
+  function getCompletionCandidates(ctx) {
+    const boardNames = Object.keys(boards);
+    const taskNames = currentBoard ? boards[currentBoard].tasks.map((t) => t.name) : [];
+    const themeNames = Object.keys(THEMES);
+
+    if (ctx.length === 0) {
+      return [...COMMAND_WORDS, ...projects];
+    }
+
+    const last = ctx[ctx.length - 1];
+    const head = ctx[0].toLowerCase();
+    const headIsProject = findProjectKey(projects, ctx[0]) !== null;
+
+    if (last === "|") {
+      if (head === "board" || headIsProject) return boardNames;
+      if (head === "task") return taskNames;
+      return [];
+    }
+    if (last === "->") {
+      if (head === "task" && ctx[1] === "-move") return boardNames;
+      return [];
+    }
+
+    if (head === "cd") return boardNames;
+    if (head === "theme") return themeNames;
+    if (head === "vis") {
+      if (ctx.length === 1) return [...boardNames, "#", "-node", "-close"];
+      if (ctx[1] === "-close") return [...boardNames, "#"];
+      return [];
+    }
+    if (head === "open") {
+      if (ctx.length === 1) return ["-project", "-close"];
+      if (ctx[1] === "-project") return projects;
+      if (ctx[1] === "-close") return ["-project"];
+      if (ctx[1] === "-close" && ctx[2] === "-project") return projects;
+      return [];
+    }
+    if (head === "init") {
+      if (ctx.length === 1) return ["-del", "-rename"];
+      if (ctx[1] === "-del" || ctx[1] === "-rename") return projects;
+      return [];
+    }
+    if (head === "board" || headIsProject) {
+      const sub = ctx[1];
+      if (ctx.length === 1) {
+        return headIsProject && head !== "board"
+          ? ["-add"]
+          : ["-add", "-del", "-parent", "-unparent", "-rename", "-tag", "-untag", "@show", "-show"];
+      }
+      if (["-del", "-unparent", "-parent", "-rename"].includes(sub)) return boardNames;
+      if (sub === "-tag" || sub === "-untag") return boardNames;
+      return [];
+    }
+    if (head === "task") {
+      const sub = ctx[1];
+      if (ctx.length === 1) {
+        return [
+          "-add",
+          "-check",
+          "-uncheck",
+          "-check-all",
+          "-uncheck-all",
+          "-del",
+          "-clear",
+          "-rename",
+          "-move",
+          "-parent",
+          "-unparent",
+        ];
+      }
+      if (
+        ["-check", "-uncheck", "-del", "-rename", "-move", "-parent", "-unparent"].includes(sub)
+      ) {
+        return taskNames;
+      }
+      return [];
+    }
+    return [];
+  }
+
+  /* live suggestion list, recomputed from the current input on every render */
+  const { ctx: suggestCtx, currentToken: suggestToken, basePrefix: suggestBase } =
+    splitInputContext(input);
+  const suggestPool = suggestToken.startsWith("@")
+    ? projects.map((p) => `@${p}`)
+    : getCompletionCandidates(suggestCtx);
+  const suggestions = suggestPool.filter((c) =>
+    c.toLowerCase().startsWith(suggestToken.toLowerCase())
+  );
+  const activeIndex = suggestions.length
+    ? Math.min(suggestIndex, suggestions.length - 1)
+    : 0;
+  const showSuggestions = suggestOpen && input.length > 0 && suggestions.length > 0;
+
+  const acceptSuggestion = (choice) => {
+    if (!choice) return;
+    setInput(suggestBase + choice + " ");
+    setSuggestIndex(0);
+    setSuggestOpen(true);
+    if (inputRef.current) inputRef.current.focus();
+  };
+
   const onKeyDown = (e) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      if (showSuggestions) acceptSuggestion(suggestions[activeIndex]);
+      return;
+    }
+    if (e.key === "Escape") {
+      if (showSuggestions) {
+        e.preventDefault();
+        setSuggestOpen(false);
+      }
+      return;
+    }
     if (e.key === "Enter") {
       runCommand(input);
       setInput("");
+      setSuggestIndex(0);
+      setSuggestOpen(true);
       return;
     }
     if (e.key === "ArrowUp") {
       e.preventDefault();
+      if (showSuggestions) {
+        setSuggestIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
+        return;
+      }
       if (cmdLog.length === 0) return;
       const idx = cmdPtr === -1 ? cmdLog.length - 1 : Math.max(0, cmdPtr - 1);
       setCmdPtr(idx);
@@ -1400,6 +1802,10 @@ export default function TodoTerminalApp() {
     }
     if (e.key === "ArrowDown") {
       e.preventDefault();
+      if (showSuggestions) {
+        setSuggestIndex((i) => (i + 1) % suggestions.length);
+        return;
+      }
       if (cmdPtr === -1) return;
       const idx = cmdPtr + 1;
       if (idx >= cmdLog.length) {
@@ -1592,14 +1998,18 @@ export default function TodoTerminalApp() {
           ))}
 
           {booted && (
-            <div className="flex items-center mt-1">
+            <div className="relative flex items-center mt-1">
               <span style={{ color: C.amberDim }}>{promptStr}</span>
               <input
                 ref={inputRef}
                 className="tt-input flex-1 bg-transparent outline-none ml-2 text-sm"
                 style={{ color: C.amber, fontFamily: FONT }}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  setSuggestIndex(0);
+                  setSuggestOpen(true);
+                }}
                 onKeyDown={onKeyDown}
                 spellCheck={false}
                 autoComplete="off"
@@ -1608,6 +2018,62 @@ export default function TodoTerminalApp() {
               <span className="tt-cursor" style={{ color: C.amber }}>
                 ▮
               </span>
+
+              {showSuggestions && (
+                <div
+                  className="tt-fade-in absolute left-0"
+                  style={{
+                    bottom: "calc(100% + 4px)",
+                    zIndex: 500,
+                    minWidth: 220,
+                    maxWidth: 360,
+                    maxHeight: 190,
+                    overflowY: "auto",
+                    background: C.surfaceHi,
+                    border: `1px solid ${C.borderHi}`,
+                    boxShadow: "0 10px 28px rgba(0,0,0,0.55)",
+                  }}
+                >
+                  {suggestions.map((s, i) => {
+                    const matched = s.slice(0, suggestToken.length);
+                    const rest = s.slice(suggestToken.length);
+                    const active = i === activeIndex;
+                    return (
+                      <button
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          acceptSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSuggestIndex(i)}
+                        className="w-full text-left px-2.5 py-1 text-xs flex items-center"
+                        style={{
+                          fontFamily: FONT,
+                          background: active ? C.amber : "transparent",
+                          color: active ? C.bg : C.amber,
+                        }}
+                      >
+                        <span style={{ fontWeight: active ? 700 : 400 }}>
+                          {matched}
+                        </span>
+                        <span style={{ color: active ? C.bg : C.amberDim }}>
+                          {rest}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  <div
+                    className="px-2.5 py-1 text-xs"
+                    style={{
+                      color: C.amberFaint,
+                      borderTop: `1px solid ${C.border}`,
+                      fontSize: 9,
+                    }}
+                  >
+                    tab / click to accept · esc to dismiss
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1615,24 +2081,46 @@ export default function TodoTerminalApp() {
 
       {/* floating windows layer */}
       <div className="absolute inset-0 pointer-events-none">
-        {windows.map((w) =>
-          w.kind === "board" ? (
-            <BoardWindow
-              key={w.id}
-              win={w}
-              board={boards[w.boardName]}
-              isDragging={draggingId === w.id}
-              onClose={() => closeWindow(w.id)}
-              onDragStart={(e) => startDrag(e, w)}
-              onFocus={() => bringToFront(w.id)}
-              onLinkStart={(e) => startLink(e, w.boardName)}
-              onAddTask={(taskName) => addTaskTo(w.boardName, taskName)}
-              onToggleTask={(taskId, done) =>
-                toggleTask(w.boardName, taskId, done)
-              }
-              onRemoveTask={(taskId) => removeTask(w.boardName, taskId)}
-            />
-          ) : (
+        {windows.map((w) => {
+          if (w.kind === "board") {
+            return (
+              <BoardWindow
+                key={w.id}
+                win={w}
+                board={boards[w.boardName]}
+                isDragging={draggingId === w.id}
+                onClose={() => closeWindow(w.id)}
+                onDragStart={(e) => startDrag(e, w)}
+                onFocus={() => bringToFront(w.id)}
+                onLinkStart={(e) => startLink(e, w.boardName)}
+                onAddTask={(taskName) => addTaskTo(w.boardName, taskName)}
+                onToggleTask={(taskId, done) =>
+                  toggleTask(w.boardName, taskId, done)
+                }
+                onRemoveTask={(taskId) => removeTask(w.boardName, taskId)}
+              />
+            );
+          }
+          if (w.kind === "project") {
+            return (
+              <ProjectWindow
+                key={w.id}
+                win={w}
+                boards={boards}
+                isDragging={draggingId === w.id}
+                onClose={() => closeWindow(w.id)}
+                onDragStart={(e) => startDrag(e, w)}
+                onFocus={() => bringToFront(w.id)}
+                onOpenBoard={(key) => openBoardWindow(key)}
+                onAddBoard={(name) => {
+                  if (!findBoardKey(boards, name)) {
+                    addBoard(name, null, [w.projectName]);
+                  }
+                }}
+              />
+            );
+          }
+          return (
             <GraphWindow
               key={w.id}
               win={w}
@@ -1646,8 +2134,8 @@ export default function TodoTerminalApp() {
                 if (!findBoardKey(boards, name)) addBoard(name);
               }}
             />
-          )
-        )}
+          );
+        })}
       </div>
 
       {/* live link-drag overlay */}
@@ -1846,7 +2334,11 @@ function BoardWindow({
   return (
     <WindowShell
       win={win}
-      title={`board / ${win.boardName}`}
+      title={`board / ${win.boardName}${
+        board.tags && board.tags.length
+          ? "  " + board.tags.map((t) => `@${t}`).join(" ")
+          : ""
+      }`}
       onClose={onClose}
       onDragStart={onDragStart}
       onFocus={onFocus}
@@ -2092,6 +2584,88 @@ function GraphWindow({
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit()}
           placeholder="new board…"
+          className="flex-1 bg-transparent outline-none text-sm"
+          style={{ color: C.amber, fontFamily: FONT }}
+          spellCheck={false}
+        />
+      </div>
+    </WindowShell>
+  );
+}
+
+/* ---------- project window: every board tagged with a project ---------- */
+function ProjectWindow({
+  win,
+  boards,
+  isDragging,
+  onClose,
+  onDragStart,
+  onFocus,
+  onOpenBoard,
+  onAddBoard,
+}) {
+  const [draft, setDraft] = useState("");
+  const keys = Object.keys(boards).filter((k) =>
+    (boards[k].tags || []).some((t) => norm(t) === norm(win.projectName))
+  );
+
+  const submit = () => {
+    const name = draft.trim();
+    if (!name) return;
+    onAddBoard(name);
+    setDraft("");
+  };
+
+  return (
+    <WindowShell
+      win={win}
+      title={`project / @${win.projectName}`}
+      onClose={onClose}
+      onDragStart={onDragStart}
+      onFocus={onFocus}
+      isDragging={isDragging}
+      minW={320}
+    >
+      <div className="flex-1 overflow-y-auto tt-scroll px-3 py-3 space-y-2">
+        {keys.length === 0 && (
+          <div className="text-xs italic" style={{ color: C.amberFaint }}>
+            no boards tagged @{win.projectName} yet — add one below
+          </div>
+        )}
+        {keys.map((k) => {
+          const { total, done } = boardStats(boards[k]);
+          return (
+            <button
+              key={k}
+              onClick={() => onOpenBoard(k)}
+              className="tt-fade-in tt-card-hover w-full text-left px-3 py-2"
+              style={{
+                background: C.surfaceHi,
+                border: `1px solid ${C.border}`,
+              }}
+            >
+              <div className="flex items-center justify-between text-sm mb-1">
+                <span style={{ color: C.amber }}>{k}</span>
+                <span style={{ color: C.amberDim, fontSize: 11 }}>
+                  {done}/{total}
+                </span>
+              </div>
+              <ProgressBar done={done} total={total} />
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        className="flex items-center gap-2 px-3 py-2 shrink-0"
+        style={{ borderTop: `1px solid ${C.border}` }}
+      >
+        <span style={{ color: C.amberDim, fontSize: 12 }}>+</span>
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+          placeholder={`new board in @${win.projectName}…`}
           className="flex-1 bg-transparent outline-none text-sm"
           style={{ color: C.amber, fontFamily: FONT }}
           spellCheck={false}
