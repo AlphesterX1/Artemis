@@ -5,6 +5,8 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  createContext,
+  useContext,
 } from "react";
 import {
   Terminal as TerminalIcon,
@@ -25,7 +27,174 @@ import {
   GripVertical,
   Sparkles,
   ListTree,
+  Palette,
 } from "lucide-react";
+
+/* ------------------------------------------------------------------ */
+/*  Theme Presets (Both Light and Dark Modes)                         */
+/* ------------------------------------------------------------------ */
+
+export const THEME_PRESETS = {
+  // Light Themes
+  "lavender-light": {
+    name: "Lavender Frost",
+    mode: "light",
+    bg: "radial-gradient(1200px 600px at 15% -10%, #f3effc 0%, transparent 60%), radial-gradient(1000px 700px at 100% 110%, #ded4f7 0%, transparent 55%), linear-gradient(160deg, #eae6f8 0%, #e2dbf5 45%, #d8cdf1 100%)",
+    desktopText: "text-violet-900",
+    windowBg: "border-white/60 bg-white/80 backdrop-blur-xl text-violet-950",
+    windowHeader: "bg-white/70 border-b border-violet-100 text-violet-900",
+    windowFocusRing: "ring-1 ring-violet-400/70",
+    accent: "#7c3aed",
+    accentBg: "bg-violet-600 hover:bg-violet-700 text-white",
+    accentText: "text-violet-600",
+    subtleBg: "bg-violet-50/60",
+    cardBg: "bg-white/60",
+    border: "border-violet-200/70",
+    iconColor: "text-violet-600",
+    cursorRing: "border-violet-500 bg-violet-500/10",
+    cursorDot: "bg-violet-700 shadow-[0_0_8px_rgba(124,58,237,0.7)]",
+    dockBg: "border-white/60 bg-white/70 shadow-2xl backdrop-blur-xl",
+    terminal: {
+      bg: "#0b0906",
+      text: "#ffb200",
+      dim: "#a97a1f",
+      glow: "rgba(255,178,0,0.45)",
+    },
+  },
+  "rose-light": {
+    name: "Rose Quartz",
+    mode: "light",
+    bg: "radial-gradient(1200px 600px at 15% -10%, #fff1f2 0%, transparent 60%), radial-gradient(1000px 700px at 100% 110%, #ffe4e6 0%, transparent 55%), linear-gradient(160deg, #fdf2f8 0%, #fce7f3 45%, #fbcfe8 100%)",
+    desktopText: "text-rose-950",
+    windowBg: "border-white/70 bg-white/85 backdrop-blur-xl text-rose-950",
+    windowHeader: "bg-rose-50/80 border-b border-rose-100 text-rose-950",
+    windowFocusRing: "ring-1 ring-rose-400/70",
+    accent: "#e11d48",
+    accentBg: "bg-rose-600 hover:bg-rose-700 text-white",
+    accentText: "text-rose-600",
+    subtleBg: "bg-rose-50/70",
+    cardBg: "bg-white/70",
+    border: "border-rose-200/70",
+    iconColor: "text-rose-600",
+    cursorRing: "border-rose-500 bg-rose-500/10",
+    cursorDot: "bg-rose-600 shadow-[0_0_8px_rgba(225,29,72,0.7)]",
+    dockBg: "border-white/60 bg-white/75 shadow-2xl backdrop-blur-xl",
+    terminal: {
+      bg: "#140508",
+      text: "#fb7185",
+      dim: "#9f1239",
+      glow: "rgba(251,113,133,0.45)",
+    },
+  },
+  "arctic-light": {
+    name: "Arctic Slate",
+    mode: "light",
+    bg: "radial-gradient(1200px 600px at 15% -10%, #f0f9ff 0%, transparent 60%), radial-gradient(1000px 700px at 100% 110%, #e0f2fe 0%, transparent 55%), linear-gradient(160deg, #f8fafc 0%, #f1f5f9 45%, #e2e8f0 100%)",
+    desktopText: "text-sky-950",
+    windowBg: "border-white/70 bg-white/85 backdrop-blur-xl text-slate-900",
+    windowHeader: "bg-sky-50/70 border-b border-sky-100 text-sky-950",
+    windowFocusRing: "ring-1 ring-sky-400/70",
+    accent: "#0284c7",
+    accentBg: "bg-sky-600 hover:bg-sky-700 text-white",
+    accentText: "text-sky-600",
+    subtleBg: "bg-sky-50/50",
+    cardBg: "bg-white/70",
+    border: "border-sky-200/70",
+    iconColor: "text-sky-600",
+    cursorRing: "border-sky-500 bg-sky-500/10",
+    cursorDot: "bg-sky-600 shadow-[0_0_8px_rgba(2,132,199,0.7)]",
+    dockBg: "border-white/60 bg-white/75 shadow-2xl backdrop-blur-xl",
+    terminal: {
+      bg: "#05131e",
+      text: "#38bdf8",
+      dim: "#0369a1",
+      glow: "rgba(56,189,248,0.45)",
+    },
+  },
+
+  // Dark Themes
+  "midnight-dark": {
+    name: "Midnight Nebula",
+    mode: "dark",
+    bg: "radial-gradient(1200px 600px at 15% -10%, #2e1065 0%, transparent 65%), radial-gradient(1000px 700px at 100% 110%, #1e1b4b 0%, transparent 60%), linear-gradient(160deg, #090614 0%, #0d0b21 45%, #150f2e 100%)",
+    desktopText: "text-violet-100",
+    windowBg: "border-violet-900/50 bg-[#120e24]/90 backdrop-blur-xl text-violet-100 shadow-[0_20px_50px_rgba(0,0,0,0.8)]",
+    windowHeader: "bg-[#181330]/90 border-b border-violet-900/60 text-violet-200",
+    windowFocusRing: "ring-1 ring-violet-500/60",
+    accent: "#a855f7",
+    accentBg: "bg-violet-600 hover:bg-violet-500 text-white",
+    accentText: "text-violet-400",
+    subtleBg: "bg-violet-950/40",
+    cardBg: "bg-white/[0.04]",
+    border: "border-violet-800/40",
+    iconColor: "text-violet-400",
+    cursorRing: "border-violet-400 bg-violet-500/20",
+    cursorDot: "bg-violet-400 shadow-[0_0_10px_rgba(168,85,247,0.9)]",
+    dockBg: "border-violet-900/60 bg-[#15102a]/80 shadow-[0_15px_40px_rgba(0,0,0,0.7)] backdrop-blur-xl",
+    terminal: {
+      bg: "#080612",
+      text: "#c084fc",
+      dim: "#7e22ce",
+      glow: "rgba(192,132,252,0.45)",
+    },
+  },
+  "cyber-dark": {
+    name: "Cyber Matrix",
+    mode: "dark",
+    bg: "radial-gradient(1200px 600px at 15% -10%, #064e3b 0%, transparent 65%), radial-gradient(1000px 700px at 100% 110%, #022c22 0%, transparent 60%), linear-gradient(160deg, #02120e 0%, #031c15 45%, #062b20 100%)",
+    desktopText: "text-emerald-100",
+    windowBg: "border-emerald-900/50 bg-[#041913]/90 backdrop-blur-xl text-emerald-100 shadow-[0_20px_50px_rgba(0,0,0,0.8)]",
+    windowHeader: "bg-[#06241b]/90 border-b border-emerald-900/60 text-emerald-200",
+    windowFocusRing: "ring-1 ring-emerald-500/60",
+    accent: "#10b981",
+    accentBg: "bg-emerald-600 hover:bg-emerald-500 text-white",
+    accentText: "text-emerald-400",
+    subtleBg: "bg-emerald-950/40",
+    cardBg: "bg-white/[0.04]",
+    border: "border-emerald-800/40",
+    iconColor: "text-emerald-400",
+    cursorRing: "border-emerald-400 bg-emerald-500/20",
+    cursorDot: "bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.9)]",
+    dockBg: "border-emerald-900/60 bg-[#06241b]/80 shadow-[0_15px_40px_rgba(0,0,0,0.7)] backdrop-blur-xl",
+    terminal: {
+      bg: "#02120e",
+      text: "#34d399",
+      dim: "#059669",
+      glow: "rgba(52,211,153,0.45)",
+    },
+  },
+  "amber-dark": {
+    name: "Obsidian Amber",
+    mode: "dark",
+    bg: "radial-gradient(1200px 600px at 15% -10%, #451a03 0%, transparent 65%), radial-gradient(1000px 700px at 100% 110%, #291102 0%, transparent 60%), linear-gradient(160deg, #110702 0%, #190c04 45%, #241206 100%)",
+    desktopText: "text-amber-100",
+    windowBg: "border-amber-900/50 bg-[#140b05]/90 backdrop-blur-xl text-amber-100 shadow-[0_20px_50px_rgba(0,0,0,0.8)]",
+    windowHeader: "bg-[#1c0f08]/90 border-b border-amber-900/60 text-amber-200",
+    windowFocusRing: "ring-1 ring-amber-500/60",
+    accent: "#f59e0b",
+    accentBg: "bg-amber-600 hover:bg-amber-500 text-stone-950 font-semibold",
+    accentText: "text-amber-400",
+    subtleBg: "bg-amber-950/40",
+    cardBg: "bg-white/[0.04]",
+    border: "border-amber-800/40",
+    iconColor: "text-amber-400",
+    cursorRing: "border-amber-400 bg-amber-500/20",
+    cursorDot: "bg-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.9)]",
+    dockBg: "border-amber-900/60 bg-[#1c0f08]/80 shadow-[0_15px_40px_rgba(0,0,0,0.7)] backdrop-blur-xl",
+    terminal: {
+      bg: "#0c0603",
+      text: "#fbbf24",
+      dim: "#b45309",
+      glow: "rgba(251,191,36,0.45)",
+    },
+  },
+};
+
+const ThemeContext = createContext({
+  themeKey: "lavender-light",
+  theme: THEME_PRESETS["lavender-light"],
+  setThemeKey: () => {},
+});
 
 /* ------------------------------------------------------------------ */
 /*  Utilities                                                          */
@@ -150,13 +319,8 @@ function layoutBoardForest(boards, w, h) {
   return positions;
 }
 
-const STORAGE_KEY = "artemis-os-state-v1";
+const STORAGE_KEY = "artemis-os-state-v2";
 
-/* Resolve a persistence backend at runtime: the platform's window.storage
-   API when it's present, otherwise a plain localStorage adapter (works in
-   any normal browser tab), otherwise null (in-memory only, for this
-   session). Every call is wrapped so a blocked or missing API degrades
-   gracefully instead of throwing. */
 function resolvePersistBackend() {
   if (typeof window === "undefined") return null;
   if (window.storage && typeof window.storage.get === "function") {
@@ -202,7 +366,7 @@ function makeInitialState() {
           { id: t1, name: "Open the File Manager", done: true, parentId: null },
           { id: t2, name: "Press Shift+T to summon the terminal", done: false, parentId: null },
           { id: t3, name: "Try: board -add sprint-1", done: false, parentId: null },
-          { id: t4, name: "Drag a task onto another to nest it", done: false, parentId: null },
+          { id: t4, name: "Click Palette in Dock to switch Theme", done: false, parentId: null },
         ],
         parent: null,
         tags: ["demo"],
@@ -562,6 +726,7 @@ function osReducer(state, action) {
 /* ------------------------------------------------------------------ */
 
 function CustomCursor({ containerRef }) {
+  const { theme } = useContext(ThemeContext);
   const dotRef = useRef(null);
   const ringRef = useRef(null);
   const pos = useRef({ x: -100, y: -100 });
@@ -609,12 +774,12 @@ function CustomCursor({ containerRef }) {
 
   const ringClass =
     variant === "pointer"
-      ? "w-9 h-9 border-2 border-violet-500 bg-violet-500/10"
+      ? `w-9 h-9 border-2 ${theme.cursorRing}`
       : variant === "drag"
-      ? "w-10 h-10 border-2 border-dashed border-violet-600 bg-violet-500/15"
+      ? `w-10 h-10 border-2 border-dashed ${theme.cursorRing}`
       : variant === "text"
-      ? "w-[3px] h-5 rounded-sm border-none bg-violet-600"
-      : "w-6 h-6 border border-violet-400/70 bg-violet-400/5";
+      ? "w-[3px] h-5 rounded-sm border-none bg-current opacity-80"
+      : `w-6 h-6 border ${theme.cursorRing} opacity-60`;
 
   return (
     <div
@@ -627,26 +792,34 @@ function CustomCursor({ containerRef }) {
       />
       <div
         ref={dotRef}
-        className="pointer-events-none absolute left-0 top-0 h-1.5 w-1.5 rounded-full bg-violet-700 shadow-[0_0_6px_rgba(124,58,237,0.6)]"
+        className={`pointer-events-none absolute left-0 top-0 h-1.5 w-1.5 rounded-full ${theme.cursorDot}`}
       />
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Small reusable UI: modal dialog (replaces window.prompt/confirm)   */
+/*  Modals                                                             */
 /* ------------------------------------------------------------------ */
 
 function Modal({ title, children, onClose }) {
+  const { theme } = useContext(ThemeContext);
+  const isDark = theme.mode === "dark";
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/20 backdrop-blur-sm animate-[fadeIn_120ms_ease-out]"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-[fadeIn_120ms_ease-out]"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-[360px] scale-100 animate-[popIn_180ms_ease-out] rounded-2xl border border-white/60 bg-white/90 shadow-2xl backdrop-blur-xl p-5">
-        <div className="mb-3 text-sm font-semibold text-violet-900">{title}</div>
+      <div
+        className={`w-[360px] scale-100 animate-[popIn_180ms_ease-out] rounded-2xl border shadow-2xl backdrop-blur-xl p-5 ${
+          isDark
+            ? "border-white/10 bg-stone-900/90 text-white"
+            : "border-white/60 bg-white/90 text-stone-900"
+        }`}
+      >
+        <div className="mb-3 text-sm font-semibold">{title}</div>
         {children}
       </div>
     </div>
@@ -654,6 +827,8 @@ function Modal({ title, children, onClose }) {
 }
 
 function PromptModal({ title, initial = "", confirmLabel = "Create", onSubmit, onClose }) {
+  const { theme } = useContext(ThemeContext);
+  const isDark = theme.mode === "dark";
   const [value, setValue] = useState(initial);
   const ref = useRef(null);
   useEffect(() => {
@@ -672,19 +847,25 @@ function PromptModal({ title, initial = "", confirmLabel = "Create", onSubmit, o
           ref={ref}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          className="w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm text-violet-950 outline-none focus:ring-2 focus:ring-violet-400"
+          className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 ${
+            isDark
+              ? "border-stone-700 bg-stone-800/80 text-white focus:ring-stone-500"
+              : "border-stone-200 bg-white text-stone-900 focus:ring-stone-400"
+          }`}
         />
         <div className="mt-4 flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-3 py-1.5 text-sm text-violet-700 transition-transform hover:bg-violet-100 active:scale-95"
+            className={`rounded-lg px-3 py-1.5 text-sm transition-transform active:scale-95 ${
+              isDark ? "text-stone-400 hover:bg-stone-800" : "text-stone-600 hover:bg-stone-100"
+            }`}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-medium text-white transition-transform hover:bg-violet-700 active:scale-95"
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-transform active:scale-95 ${theme.accentBg}`}
           >
             {confirmLabel}
           </button>
@@ -695,13 +876,17 @@ function PromptModal({ title, initial = "", confirmLabel = "Create", onSubmit, o
 }
 
 function ConfirmModal({ title, message, danger, onConfirm, onClose }) {
+  const { theme } = useContext(ThemeContext);
+  const isDark = theme.mode === "dark";
   return (
     <Modal title={title} onClose={onClose}>
-      <p className="text-sm text-violet-700">{message}</p>
+      <p className={`text-sm ${isDark ? "text-stone-300" : "text-stone-600"}`}>{message}</p>
       <div className="mt-4 flex justify-end gap-2">
         <button
           onClick={onClose}
-          className="rounded-lg px-3 py-1.5 text-sm text-violet-700 transition-transform hover:bg-violet-100 active:scale-95"
+          className={`rounded-lg px-3 py-1.5 text-sm transition-transform active:scale-95 ${
+            isDark ? "text-stone-400 hover:bg-stone-800" : "text-stone-600 hover:bg-stone-100"
+          }`}
         >
           Cancel
         </button>
@@ -711,7 +896,7 @@ function ConfirmModal({ title, message, danger, onConfirm, onClose }) {
             onClose();
           }}
           className={`rounded-lg px-3 py-1.5 text-sm font-medium text-white transition-transform active:scale-95 ${
-            danger ? "bg-rose-500 hover:bg-rose-600" : "bg-violet-600 hover:bg-violet-700"
+            danger ? "bg-rose-600 hover:bg-rose-700" : theme.accentBg
           }`}
         >
           Confirm
@@ -726,20 +911,23 @@ function ConfirmModal({ title, message, danger, onConfirm, onClose }) {
 /* ------------------------------------------------------------------ */
 
 function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onToggleMax, onFocus, onDragStart, children }) {
+  const { theme } = useContext(ThemeContext);
+  const isDark = theme.mode === "dark";
   if (win.minimized) return null;
+
   return (
     <div
       className={`absolute flex flex-col overflow-hidden rounded-xl border shadow-2xl transition-shadow duration-200 will-change-transform ${
         dark
-          ? "animate-[terminalIn_320ms_ease-out] border-amber-900/60 bg-[#0b0906]"
-          : "animate-[winIn_260ms_cubic-bezier(0.16,1,0.3,1)] border-white/60 bg-white/75 backdrop-blur-xl"
-      } ${isTop ? "ring-1 ring-violet-300/70" : ""}`}
+          ? "animate-[terminalIn_320ms_ease-out] border-stone-800/80 bg-[#080604]"
+          : `animate-[winIn_260ms_cubic-bezier(0.16,1,0.3,1)] ${theme.windowBg}`
+      } ${isTop ? theme.windowFocusRing : ""}`}
       style={{ left: win.x, top: win.y, width: win.width, height: win.height, zIndex: win.z }}
       onMouseDown={onFocus}
     >
       <div
         className={`flex select-none items-center gap-2 px-3 py-2 ${
-          dark ? "bg-gradient-to-b from-amber-950/80 to-[#0b0906] text-amber-300" : "bg-white/70 text-violet-900"
+          dark ? "bg-stone-900/90 text-stone-200 border-b border-stone-800" : theme.windowHeader
         }`}
         style={{ cursor: "inherit" }}
         data-cursor-drag
@@ -749,14 +937,14 @@ function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onTog
         }}
         onDoubleClick={onToggleMax}
       >
-        <span className={dark ? "text-amber-400" : "text-violet-500"}>{icon}</span>
+        <span className={dark ? "text-amber-400" : theme.accentText}>{icon}</span>
         <span className="text-xs font-semibold tracking-wide">{title}</span>
         <div className="ml-auto flex items-center gap-1.5">
           <button
             onMouseDown={(e) => e.stopPropagation()}
             onClick={onMinimize}
             className={`grid h-5 w-5 place-items-center rounded-full transition-transform hover:scale-110 active:scale-90 ${
-              dark ? "bg-amber-900/40 hover:bg-amber-800/60 text-amber-300" : "bg-violet-100 hover:bg-violet-200 text-violet-700"
+              isDark || dark ? "bg-white/10 hover:bg-white/20 text-white/80" : "bg-black/5 hover:bg-black/10 text-black/70"
             }`}
             title="Minimize"
           >
@@ -766,7 +954,7 @@ function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onTog
             onMouseDown={(e) => e.stopPropagation()}
             onClick={onToggleMax}
             className={`grid h-5 w-5 place-items-center rounded-full transition-transform hover:scale-110 active:scale-90 ${
-              dark ? "bg-amber-900/40 hover:bg-amber-800/60 text-amber-300" : "bg-violet-100 hover:bg-violet-200 text-violet-700"
+              isDark || dark ? "bg-white/10 hover:bg-white/20 text-white/80" : "bg-black/5 hover:bg-black/10 text-black/70"
             }`}
             title="Maximize"
           >
@@ -775,7 +963,7 @@ function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onTog
           <button
             onMouseDown={(e) => e.stopPropagation()}
             onClick={onClose}
-            className="grid h-5 w-5 place-items-center rounded-full bg-rose-400/80 text-white transition-transform hover:scale-110 hover:bg-rose-500 active:scale-90"
+            className="grid h-5 w-5 place-items-center rounded-full bg-rose-500 text-white transition-transform hover:scale-110 hover:bg-rose-600 active:scale-90"
             title="Close"
           >
             <X size={11} />
@@ -792,6 +980,8 @@ function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onTog
 /* ------------------------------------------------------------------ */
 
 function FileManagerApp({ boards, dispatch, openWindow }) {
+  const { theme } = useContext(ThemeContext);
+  const isDark = theme.mode === "dark";
   const [menu, setMenu] = useState(null);
   const [modal, setModal] = useState(null);
 
@@ -804,12 +994,12 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
   const names = Object.keys(boards).sort();
 
   return (
-    <div className="flex h-full flex-col bg-gradient-to-b from-white/40 to-violet-50/40">
-      <div className="flex items-center justify-between border-b border-violet-100 px-4 py-2">
-        <div className="text-xs font-medium text-violet-500">Boards · {names.length}</div>
+    <div className={`flex h-full flex-col ${theme.subtleBg}`}>
+      <div className={`flex items-center justify-between border-b ${theme.border} px-4 py-2`}>
+        <div className={`text-xs font-medium opacity-70`}>Boards · {names.length}</div>
         <button
           onClick={() => setModal({ type: "new" })}
-          className="flex items-center gap-1 rounded-lg bg-violet-600 px-2.5 py-1.5 text-xs font-medium text-white shadow transition-transform hover:bg-violet-700 active:scale-95"
+          className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium shadow transition-transform active:scale-95 ${theme.accentBg}`}
         >
           <Kanban size={13} /> New Board
         </button>
@@ -817,7 +1007,7 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
 
       <div className="grid flex-1 auto-rows-min grid-cols-3 gap-4 overflow-auto p-4 sm:grid-cols-4">
         {names.length === 0 && (
-          <div className="col-span-full mt-10 text-center text-sm text-violet-400">
+          <div className="col-span-full mt-10 text-center text-sm opacity-50">
             No boards yet — create one to get started.
           </div>
         )}
@@ -834,18 +1024,20 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
                 e.stopPropagation();
                 setMenu({ name, x: e.clientX, y: e.clientY });
               }}
-              className="group flex animate-[popIn_220ms_ease-out_backwards] flex-col items-center gap-1.5 rounded-xl p-2 text-center transition-transform hover:-translate-y-0.5 hover:bg-violet-100/70"
+              className={`group flex animate-[popIn_220ms_ease-out_backwards] flex-col items-center gap-1.5 rounded-xl p-2 text-center transition-transform hover:-translate-y-0.5 ${
+                isDark ? "hover:bg-white/10" : "hover:bg-black/5"
+              }`}
             >
               <div className="relative">
-                <Folder size={40} className="text-violet-400 drop-shadow-sm transition-colors group-hover:text-violet-500" strokeWidth={1.5} />
-                <span className="absolute -bottom-1 -right-1 rounded-full bg-violet-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
+                <Folder size={40} className={`${theme.iconColor} opacity-80 drop-shadow-sm transition-all group-hover:opacity-100 group-hover:scale-105`} strokeWidth={1.5} />
+                <span className="absolute -bottom-1 -right-1 rounded-full bg-stone-900 px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
                   {done}/{total}
                 </span>
               </div>
-              <span className="line-clamp-1 max-w-[92px] text-[11px] font-medium text-violet-800">{name}</span>
-              {parent && <span className="text-[9px] text-violet-400">in {parent}</span>}
-              <div className="h-1 w-16 overflow-hidden rounded-full bg-violet-100">
-                <div className="h-full bg-violet-500 transition-all duration-500" style={{ width: `${pct}%` }} />
+              <span className="line-clamp-1 max-w-[92px] text-[11px] font-medium">{name}</span>
+              {parent && <span className="text-[9px] opacity-60">in {parent}</span>}
+              <div className="h-1 w-16 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+                <div className="h-full bg-current transition-all duration-500" style={{ width: `${pct}%`, color: theme.accent }} />
               </div>
             </button>
           );
@@ -854,7 +1046,9 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
 
       {menu && (
         <div
-          className="fixed z-[9998] w-40 origin-top-left animate-[popIn_120ms_ease-out] overflow-hidden rounded-lg border border-violet-100 bg-white shadow-xl"
+          className={`fixed z-[9998] w-40 origin-top-left animate-[popIn_120ms_ease-out] overflow-hidden rounded-lg border shadow-xl ${
+            isDark ? "border-stone-700 bg-stone-900 text-stone-200" : "border-stone-200 bg-white text-stone-800"
+          }`}
           style={{ left: menu.x, top: menu.y }}
           onMouseDown={(e) => e.stopPropagation()}
         >
@@ -863,7 +1057,7 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
               openWindow("board", { boardName: menu.name });
               setMenu(null);
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-xs text-violet-700 hover:bg-violet-50"
+            className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-black/5 dark:hover:bg-white/10"
           >
             <FolderOpen size={13} /> Open
           </button>
@@ -872,7 +1066,7 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
               setModal({ type: "rename", name: menu.name });
               setMenu(null);
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-xs text-violet-700 hover:bg-violet-50"
+            className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-black/5 dark:hover:bg-white/10"
           >
             <Pencil size={13} /> Rename
           </button>
@@ -882,7 +1076,7 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
                 dispatch({ type: "UNSET_BOARD_PARENT", name: menu.name });
                 setMenu(null);
               }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-xs text-violet-700 hover:bg-violet-50"
+              className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-black/5 dark:hover:bg-white/10"
             >
               <ListTree size={13} /> Move to top level
             </button>
@@ -892,7 +1086,7 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
               setModal({ type: "delete", name: menu.name });
               setMenu(null);
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-xs text-rose-600 hover:bg-rose-50"
+            className="flex w-full items-center gap-2 px-3 py-2 text-xs text-rose-500 hover:bg-rose-500/10"
           >
             <Trash2 size={13} /> Delete
           </button>
@@ -936,7 +1130,7 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Board window (dual pending / done view)                            */
+/*  Board window                                                       */
 /* ------------------------------------------------------------------ */
 
 function buildColumnTree(tasks) {
@@ -950,6 +1144,8 @@ function buildColumnTree(tasks) {
 }
 
 function TaskRow({ task, depth, board, dispatch, onDrop }) {
+  const { theme } = useContext(ThemeContext);
+  const isDark = theme.mode === "dark";
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.name);
   const [over, setOver] = useState(false);
@@ -973,14 +1169,20 @@ function TaskRow({ task, depth, board, dispatch, onDrop }) {
       }}
       style={{ marginLeft: depth * 16 }}
       className={`group flex animate-[slideIn_160ms_ease-out] items-center gap-2 rounded-lg px-2 py-1.5 transition-colors ${
-        over ? "bg-violet-200/70 ring-1 ring-violet-400" : "hover:bg-white/70"
+        over
+          ? isDark ? "bg-white/20 ring-1 ring-white/40" : "bg-black/10 ring-1 ring-black/20"
+          : isDark ? "hover:bg-white/10" : "hover:bg-white/70"
       }`}
     >
-      <GripVertical size={12} className="shrink-0 text-violet-300" />
+      <GripVertical size={12} className="shrink-0 opacity-40" />
       <button
         onClick={() => dispatch({ type: "TOGGLE_TASK", board, taskId: task.id, done: !task.done })}
         className={`grid h-4 w-4 shrink-0 place-items-center rounded border transition-transform active:scale-90 ${
-          task.done ? "border-violet-500 bg-violet-500 text-white" : "border-violet-300 bg-white"
+          task.done
+            ? theme.accentBg
+            : isDark
+            ? "border-stone-600 bg-stone-800"
+            : "border-stone-300 bg-white"
         }`}
       >
         {task.done && <Check size={11} strokeWidth={3} className="animate-[popIn_180ms_ease-out]" />}
@@ -1001,19 +1203,21 @@ function TaskRow({ task, depth, board, dispatch, onDrop }) {
               setEditing(false);
             }
           }}
-          className="flex-1 rounded border border-violet-300 bg-white px-1.5 py-0.5 text-xs outline-none"
+          className={`flex-1 rounded border px-1.5 py-0.5 text-xs outline-none ${
+            isDark ? "border-stone-700 bg-stone-900 text-white" : "border-stone-300 bg-white text-stone-900"
+          }`}
         />
       ) : (
         <span
           onDoubleClick={() => setEditing(true)}
-          className={`flex-1 truncate text-xs transition-colors ${task.done ? "text-violet-400 line-through" : "text-violet-900"}`}
+          className={`flex-1 truncate text-xs transition-colors ${task.done ? "line-through opacity-40" : ""}`}
         >
           {task.name}
         </span>
       )}
       <button
         onClick={() => dispatch({ type: "DELETE_TASK", board, taskId: task.id })}
-        className="invisible shrink-0 rounded p-1 text-violet-300 transition-transform hover:bg-rose-50 hover:text-rose-500 group-hover:visible active:scale-90"
+        className="invisible shrink-0 rounded p-1 opacity-50 transition-transform hover:text-rose-500 group-hover:visible active:scale-90"
       >
         <Trash2 size={12} />
       </button>
@@ -1022,6 +1226,7 @@ function TaskRow({ task, depth, board, dispatch, onDrop }) {
 }
 
 function TaskColumn({ label, tasks, board, dispatch, accent }) {
+  const { theme } = useContext(ThemeContext);
   const tree = useMemo(() => buildColumnTree(tasks), [tasks]);
 
   const handleDrop = useCallback(
@@ -1046,15 +1251,15 @@ function TaskColumn({ label, tasks, board, dispatch, accent }) {
         const draggedId = e.dataTransfer.getData("text/plain");
         if (draggedId) dispatch({ type: "SET_TASK_PARENT", board, taskId: draggedId, parentId: null });
       }}
-      className="flex min-h-0 flex-1 flex-col rounded-xl bg-white/50 p-2"
+      className={`flex min-h-0 flex-1 flex-col rounded-xl p-2.5 ${theme.cardBg} border ${theme.border}`}
     >
       <div className={`mb-1.5 flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide ${accent}`}>
         <span className="h-1.5 w-1.5 rounded-full bg-current" />
         {label}
-        <span className="ml-auto text-violet-400">{tasks.length}</span>
+        <span className="ml-auto opacity-70">{tasks.length}</span>
       </div>
       <div className="flex-1 space-y-0.5 overflow-auto pr-1">
-        {tasks.length === 0 && <div className="px-2 py-3 text-[11px] text-violet-300">Nothing here</div>}
+        {tasks.length === 0 && <div className="px-2 py-3 text-[11px] opacity-40">Nothing here</div>}
         {renderLevel("__root__", 0)}
       </div>
     </div>
@@ -1062,24 +1267,26 @@ function TaskColumn({ label, tasks, board, dispatch, accent }) {
 }
 
 function BoardApp({ boardName, boards, dispatch }) {
+  const { theme } = useContext(ThemeContext);
+  const isDark = theme.mode === "dark";
   const board = boards[boardName];
   const [draft, setDraft] = useState("");
   if (!board) {
-    return <div className="grid h-full place-items-center text-sm text-violet-400">Board deleted.</div>;
+    return <div className="grid h-full place-items-center text-sm opacity-50">Board deleted.</div>;
   }
   const pending = board.tasks.filter((t) => !t.done);
   const done = board.tasks.filter((t) => t.done);
   const { pct, total } = countStats(board);
 
   return (
-    <div className="flex h-full flex-col bg-gradient-to-b from-white/40 to-violet-50/40">
-      <div className="border-b border-violet-100 px-4 py-2.5">
+    <div className={`flex h-full flex-col ${theme.subtleBg}`}>
+      <div className={`border-b ${theme.border} px-4 py-2.5`}>
         <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold text-violet-900">{boardName}</div>
-          <div className="text-[11px] text-violet-400">{total} tasks · {pct}% done</div>
+          <div className="text-sm font-semibold">{boardName}</div>
+          <div className="text-[11px] opacity-70">{total} tasks · {pct}% done</div>
         </div>
-        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-violet-100">
-          <div className="h-full bg-gradient-to-r from-violet-400 to-violet-600 transition-all duration-500" style={{ width: `${pct}%` }} />
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+          <div className="h-full transition-all duration-500" style={{ width: `${pct}%`, background: theme.accent }} />
         </div>
         <form
           className="mt-2.5 flex gap-2"
@@ -1095,26 +1302,30 @@ function BoardApp({ boardName, boards, dispatch }) {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Add a task and press Enter…"
-            className="flex-1 rounded-lg border border-violet-200 bg-white px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-violet-300"
+            className={`flex-1 rounded-lg border px-3 py-1.5 text-xs outline-none focus:ring-2 ${
+              isDark ? "border-stone-700 bg-stone-900/80 text-white focus:ring-stone-500" : "border-stone-200 bg-white text-stone-900 focus:ring-stone-300"
+            }`}
           />
-          <button type="submit" className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition-transform hover:bg-violet-700 active:scale-95">
+          <button type="submit" className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-transform active:scale-95 ${theme.accentBg}`}>
             <Plus size={13} />
           </button>
         </form>
       </div>
       <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 p-3">
-        <TaskColumn label="Pending" tasks={pending} board={boardName} dispatch={dispatch} accent="text-amber-600" />
-        <TaskColumn label="Done" tasks={done} board={boardName} dispatch={dispatch} accent="text-emerald-600" />
+        <TaskColumn label="Pending" tasks={pending} board={boardName} dispatch={dispatch} accent="text-amber-500" />
+        <TaskColumn label="Done" tasks={done} board={boardName} dispatch={dispatch} accent="text-emerald-500" />
       </div>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Graph view (real board hierarchy, radial layout)                   */
+/*  Graph view                                                         */
 /* ------------------------------------------------------------------ */
 
 function GraphApp({ boards, openWindow }) {
+  const { theme } = useContext(ThemeContext);
+  const isDark = theme.mode === "dark";
   const [ref, setRef] = useState(null);
   const [size, setSize] = useState({ width: 600, height: 420 });
   useEffect(() => {
@@ -1130,11 +1341,11 @@ function GraphApp({ boards, openWindow }) {
   const positions = keys.length ? layoutBoardForest(boards, size.width, size.height) : {};
 
   return (
-    <div className="flex h-full flex-col bg-gradient-to-b from-white/40 to-violet-50/40 p-3">
-      <div className="mb-1 text-xs font-medium text-violet-500">Board relationship graph</div>
+    <div className={`flex h-full flex-col p-3 ${theme.subtleBg}`}>
+      <div className="mb-1 text-xs font-medium opacity-70">Board relationship graph</div>
       <div ref={setRef} className="relative flex-1 overflow-hidden">
         {keys.length === 0 && (
-          <div className="grid h-full place-items-center text-xs text-violet-300">No boards yet</div>
+          <div className="grid h-full place-items-center text-xs opacity-40">No boards yet</div>
         )}
         <svg width={size.width} height={size.height} className="absolute inset-0">
           {keys.map((k) => {
@@ -1143,7 +1354,7 @@ function GraphApp({ boards, openWindow }) {
             const p1 = positions[parent];
             const p2 = positions[k];
             return (
-              <line key={`e-${k}`} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#c4b5fd" strokeWidth={1.5} />
+              <line key={`e-${k}`} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={isDark ? "#4b5563" : "#cbd5e1"} strokeWidth={1.5} />
             );
           })}
         </svg>
@@ -1166,11 +1377,13 @@ function GraphApp({ boards, openWindow }) {
               }}
               onClick={() => openWindow("board", { boardName: k })}
               className={`absolute flex flex-col items-center justify-center rounded-full border-2 text-center transition-transform animate-[popIn_220ms_ease-out_backwards] hover:scale-110 ${
-                complete ? "border-violet-600 bg-violet-400" : "border-violet-500 bg-violet-100"
+                complete
+                  ? isDark ? "border-emerald-400 bg-emerald-950 text-emerald-100" : "border-emerald-500 bg-emerald-100 text-emerald-900"
+                  : isDark ? "border-stone-600 bg-stone-800 text-stone-200" : "border-stone-300 bg-white text-stone-800"
               } ${complete ? "animate-[pulse_2.4s_ease-in-out_infinite]" : ""}`}
             >
-              <span className="w-full truncate px-1 text-[9px] font-semibold text-violet-800">{k}</span>
-              <span className="text-[8px] text-violet-600">{done}/{total}</span>
+              <span className="w-full truncate px-1 text-[9px] font-semibold">{k}</span>
+              <span className="text-[8px] opacity-70">{done}/{total}</span>
             </button>
           );
         })}
@@ -1183,20 +1396,22 @@ function GraphApp({ boards, openWindow }) {
 /*  Project view                                                       */
 /* ------------------------------------------------------------------ */
 
-function ProjectApp({ projectName, boards, dispatch, openWindow }) {
+function ProjectApp({ projectName, boards, openWindow }) {
+  const { theme } = useContext(ThemeContext);
+  const isDark = theme.mode === "dark";
   const keys = Object.keys(boards).filter((k) => (boards[k].tags || []).some((t) => norm(t) === norm(projectName)));
   return (
-    <div className="flex h-full flex-col gap-3 bg-gradient-to-b from-white/40 to-violet-50/40 p-4">
+    <div className={`flex h-full flex-col gap-3 p-4 ${theme.subtleBg}`}>
       <div className="flex items-center gap-2">
-        <Rocket size={16} className="text-violet-500" />
-        <div className="text-sm font-semibold text-violet-900">@{projectName}</div>
+        <Rocket size={16} className={theme.accentText} />
+        <div className="text-sm font-semibold">@{projectName}</div>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto rounded-xl bg-white/60 p-3">
-        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-violet-400">
+      <div className={`min-h-0 flex-1 overflow-auto rounded-xl p-3 ${theme.cardBg} border ${theme.border}`}>
+        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide opacity-60">
           Tagged boards ({keys.length})
         </div>
         {keys.length === 0 && (
-          <div className="px-1 text-xs text-violet-400">
+          <div className="px-1 text-xs opacity-60">
             No boards tagged @{projectName} yet — try <code>board -tag &lt;name&gt; @{projectName}</code> in the terminal.
           </div>
         )}
@@ -1207,10 +1422,12 @@ function ProjectApp({ projectName, boards, dispatch, openWindow }) {
               <button
                 key={n}
                 onClick={() => openWindow("board", { boardName: n })}
-                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-violet-700 transition-transform hover:translate-x-0.5 hover:bg-violet-100"
+                className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-transform hover:translate-x-0.5 ${
+                  isDark ? "hover:bg-white/10" : "hover:bg-black/5"
+                }`}
               >
-                <Folder size={13} className="text-violet-400" /> {n}
-                <span className="ml-auto text-violet-400">{done}/{total}</span>
+                <Folder size={13} className={theme.iconColor} /> {n}
+                <span className="ml-auto opacity-60">{done}/{total}</span>
               </button>
             );
           })}
@@ -1221,15 +1438,8 @@ function ProjectApp({ projectName, boards, dispatch, openWindow }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Terminal — rich command engine                                     */
+/*  Terminal                                                           */
 /* ------------------------------------------------------------------ */
-
-const THEMES = {
-  amber: { text: "#ffb200", dim: "#a97a1f", faint: "#6b4c17", glow: "rgba(255,178,0,0.45)" },
-  green: { text: "#33ff66", dim: "#1f9e42", faint: "#155c29", glow: "rgba(51,255,102,0.45)" },
-  cyan: { text: "#4ee7ff", dim: "#2b93a8", faint: "#1a5866", glow: "rgba(78,231,255,0.45)" },
-  paper: { text: "#f2ead8", dim: "#a89d84", faint: "#5f5748", glow: "rgba(242,234,216,0.35)" },
-};
 
 const HELP_LINES = [
   "commands:",
@@ -1264,18 +1474,10 @@ const HELP_LINES = [
   "  open -project <name>               open every board tagged with a project",
   "  graph                              open the board relationship graph",
   "",
-  "  boards open automatically the moment you create or `cd` into them —",
-  "  click a board in the Boards window or dock to bring it back up.",
-  "",
-  "  find <text>                        search task names across all boards",
-  "  stats                              show overall progress",
-  "  history                            show recently run commands",
-  "  theme <amber|green|cyan|paper>      change terminal theme",
-  "  date · whoami · clear · help",
+  "  theme <name>                       switch themes: lavender-light, rose-light,",
+  "                                     arctic-light, midnight-dark, cyber-dark, amber-dark",
+  "  find <text> · stats · history · date · whoami · clear · help",
   "  reset -yes                         erase every board & task",
-  "",
-  "  aliases: mkdir = board -add   touch = task -add",
-  "           rmdir = board -del   rm = task -del / board -del",
 ];
 
 const COMMAND_WORDS = [
@@ -1288,7 +1490,8 @@ function getPromptStr(cwd) {
   return cwd ? `guest:~/${cwd}$` : "guest:~$";
 }
 
-function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, setTheme }) {
+function TerminalApp({ boards, projects, dispatch, openWindow, windows }) {
+  const { theme, themeKey, setThemeKey } = useContext(ThemeContext);
   const [cwd, setCwd] = useState(null);
   const [lines, setLines] = useState([
     { id: uid("l"), kind: "sys", text: "Artemis Terminal — type 'help' for commands." },
@@ -1313,7 +1516,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
     setLines((L) => [...L, { id: uid("l"), kind, text }]);
   }, []);
 
-  const th = THEMES[theme] || THEMES.amber;
+  const th = theme.terminal;
 
   const printBoardList = useCallback(() => {
     const allKeys = Object.keys(boards);
@@ -1644,11 +1847,11 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
           return print(cmdLog.length ? cmdLog.map((c, i) => `  ${i + 1}  ${c}`).join("\n") : "no commands yet");
         case "theme": {
           const arg = (tokens[1] || "").toLowerCase();
-          const names = Object.keys(THEMES);
-          if (!arg) return print(`current theme: ${theme}\navailable: ${names.join(", ")}`);
-          if (!names.includes(arg)) return print(`unknown theme '${arg}' — try: ${names.join(", ")}`, "err");
-          setTheme(arg);
-          return print(`theme set to '${arg}'`, "ok");
+          const validKeys = Object.keys(THEME_PRESETS);
+          if (!arg) return print(`current theme: ${themeKey}\navailable: ${validKeys.join(", ")}`);
+          if (!validKeys.includes(arg)) return print(`unknown theme '${arg}' — try: ${validKeys.join(", ")}`, "err");
+          setThemeKey(arg);
+          return print(`theme set to '${THEME_PRESETS[arg].name}'`, "ok");
         }
         case "init": {
           if (tokens[1] === "-del") {
@@ -1756,7 +1959,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
         }
       }
     },
-    [boards, projects, cwd, cmdLog, dispatch, openWindow, print, printBoardList, printBoardTasks, setTheme, theme, windows]
+    [boards, projects, cwd, cmdLog, dispatch, openWindow, print, printBoardList, printBoardTasks, setThemeKey, themeKey, windows]
   );
 
   /* ---------- suggestions ---------- */
@@ -1787,7 +1990,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
       return [];
     }
     if (head === "cd") return boardNames;
-    if (head === "theme") return Object.keys(THEMES);
+    if (head === "theme") return Object.keys(THEME_PRESETS);
     if (head === "open") {
       if (ctx.length === 1) return ["-project"];
       if (ctx[1] === "-project") return projects;
@@ -1882,7 +2085,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
   return (
     <div
       className="relative flex h-full flex-col overflow-hidden font-mono"
-      style={{ background: "#0b0906", color: th.text }}
+      style={{ background: th.bg, color: th.text }}
       onMouseDown={() => inputRef.current?.focus()}
     >
       <div
@@ -1934,7 +2137,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
           {showSuggestions && (
             <div
               className="absolute left-0 z-[500] max-h-48 min-w-[220px] max-w-[360px] animate-[fadeIn_120ms_ease-out] overflow-y-auto border"
-              style={{ bottom: "calc(100% + 6px)", background: "#1e1509", borderColor: th.dim, boxShadow: "0 10px 28px rgba(0,0,0,0.55)" }}
+              style={{ bottom: "calc(100% + 6px)", background: "#11100f", borderColor: th.dim, boxShadow: "0 10px 28px rgba(0,0,0,0.55)" }}
             >
               {suggestions.map((s, i) => {
                 const active = i === activeIndex;
@@ -1962,52 +2165,29 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
 }
 
 /* ------------------------------------------------------------------ */
-/*  Dock / Taskbar                                                     */
+/*  Dock & Theme Switcher                                              */
 /* ------------------------------------------------------------------ */
 
 function Clock24() {
+  const { theme } = useContext(ThemeContext);
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000 * 15);
     return () => clearInterval(id);
   }, []);
   return (
-    <div className="flex items-center gap-1.5 text-[11px] font-medium text-violet-700">
+    <div className={`flex items-center gap-1.5 text-[11px] font-medium opacity-80 ${theme.mode === "dark" ? "text-white" : "text-stone-800"}`}>
       <Clock size={12} />
       {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
     </div>
   );
 }
 
-function SaveIndicator({ status }) {
-  const meta = {
-    restoring: { label: "Restoring…", dot: "bg-violet-400 animate-pulse" },
-    saving: { label: "Saving…", dot: "bg-amber-400 animate-pulse" },
-    saved: { label: "Saved", dot: "bg-emerald-500" },
-    error: { label: "Save failed", dot: "bg-rose-500" },
-    unavailable: { label: "This session only", dot: "bg-violet-300" },
-    idle: { label: "", dot: "bg-violet-300" },
-  }[status] || { label: "", dot: "bg-violet-300" };
-  if (!meta.label) return null;
-  return (
-    <div
-      className="flex items-center gap-1.5 text-[10px] font-medium text-violet-500"
-      title={
-        status === "unavailable"
-          ? "No storage is reachable here (platform storage and localStorage both failed) — progress won't survive a refresh."
-          : status === "error"
-          ? "The last save attempt failed — your changes are still here, but may not persist."
-          : "Boards, tasks, and projects are saved automatically."
-      }
-    >
-      <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
-      {meta.label}
-    </div>
-  );
-}
-
-function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow, saveStatus }) {
+function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow }) {
+  const { theme, themeKey, setThemeKey } = useContext(ThemeContext);
+  const isDark = theme.mode === "dark";
   const [startOpen, setStartOpen] = useState(false);
+  const [themePickerOpen, setThemePickerOpen] = useState(false);
 
   const label = (w) => {
     if (w.kind === "terminal") return "Terminal";
@@ -2027,18 +2207,24 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-3 z-[9000] flex justify-center">
-      <div className="pointer-events-auto flex animate-[slideUp_260ms_cubic-bezier(0.16,1,0.3,1)] items-center gap-1 rounded-2xl border border-white/60 bg-white/60 px-2 py-1.5 shadow-xl backdrop-blur-xl">
+      <div className={`pointer-events-auto flex animate-[slideUp_260ms_cubic-bezier(0.16,1,0.3,1)] items-center gap-1 rounded-2xl border px-2 py-1.5 ${theme.dockBg}`}>
+        {/* Start / Launch Menu */}
         <div className="relative">
           <button
-            onClick={() => setStartOpen((s) => !s)}
-            className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 text-white shadow transition-transform hover:scale-110 active:scale-95"
+            onClick={() => {
+              setStartOpen((s) => !s);
+              setThemePickerOpen(false);
+            }}
+            className={`grid h-9 w-9 place-items-center rounded-xl shadow transition-transform hover:scale-110 active:scale-95 ${theme.accentBg}`}
             title="Artemis"
           >
             <Sparkles size={16} />
           </button>
           {startOpen && (
             <div
-              className="absolute bottom-12 left-0 w-44 origin-bottom-left animate-[popIn_140ms_ease-out] overflow-hidden rounded-xl border border-violet-100 bg-white shadow-2xl"
+              className={`absolute bottom-12 left-0 w-44 origin-bottom-left animate-[popIn_140ms_ease-out] overflow-hidden rounded-xl border shadow-2xl ${
+                isDark ? "border-stone-700 bg-stone-900/95 text-stone-200" : "border-stone-200 bg-white/95 text-stone-800"
+              }`}
               onMouseLeave={() => setStartOpen(false)}
             >
               <button
@@ -2046,7 +2232,7 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
                   openWindow("terminal");
                   setStartOpen(false);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs text-violet-700 hover:bg-violet-50"
+                className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-black/5 dark:hover:bg-white/10"
               >
                 <TerminalIcon size={13} /> Open Terminal
               </button>
@@ -2055,7 +2241,7 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
                   openWindow("file-manager");
                   setStartOpen(false);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs text-violet-700 hover:bg-violet-50"
+                className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-black/5 dark:hover:bg-white/10"
               >
                 <Kanban size={13} /> Boards
               </button>
@@ -2064,7 +2250,7 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
                   openWindow("graph");
                   setStartOpen(false);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs text-violet-700 hover:bg-violet-50"
+                className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-black/5 dark:hover:bg-white/10"
               >
                 <Network size={13} /> Graph View
               </button>
@@ -2074,20 +2260,95 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
 
         <button
           onClick={() => openWindow("file-manager")}
-          className="grid h-9 w-9 place-items-center rounded-xl text-violet-600 transition-transform hover:scale-110 hover:bg-violet-100 active:scale-95"
+          className={`grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95 ${
+            isDark ? "text-stone-300 hover:bg-white/10" : "text-stone-700 hover:bg-black/5"
+          }`}
           title="Boards"
         >
           <Kanban size={17} />
         </button>
         <button
           onClick={() => openWindow("terminal")}
-          className="grid h-9 w-9 place-items-center rounded-xl text-violet-600 transition-transform hover:scale-110 hover:bg-violet-100 active:scale-95"
+          className={`grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95 ${
+            isDark ? "text-stone-300 hover:bg-white/10" : "text-stone-700 hover:bg-black/5"
+          }`}
           title="Terminal (Shift+T)"
         >
           <TerminalIcon size={17} />
         </button>
 
-        {windows.length > 0 && <div className="mx-1 h-6 w-px bg-violet-200" />}
+        {/* Theme Switcher Button */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              setThemePickerOpen((p) => !p);
+              setStartOpen(false);
+            }}
+            className={`grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95 ${
+              isDark ? "text-stone-300 hover:bg-white/10" : "text-stone-700 hover:bg-black/5"
+            }`}
+            title="Themes"
+          >
+            <Palette size={17} />
+          </button>
+          {themePickerOpen && (
+            <div
+              className={`absolute bottom-12 left-1/2 -translate-x-1/2 w-56 origin-bottom animate-[popIn_140ms_ease-out] overflow-hidden rounded-xl border p-2 shadow-2xl ${
+                isDark ? "border-stone-700 bg-stone-900/95 text-stone-200" : "border-stone-200 bg-white/95 text-stone-800"
+              }`}
+              onMouseLeave={() => setThemePickerOpen(false)}
+            >
+              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider opacity-50">Light Themes</div>
+              {Object.entries(THEME_PRESETS)
+                .filter(([, t]) => t.mode === "light")
+                .map(([key, t]) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setThemeKey(key);
+                      setThemePickerOpen(false);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                      themeKey === key
+                        ? "bg-black/10 dark:bg-white/15 font-semibold"
+                        : "hover:bg-black/5 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: t.accent }} />
+                      {t.name}
+                    </span>
+                    {themeKey === key && <Check size={12} />}
+                  </button>
+                ))}
+              <div className="mt-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider opacity-50">Dark Themes</div>
+              {Object.entries(THEME_PRESETS)
+                .filter(([, t]) => t.mode === "dark")
+                .map(([key, t]) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setThemeKey(key);
+                      setThemePickerOpen(false);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                      themeKey === key
+                        ? "bg-black/10 dark:bg-white/15 font-semibold"
+                        : "hover:bg-black/5 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: t.accent }} />
+                      {t.name}
+                    </span>
+                    {themeKey === key && <Check size={12} />}
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+
+        {windows.length > 0 && <div className="mx-1 h-6 w-px bg-black/10 dark:bg-white/10" />}
 
         {windows.map((w) => {
           const active = !w.minimized && w.z === topZ;
@@ -2096,7 +2357,11 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
               key={w.id}
               onClick={() => (w.minimized ? restoreWindow(w.id) : active ? minimizeWindow(w.id) : focusWindow(w.id))}
               className={`flex max-w-[120px] animate-[popIn_180ms_ease-out] items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-medium transition-transform hover:scale-105 active:scale-95 ${
-                active ? "bg-violet-600 text-white" : "bg-violet-100/80 text-violet-700 hover:bg-violet-200"
+                active
+                  ? theme.accentBg
+                  : isDark
+                  ? "bg-white/10 text-stone-200 hover:bg-white/20"
+                  : "bg-black/5 text-stone-700 hover:bg-black/10"
               }`}
             >
               {iconFor(w.kind)}
@@ -2105,9 +2370,8 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
           );
         })}
 
-        <div className="mx-1 h-6 w-px bg-violet-200" />
+        <div className="mx-1 h-6 w-px bg-black/10 dark:bg-white/10" />
         <div className="flex items-center gap-2 px-2">
-          <SaveIndicator status={saveStatus} />
           <Clock24 />
         </div>
       </div>
@@ -2120,13 +2384,19 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
 /* ------------------------------------------------------------------ */
 
 function DesktopIcon({ icon, label, onOpen }) {
+  const { theme } = useContext(ThemeContext);
+  const isDark = theme.mode === "dark";
   return (
     <button
       onClick={onOpen}
-      className="flex w-20 flex-col items-center gap-1 rounded-lg p-2 text-center transition-transform hover:-translate-y-0.5 hover:bg-white/30 active:scale-95"
+      className={`flex w-20 flex-col items-center gap-1 rounded-lg p-2 text-center transition-transform hover:-translate-y-0.5 active:scale-95 ${
+        isDark ? "hover:bg-white/10" : "hover:bg-black/5"
+      }`}
     >
-      <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/50 text-violet-600 shadow backdrop-blur">{icon}</div>
-      <span className="text-[10px] font-medium text-violet-800 drop-shadow-sm">{label}</span>
+      <div className={`grid h-10 w-10 place-items-center rounded-xl shadow backdrop-blur ${isDark ? "bg-white/10 text-white" : "bg-white/60 text-stone-800"}`}>
+        {icon}
+      </div>
+      <span className={`text-[10px] font-medium drop-shadow-sm ${theme.desktopText}`}>{label}</span>
     </button>
   );
 }
@@ -2137,15 +2407,15 @@ function DesktopIcon({ icon, label, onOpen }) {
 
 export default function ArtemisOS() {
   const [state, dispatch] = useReducer(osReducer, undefined, makeInitialState);
-  const [theme, setTheme] = useState("amber");
+  const [themeKey, setThemeKey] = useState("lavender-light");
   const desktopRef = useRef(null);
   const dragRef = useRef(null);
-  const zRef = useRef(0);
   const [loaded, setLoaded] = useState(false);
-  const [saveStatus, setSaveStatus] = useState("idle"); // idle | restoring | saving | saved | error | unavailable
   const backendRef = useRef(null);
   if (backendRef.current === null) backendRef.current = resolvePersistBackend() || false;
   const backend = backendRef.current || null;
+
+  const activeTheme = THEME_PRESETS[themeKey] || THEME_PRESETS["lavender-light"];
 
   const getRect = () => desktopRef.current?.getBoundingClientRect() || { width: 1200, height: 700 };
 
@@ -2153,15 +2423,13 @@ export default function ArtemisOS() {
     dispatch({ type: "OPEN_WINDOW", kind, rect: getRect(), ...extra });
   }, []);
 
-  /* load persisted state once */
+  /* Hydrate state */
   useEffect(() => {
     let cancelled = false;
     if (!backend) {
-      setSaveStatus("unavailable");
       setLoaded(true);
       return undefined;
     }
-    setSaveStatus("restoring");
     (async () => {
       try {
         const result = await backend.get(STORAGE_KEY);
@@ -2176,34 +2444,28 @@ export default function ArtemisOS() {
               activeBoard: data.activeBoard ?? null,
             },
           });
-          if (data.theme) setTheme(data.theme);
+          if (data.themeKey && THEME_PRESETS[data.themeKey]) setThemeKey(data.themeKey);
         }
       } catch (e) {
-        /* nothing saved yet, or the saved data was corrupt — start fresh */
+        /* starting fresh */
       } finally {
-        if (!cancelled) {
-          setSaveStatus("saved");
-          setLoaded(true);
-        }
+        if (!cancelled) setLoaded(true);
       }
     })();
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [backend]);
 
-  /* open the file manager by default once we know whether we hydrated */
+  /* Default window */
   useEffect(() => {
     if (!loaded) return;
     if (state.windows.length === 0) openWindow("file-manager");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded]);
+  }, [loaded, openWindow, state.windows.length]);
 
-  /* debounced save */
+  /* Debounced save without UI indicator */
   useEffect(() => {
     if (!loaded || !backend) return undefined;
-    setSaveStatus("saving");
     const t = setTimeout(async () => {
       try {
         await backend.set(
@@ -2213,16 +2475,15 @@ export default function ArtemisOS() {
             projects: state.projects,
             windows: state.windows,
             activeBoard: state.activeBoard,
-            theme,
+            themeKey,
           })
         );
-        setSaveStatus("saved");
       } catch (e) {
-        setSaveStatus("error");
+        // silent fail
       }
     }, 400);
     return () => clearTimeout(t);
-  }, [state.boards, state.projects, state.windows, state.activeBoard, theme, loaded, backend]);
+  }, [state.boards, state.projects, state.windows, state.activeBoard, themeKey, loaded, backend]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -2266,103 +2527,105 @@ export default function ArtemisOS() {
   const topZ = state.windows.reduce((m, w) => Math.max(m, w.z), 0);
 
   return (
-    <div
-      ref={desktopRef}
-      className="relative h-[700px] w-full select-none overflow-hidden rounded-2xl"
-      style={{
-        cursor: "none",
-        background:
-          "radial-gradient(1200px 600px at 15% -10%, #f3effc 0%, transparent 60%), radial-gradient(1000px 700px at 100% 110%, #ded4f7 0%, transparent 55%), linear-gradient(160deg, #eae6f8 0%, #e2dbf5 45%, #d8cdf1 100%)",
-      }}
-    >
-      <style>{`
-        @keyframes winIn { 0% { opacity:0; transform: scale(0.9) translateY(10px);} 60% { opacity:1; transform: scale(1.015) translateY(0);} 100% { opacity:1; transform: scale(1) translateY(0);} }
-        @keyframes terminalIn { 0% { opacity:0; transform: scale(0.94); clip-path: inset(0 0 100% 0);} 45% { opacity:1; clip-path: inset(0 0 0% 0);} 100% { opacity:1; transform: scale(1); clip-path: inset(0 0 0% 0);} }
-        @keyframes popIn { 0% { opacity:0; transform: scale(0.85);} 100% { opacity:1; transform: scale(1);} }
-        @keyframes fadeIn { 0% { opacity:0;} 100% { opacity:1;} }
-        @keyframes slideIn { 0% { opacity:0; transform: translateX(-4px);} 100% { opacity:1; transform: translateX(0);} }
-        @keyframes slideUp { 0% { opacity:0; transform: translateY(14px);} 100% { opacity:1; transform: translateY(0);} }
-        @keyframes lineIn { 0% { opacity:0; transform: translateY(3px);} 100% { opacity:1; transform: translateY(0);} }
-        @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(124,58,237,0.35);} 50% { box-shadow: 0 0 0 6px rgba(124,58,237,0);} }
-        .line-clamp-1 { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
-        * { cursor: none !important; }
-        @media (prefers-reduced-motion: reduce) {
-          * { animation: none !important; transition: none !important; cursor: auto !important; }
-        }
-      `}</style>
+    <ThemeContext.Provider value={{ themeKey, theme: activeTheme, setThemeKey }}>
+      <div
+        ref={desktopRef}
+        className="relative h-[700px] w-full select-none overflow-hidden rounded-2xl transition-all duration-500 font-sans"
+        style={{
+          cursor: "none",
+          background: activeTheme.bg,
+        }}
+      >
+        <style>{`
+          @keyframes winIn { 0% { opacity:0; transform: scale(0.9) translateY(10px);} 60% { opacity:1; transform: scale(1.015) translateY(0);} 100% { opacity:1; transform: scale(1) translateY(0);} }
+          @keyframes terminalIn { 0% { opacity:0; transform: scale(0.94); clip-path: inset(0 0 100% 0);} 45% { opacity:1; clip-path: inset(0 0 0% 0);} 100% { opacity:1; transform: scale(1); clip-path: inset(0 0 0% 0);} }
+          @keyframes popIn { 0% { opacity:0; transform: scale(0.85);} 100% { opacity:1; transform: scale(1);} }
+          @keyframes fadeIn { 0% { opacity:0;} 100% { opacity:1;} }
+          @keyframes slideIn { 0% { opacity:0; transform: translateX(-4px);} 100% { opacity:1; transform: translateX(0);} }
+          @keyframes slideUp { 0% { opacity:0; transform: translateY(14px);} 100% { opacity:1; transform: translateY(0);} }
+          @keyframes lineIn { 0% { opacity:0; transform: translateY(3px);} 100% { opacity:1; transform: translateY(0);} }
+          @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(124,58,237,0.35);} 50% { box-shadow: 0 0 0 6px rgba(124,58,237,0);} }
+          .line-clamp-1 { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
+          * { cursor: none !important; }
+          @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; cursor: auto !important; }
+          }
+        `}</style>
 
-      <div className="absolute left-6 top-6 flex flex-col gap-1">
-        <DesktopIcon icon={<Kanban size={19} />} label="Boards" onOpen={() => openWindow("file-manager")} />
-        <DesktopIcon icon={<TerminalIcon size={19} />} label="Terminal" onOpen={() => openWindow("terminal")} />
-        <DesktopIcon icon={<Network size={19} />} label="Graph" onOpen={() => openWindow("graph")} />
+        {/* Desktop Application Shortcuts */}
+        <div className="absolute left-6 top-6 flex flex-col gap-1">
+          <DesktopIcon icon={<Kanban size={19} />} label="Boards" onOpen={() => openWindow("file-manager")} />
+          <DesktopIcon icon={<TerminalIcon size={19} />} label="Terminal" onOpen={() => openWindow("terminal")} />
+          <DesktopIcon icon={<Network size={19} />} label="Graph" onOpen={() => openWindow("graph")} />
+        </div>
+
+        {/* Window Manager */}
+        {state.windows.map((w) => {
+          const commonProps = {
+            win: w,
+            isTop: w.z === topZ,
+            onClose: () => dispatch({ type: "CLOSE_WINDOW", id: w.id }),
+            onMinimize: () => dispatch({ type: "MINIMIZE_WINDOW", id: w.id }),
+            onToggleMax: () => dispatch({ type: "TOGGLE_MAXIMIZE", id: w.id, rect: getRect() }),
+            onFocus: () => dispatch({ type: "FOCUS_WINDOW", id: w.id }),
+            onDragStart: (e) => startDrag(w, e),
+          };
+          if (w.kind === "terminal") {
+            return (
+              <WindowFrame key={w.id} {...commonProps} title="terminal — artemis" icon={<TerminalIcon size={13} />} dark>
+                <TerminalApp
+                  boards={state.boards}
+                  projects={state.projects}
+                  windows={state.windows}
+                  dispatch={dispatch}
+                  openWindow={openWindow}
+                />
+              </WindowFrame>
+            );
+          }
+          if (w.kind === "file-manager") {
+            return (
+              <WindowFrame key={w.id} {...commonProps} title="Boards" icon={<Kanban size={13} />}>
+                <FileManagerApp boards={state.boards} dispatch={dispatch} openWindow={openWindow} />
+              </WindowFrame>
+            );
+          }
+          if (w.kind === "board") {
+            return (
+              <WindowFrame key={w.id} {...commonProps} title={w.boardName} icon={<ListTree size={13} />}>
+                <BoardApp boardName={w.boardName} boards={state.boards} dispatch={dispatch} />
+              </WindowFrame>
+            );
+          }
+          if (w.kind === "graph") {
+            return (
+              <WindowFrame key={w.id} {...commonProps} title="Graph View" icon={<Network size={13} />}>
+                <GraphApp boards={state.boards} openWindow={openWindow} />
+              </WindowFrame>
+            );
+          }
+          if (w.kind === "project") {
+            return (
+              <WindowFrame key={w.id} {...commonProps} title={w.projectName} icon={<Rocket size={13} />}>
+                <ProjectApp projectName={w.projectName} boards={state.boards} dispatch={dispatch} openWindow={openWindow} />
+              </WindowFrame>
+            );
+          }
+          return null;
+        })}
+
+        {/* Global Dock */}
+        <Dock
+          windows={state.windows}
+          openWindow={openWindow}
+          focusWindow={(id) => dispatch({ type: "FOCUS_WINDOW", id })}
+          restoreWindow={(id) => dispatch({ type: "RESTORE_WINDOW", id })}
+          minimizeWindow={(id) => dispatch({ type: "MINIMIZE_WINDOW", id })}
+        />
+
+        {/* Adaptive Custom Cursor */}
+        <CustomCursor containerRef={desktopRef} />
       </div>
-
-      {state.windows.map((w) => {
-        const commonProps = {
-          win: w,
-          isTop: w.z === topZ,
-          onClose: () => dispatch({ type: "CLOSE_WINDOW", id: w.id }),
-          onMinimize: () => dispatch({ type: "MINIMIZE_WINDOW", id: w.id }),
-          onToggleMax: () => dispatch({ type: "TOGGLE_MAXIMIZE", id: w.id, rect: getRect() }),
-          onFocus: () => dispatch({ type: "FOCUS_WINDOW", id: w.id }),
-          onDragStart: (e) => startDrag(w, e),
-        };
-        if (w.kind === "terminal") {
-          return (
-            <WindowFrame key={w.id} {...commonProps} title="terminal — artemis" icon={<TerminalIcon size={13} />} dark>
-              <TerminalApp
-                boards={state.boards}
-                projects={state.projects}
-                windows={state.windows}
-                dispatch={dispatch}
-                openWindow={openWindow}
-                theme={theme}
-                setTheme={setTheme}
-              />
-            </WindowFrame>
-          );
-        }
-        if (w.kind === "file-manager") {
-          return (
-            <WindowFrame key={w.id} {...commonProps} title="Boards" icon={<Kanban size={13} />}>
-              <FileManagerApp boards={state.boards} dispatch={dispatch} openWindow={openWindow} />
-            </WindowFrame>
-          );
-        }
-        if (w.kind === "board") {
-          return (
-            <WindowFrame key={w.id} {...commonProps} title={w.boardName} icon={<ListTree size={13} />}>
-              <BoardApp boardName={w.boardName} boards={state.boards} dispatch={dispatch} />
-            </WindowFrame>
-          );
-        }
-        if (w.kind === "graph") {
-          return (
-            <WindowFrame key={w.id} {...commonProps} title="Graph View" icon={<Network size={13} />}>
-              <GraphApp boards={state.boards} openWindow={openWindow} />
-            </WindowFrame>
-          );
-        }
-        if (w.kind === "project") {
-          return (
-            <WindowFrame key={w.id} {...commonProps} title={w.projectName} icon={<Rocket size={13} />}>
-              <ProjectApp projectName={w.projectName} boards={state.boards} dispatch={dispatch} openWindow={openWindow} />
-            </WindowFrame>
-          );
-        }
-        return null;
-      })}
-
-      <Dock
-        windows={state.windows}
-        openWindow={openWindow}
-        focusWindow={(id) => dispatch({ type: "FOCUS_WINDOW", id })}
-        restoreWindow={(id) => dispatch({ type: "RESTORE_WINDOW", id })}
-        minimizeWindow={(id) => dispatch({ type: "MINIMIZE_WINDOW", id })}
-        saveStatus={saveStatus}
-      />
-
-      <CustomCursor containerRef={desktopRef} />
-    </div>
+    </ThemeContext.Provider>
   );
 }
