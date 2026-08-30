@@ -152,6 +152,40 @@ function layoutBoardForest(boards, w, h) {
 
 const STORAGE_KEY = "artemis-os-state-v1";
 
+/* Resolve a persistence backend at runtime: the platform's window.storage
+   API when it's present, otherwise a plain localStorage adapter (works in
+   any normal browser tab), otherwise null (in-memory only, for this
+   session). Every call is wrapped so a blocked or missing API degrades
+   gracefully instead of throwing. */
+function resolvePersistBackend() {
+  if (typeof window === "undefined") return null;
+  if (window.storage && typeof window.storage.get === "function") {
+    return {
+      kind: "platform",
+      get: (key) => window.storage.get(key, false),
+      set: (key, value) => window.storage.set(key, value, false),
+    };
+  }
+  try {
+    const probeKey = "__artemis_probe__";
+    window.localStorage.setItem(probeKey, "1");
+    window.localStorage.removeItem(probeKey);
+    return {
+      kind: "local",
+      get: async (key) => {
+        const value = window.localStorage.getItem(key);
+        return value == null ? null : { key, value };
+      },
+      set: async (key, value) => {
+        window.localStorage.setItem(key, value);
+        return { key, value };
+      },
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /*  Initial state                                                      */
 /* ------------------------------------------------------------------ */
@@ -695,8 +729,10 @@ function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onTog
   if (win.minimized) return null;
   return (
     <div
-      className={`absolute flex flex-col overflow-hidden rounded-xl border shadow-2xl transition-shadow duration-200 will-change-transform animate-[winIn_220ms_cubic-bezier(0.16,1,0.3,1)] ${
-        dark ? "border-amber-900/60 bg-[#0b0906]" : "border-white/60 bg-white/75 backdrop-blur-xl"
+      className={`absolute flex flex-col overflow-hidden rounded-xl border shadow-2xl transition-shadow duration-200 will-change-transform ${
+        dark
+          ? "animate-[terminalIn_320ms_ease-out] border-amber-900/60 bg-[#0b0906]"
+          : "animate-[winIn_260ms_cubic-bezier(0.16,1,0.3,1)] border-white/60 bg-white/75 backdrop-blur-xl"
       } ${isTop ? "ring-1 ring-violet-300/70" : ""}`}
       style={{ left: win.x, top: win.y, width: win.width, height: win.height, zIndex: win.z }}
       onMouseDown={onFocus}
@@ -792,7 +828,7 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
             <button
               key={name}
               style={{ animationDelay: `${Math.min(i, 12) * 25}ms` }}
-              onDoubleClick={() => openWindow("board", { boardName: name })}
+              onClick={() => openWindow("board", { boardName: name })}
               onContextMenu={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -1226,10 +1262,10 @@ const HELP_LINES = [
   "  init -del <project>                remove a project (untags its boards)",
   "  projects                           list projects and their board counts",
   "  open -project <name>               open every board tagged with a project",
+  "  graph                              open the board relationship graph",
   "",
-  "  vis <name>                         open a board window",
-  "  vis -node                          open the relationship graph",
-  "  vis -close <name>                  close a board window",
+  "  boards open automatically the moment you create or `cd` into them —",
+  "  click a board in the Boards window or dock to bring it back up.",
   "",
   "  find <text>                        search task names across all boards",
   "  stats                              show overall progress",
@@ -1243,7 +1279,7 @@ const HELP_LINES = [
 ];
 
 const COMMAND_WORDS = [
-  "board", "task", "vis", "open", "init", "projects", "ls", "cd", "pwd",
+  "board", "task", "graph", "open", "init", "projects", "ls", "cd", "pwd",
   "whoami", "clear", "help", "find", "stats", "history", "theme", "date",
   "reset", "mkdir", "touch", "rm", "rmdir",
 ];
@@ -1327,6 +1363,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
       if (!parentKey) return print(`no board named '${parentName}'`, "err");
     }
     dispatch({ type: "ADD_BOARD", name, parent: parentKey, tags: tagKey ? [tagKey] : [] });
+    openWindow("board", { boardName: name });
     const bits = [];
     if (parentKey) bits.push(`under '${parentKey}'`);
     if (tagKey) bits.push(`tagged @${tagKey}`);
@@ -1561,32 +1598,16 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
           if (!key) return print(`no board named '${arg}'`, "err");
           setCwd(key);
           dispatch({ type: "SET_ACTIVE_BOARD", name: key });
+          openWindow("board", { boardName: key });
           return print(`now in '${key}'`, "ok");
         }
         case "board":
           return handleBoardCommand(tokens);
         case "task":
           return handleTaskCommand(tokens);
-        case "vis": {
-          if (tokens[1] === "-close") {
-            const arg = tokens.slice(2).join(" ");
-            const key = findBoardKey(boards, arg);
-            const win = key ? windows.find((w) => w.kind === "board" && w.boardName === key) : null;
-            if (!win) return print(`no open window for '${arg}'`, "err");
-            dispatch({ type: "CLOSE_WINDOW", id: win.id });
-            return print(`closed '${key}'`, "ok");
-          }
-          const arg = tokens.slice(1).join(" ").trim();
-          if (arg === "-node") {
-            openWindow("graph");
-            return print("opened board graph");
-          }
-          if (!arg) return print("usage: vis <board name>   or   vis -node", "err");
-          const key = findBoardKey(boards, arg);
-          if (!key) return print(`no board named '${arg}'`, "err");
-          openWindow("board", { boardName: key });
-          return print(`opened '${key}'`, "ok");
-        }
+        case "graph":
+          openWindow("graph");
+          return print("opened board graph", "ok");
         case "find": {
           const query = tokens.slice(1).join(" ");
           if (!query) return print("usage: find <text>", "err");
@@ -1690,6 +1711,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
           if (!name) return print("usage: mkdir <board name>", "err");
           if (findBoardKey(boards, name)) return print(`board '${name}' already exists`, "err");
           dispatch({ type: "ADD_BOARD", name });
+          openWindow("board", { boardName: name });
           return print(`created board '${name}'`, "ok");
         }
         case "rmdir": {
@@ -1766,11 +1788,6 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
     }
     if (head === "cd") return boardNames;
     if (head === "theme") return Object.keys(THEMES);
-    if (head === "vis") {
-      if (ctx.length === 1) return [...boardNames, "-node", "-close"];
-      if (ctx[1] === "-close") return boardNames;
-      return [];
-    }
     if (head === "open") {
       if (ctx.length === 1) return ["-project"];
       if (ctx[1] === "-project") return projects;
@@ -1968,7 +1985,7 @@ function SaveIndicator({ status }) {
     saving: { label: "Saving…", dot: "bg-amber-400 animate-pulse" },
     saved: { label: "Saved", dot: "bg-emerald-500" },
     error: { label: "Save failed", dot: "bg-rose-500" },
-    unavailable: { label: "Autosave off", dot: "bg-violet-300" },
+    unavailable: { label: "This session only", dot: "bg-violet-300" },
     idle: { label: "", dot: "bg-violet-300" },
   }[status] || { label: "", dot: "bg-violet-300" };
   if (!meta.label) return null;
@@ -1977,7 +1994,7 @@ function SaveIndicator({ status }) {
       className="flex items-center gap-1.5 text-[10px] font-medium text-violet-500"
       title={
         status === "unavailable"
-          ? "Persistent storage isn't available in this environment — progress won't survive a refresh."
+          ? "No storage is reachable here (platform storage and localStorage both failed) — progress won't survive a refresh."
           : status === "error"
           ? "The last save attempt failed — your changes are still here, but may not persist."
           : "Boards, tasks, and projects are saved automatically."
@@ -2102,10 +2119,10 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
 /*  Desktop icons                                                      */
 /* ------------------------------------------------------------------ */
 
-function DesktopIcon({ icon, label, onDoubleClick }) {
+function DesktopIcon({ icon, label, onOpen }) {
   return (
     <button
-      onDoubleClick={onDoubleClick}
+      onClick={onOpen}
       className="flex w-20 flex-col items-center gap-1 rounded-lg p-2 text-center transition-transform hover:-translate-y-0.5 hover:bg-white/30 active:scale-95"
     >
       <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/50 text-violet-600 shadow backdrop-blur">{icon}</div>
@@ -2126,7 +2143,9 @@ export default function ArtemisOS() {
   const zRef = useRef(0);
   const [loaded, setLoaded] = useState(false);
   const [saveStatus, setSaveStatus] = useState("idle"); // idle | restoring | saving | saved | error | unavailable
-  const storageAvailable = typeof window !== "undefined" && !!window.storage;
+  const backendRef = useRef(null);
+  if (backendRef.current === null) backendRef.current = resolvePersistBackend() || false;
+  const backend = backendRef.current || null;
 
   const getRect = () => desktopRef.current?.getBoundingClientRect() || { width: 1200, height: 700 };
 
@@ -2137,7 +2156,7 @@ export default function ArtemisOS() {
   /* load persisted state once */
   useEffect(() => {
     let cancelled = false;
-    if (!storageAvailable) {
+    if (!backend) {
       setSaveStatus("unavailable");
       setLoaded(true);
       return undefined;
@@ -2145,7 +2164,7 @@ export default function ArtemisOS() {
     setSaveStatus("restoring");
     (async () => {
       try {
-        const result = await window.storage.get(STORAGE_KEY, false);
+        const result = await backend.get(STORAGE_KEY);
         if (!cancelled && result?.value) {
           const data = JSON.parse(result.value);
           dispatch({
@@ -2183,11 +2202,11 @@ export default function ArtemisOS() {
 
   /* debounced save */
   useEffect(() => {
-    if (!loaded || !storageAvailable) return undefined;
+    if (!loaded || !backend) return undefined;
     setSaveStatus("saving");
     const t = setTimeout(async () => {
       try {
-        await window.storage.set(
+        await backend.set(
           STORAGE_KEY,
           JSON.stringify({
             boards: state.boards,
@@ -2195,8 +2214,7 @@ export default function ArtemisOS() {
             windows: state.windows,
             activeBoard: state.activeBoard,
             theme,
-          }),
-          false
+          })
         );
         setSaveStatus("saved");
       } catch (e) {
@@ -2204,7 +2222,7 @@ export default function ArtemisOS() {
       }
     }, 400);
     return () => clearTimeout(t);
-  }, [state.boards, state.projects, state.windows, state.activeBoard, theme, loaded, storageAvailable]);
+  }, [state.boards, state.projects, state.windows, state.activeBoard, theme, loaded, backend]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -2258,7 +2276,8 @@ export default function ArtemisOS() {
       }}
     >
       <style>{`
-        @keyframes winIn { 0% { opacity:0; transform: scale(0.96) translateY(6px);} 100% { opacity:1; transform: scale(1) translateY(0);} }
+        @keyframes winIn { 0% { opacity:0; transform: scale(0.9) translateY(10px);} 60% { opacity:1; transform: scale(1.015) translateY(0);} 100% { opacity:1; transform: scale(1) translateY(0);} }
+        @keyframes terminalIn { 0% { opacity:0; transform: scale(0.94); clip-path: inset(0 0 100% 0);} 45% { opacity:1; clip-path: inset(0 0 0% 0);} 100% { opacity:1; transform: scale(1); clip-path: inset(0 0 0% 0);} }
         @keyframes popIn { 0% { opacity:0; transform: scale(0.85);} 100% { opacity:1; transform: scale(1);} }
         @keyframes fadeIn { 0% { opacity:0;} 100% { opacity:1;} }
         @keyframes slideIn { 0% { opacity:0; transform: translateX(-4px);} 100% { opacity:1; transform: translateX(0);} }
@@ -2273,9 +2292,9 @@ export default function ArtemisOS() {
       `}</style>
 
       <div className="absolute left-6 top-6 flex flex-col gap-1">
-        <DesktopIcon icon={<Kanban size={19} />} label="Boards" onDoubleClick={() => openWindow("file-manager")} />
-        <DesktopIcon icon={<TerminalIcon size={19} />} label="Terminal" onDoubleClick={() => openWindow("terminal")} />
-        <DesktopIcon icon={<Network size={19} />} label="Graph" onDoubleClick={() => openWindow("graph")} />
+        <DesktopIcon icon={<Kanban size={19} />} label="Boards" onOpen={() => openWindow("file-manager")} />
+        <DesktopIcon icon={<TerminalIcon size={19} />} label="Terminal" onOpen={() => openWindow("terminal")} />
+        <DesktopIcon icon={<Network size={19} />} label="Graph" onOpen={() => openWindow("graph")} />
       </div>
 
       {state.windows.map((w) => {
