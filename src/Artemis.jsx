@@ -2389,17 +2389,15 @@ function Clock24() {
 
 function ThemeSwitcher({ osTheme, setOsTheme }) {
   const [open, setOpen] = useState(false);
-  useEffect(() => {
-    if (!open) return undefined;
-    const close = () => setOpen(false);
-    window.addEventListener("click", close);
-    return () => window.removeEventListener("click", close);
-  }, [open]);
 
   return (
-    <div className="relative" onMouseDown={(e) => e.stopPropagation()}>
+    <div className="relative">
       <button
-        onClick={() => setOpen((o) => !o)}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
         className="grid h-8 w-8 place-items-center rounded-lg transition-transform hover:scale-110 active:scale-95"
         style={{ color: "var(--text-muted)" }}
         title="Theme"
@@ -2410,6 +2408,7 @@ function ThemeSwitcher({ osTheme, setOsTheme }) {
         <div
           className="absolute bottom-11 right-0 w-40 origin-bottom-right animate-[popIn_120ms_ease-out] overflow-hidden rounded-xl border shadow-2xl"
           style={{ background: "var(--surface-solid)", borderColor: "var(--border)" }}
+          onMouseLeave={() => setOpen(false)}
         >
           {OS_THEME_ORDER.map((key) => {
             const t = OS_THEMES[key];
@@ -2417,7 +2416,9 @@ function ThemeSwitcher({ osTheme, setOsTheme }) {
             return (
               <button
                 key={key}
-                onClick={() => {
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
                   setOsTheme(key);
                   setOpen(false);
                 }}
