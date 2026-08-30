@@ -5,8 +5,6 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
-  createContext,
-  useContext,
 } from "react";
 import {
   Terminal as TerminalIcon,
@@ -15,7 +13,6 @@ import {
   Kanban,
   X,
   Minus,
-  Square,
   Maximize2,
   Check,
   Trash2,
@@ -27,174 +24,11 @@ import {
   GripVertical,
   Sparkles,
   ListTree,
+  Calendar as CalendarIcon,
   Palette,
+  Sun,
+  Moon,
 } from "lucide-react";
-
-/* ------------------------------------------------------------------ */
-/*  Theme Presets (Both Light and Dark Modes)                         */
-/* ------------------------------------------------------------------ */
-
-export const THEME_PRESETS = {
-  // Light Themes
-  "lavender-light": {
-    name: "Lavender Frost",
-    mode: "light",
-    bg: "radial-gradient(1200px 600px at 15% -10%, #f3effc 0%, transparent 60%), radial-gradient(1000px 700px at 100% 110%, #ded4f7 0%, transparent 55%), linear-gradient(160deg, #eae6f8 0%, #e2dbf5 45%, #d8cdf1 100%)",
-    desktopText: "text-violet-900",
-    windowBg: "border-white/60 bg-white/80 backdrop-blur-xl text-violet-950",
-    windowHeader: "bg-white/70 border-b border-violet-100 text-violet-900",
-    windowFocusRing: "ring-1 ring-violet-400/70",
-    accent: "#7c3aed",
-    accentBg: "bg-violet-600 hover:bg-violet-700 text-white",
-    accentText: "text-violet-600",
-    subtleBg: "bg-violet-50/60",
-    cardBg: "bg-white/60",
-    border: "border-violet-200/70",
-    iconColor: "text-violet-600",
-    cursorRing: "border-violet-500 bg-violet-500/10",
-    cursorDot: "bg-violet-700 shadow-[0_0_8px_rgba(124,58,237,0.7)]",
-    dockBg: "border-white/60 bg-white/70 shadow-2xl backdrop-blur-xl",
-    terminal: {
-      bg: "#0b0906",
-      text: "#ffb200",
-      dim: "#a97a1f",
-      glow: "rgba(255,178,0,0.45)",
-    },
-  },
-  "rose-light": {
-    name: "Rose Quartz",
-    mode: "light",
-    bg: "radial-gradient(1200px 600px at 15% -10%, #fff1f2 0%, transparent 60%), radial-gradient(1000px 700px at 100% 110%, #ffe4e6 0%, transparent 55%), linear-gradient(160deg, #fdf2f8 0%, #fce7f3 45%, #fbcfe8 100%)",
-    desktopText: "text-rose-950",
-    windowBg: "border-white/70 bg-white/85 backdrop-blur-xl text-rose-950",
-    windowHeader: "bg-rose-50/80 border-b border-rose-100 text-rose-950",
-    windowFocusRing: "ring-1 ring-rose-400/70",
-    accent: "#e11d48",
-    accentBg: "bg-rose-600 hover:bg-rose-700 text-white",
-    accentText: "text-rose-600",
-    subtleBg: "bg-rose-50/70",
-    cardBg: "bg-white/70",
-    border: "border-rose-200/70",
-    iconColor: "text-rose-600",
-    cursorRing: "border-rose-500 bg-rose-500/10",
-    cursorDot: "bg-rose-600 shadow-[0_0_8px_rgba(225,29,72,0.7)]",
-    dockBg: "border-white/60 bg-white/75 shadow-2xl backdrop-blur-xl",
-    terminal: {
-      bg: "#140508",
-      text: "#fb7185",
-      dim: "#9f1239",
-      glow: "rgba(251,113,133,0.45)",
-    },
-  },
-  "arctic-light": {
-    name: "Arctic Slate",
-    mode: "light",
-    bg: "radial-gradient(1200px 600px at 15% -10%, #f0f9ff 0%, transparent 60%), radial-gradient(1000px 700px at 100% 110%, #e0f2fe 0%, transparent 55%), linear-gradient(160deg, #f8fafc 0%, #f1f5f9 45%, #e2e8f0 100%)",
-    desktopText: "text-sky-950",
-    windowBg: "border-white/70 bg-white/85 backdrop-blur-xl text-slate-900",
-    windowHeader: "bg-sky-50/70 border-b border-sky-100 text-sky-950",
-    windowFocusRing: "ring-1 ring-sky-400/70",
-    accent: "#0284c7",
-    accentBg: "bg-sky-600 hover:bg-sky-700 text-white",
-    accentText: "text-sky-600",
-    subtleBg: "bg-sky-50/50",
-    cardBg: "bg-white/70",
-    border: "border-sky-200/70",
-    iconColor: "text-sky-600",
-    cursorRing: "border-sky-500 bg-sky-500/10",
-    cursorDot: "bg-sky-600 shadow-[0_0_8px_rgba(2,132,199,0.7)]",
-    dockBg: "border-white/60 bg-white/75 shadow-2xl backdrop-blur-xl",
-    terminal: {
-      bg: "#05131e",
-      text: "#38bdf8",
-      dim: "#0369a1",
-      glow: "rgba(56,189,248,0.45)",
-    },
-  },
-
-  // Dark Themes
-  "midnight-dark": {
-    name: "Midnight Nebula",
-    mode: "dark",
-    bg: "radial-gradient(1200px 600px at 15% -10%, #2e1065 0%, transparent 65%), radial-gradient(1000px 700px at 100% 110%, #1e1b4b 0%, transparent 60%), linear-gradient(160deg, #090614 0%, #0d0b21 45%, #150f2e 100%)",
-    desktopText: "text-violet-100",
-    windowBg: "border-violet-900/50 bg-[#120e24]/90 backdrop-blur-xl text-violet-100 shadow-[0_20px_50px_rgba(0,0,0,0.8)]",
-    windowHeader: "bg-[#181330]/90 border-b border-violet-900/60 text-violet-200",
-    windowFocusRing: "ring-1 ring-violet-500/60",
-    accent: "#a855f7",
-    accentBg: "bg-violet-600 hover:bg-violet-500 text-white",
-    accentText: "text-violet-400",
-    subtleBg: "bg-violet-950/40",
-    cardBg: "bg-white/[0.04]",
-    border: "border-violet-800/40",
-    iconColor: "text-violet-400",
-    cursorRing: "border-violet-400 bg-violet-500/20",
-    cursorDot: "bg-violet-400 shadow-[0_0_10px_rgba(168,85,247,0.9)]",
-    dockBg: "border-violet-900/60 bg-[#15102a]/80 shadow-[0_15px_40px_rgba(0,0,0,0.7)] backdrop-blur-xl",
-    terminal: {
-      bg: "#080612",
-      text: "#c084fc",
-      dim: "#7e22ce",
-      glow: "rgba(192,132,252,0.45)",
-    },
-  },
-  "cyber-dark": {
-    name: "Cyber Matrix",
-    mode: "dark",
-    bg: "radial-gradient(1200px 600px at 15% -10%, #064e3b 0%, transparent 65%), radial-gradient(1000px 700px at 100% 110%, #022c22 0%, transparent 60%), linear-gradient(160deg, #02120e 0%, #031c15 45%, #062b20 100%)",
-    desktopText: "text-emerald-100",
-    windowBg: "border-emerald-900/50 bg-[#041913]/90 backdrop-blur-xl text-emerald-100 shadow-[0_20px_50px_rgba(0,0,0,0.8)]",
-    windowHeader: "bg-[#06241b]/90 border-b border-emerald-900/60 text-emerald-200",
-    windowFocusRing: "ring-1 ring-emerald-500/60",
-    accent: "#10b981",
-    accentBg: "bg-emerald-600 hover:bg-emerald-500 text-white",
-    accentText: "text-emerald-400",
-    subtleBg: "bg-emerald-950/40",
-    cardBg: "bg-white/[0.04]",
-    border: "border-emerald-800/40",
-    iconColor: "text-emerald-400",
-    cursorRing: "border-emerald-400 bg-emerald-500/20",
-    cursorDot: "bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.9)]",
-    dockBg: "border-emerald-900/60 bg-[#06241b]/80 shadow-[0_15px_40px_rgba(0,0,0,0.7)] backdrop-blur-xl",
-    terminal: {
-      bg: "#02120e",
-      text: "#34d399",
-      dim: "#059669",
-      glow: "rgba(52,211,153,0.45)",
-    },
-  },
-  "amber-dark": {
-    name: "Obsidian Amber",
-    mode: "dark",
-    bg: "radial-gradient(1200px 600px at 15% -10%, #451a03 0%, transparent 65%), radial-gradient(1000px 700px at 100% 110%, #291102 0%, transparent 60%), linear-gradient(160deg, #110702 0%, #190c04 45%, #241206 100%)",
-    desktopText: "text-amber-100",
-    windowBg: "border-amber-900/50 bg-[#140b05]/90 backdrop-blur-xl text-amber-100 shadow-[0_20px_50px_rgba(0,0,0,0.8)]",
-    windowHeader: "bg-[#1c0f08]/90 border-b border-amber-900/60 text-amber-200",
-    windowFocusRing: "ring-1 ring-amber-500/60",
-    accent: "#f59e0b",
-    accentBg: "bg-amber-600 hover:bg-amber-500 text-stone-950 font-semibold",
-    accentText: "text-amber-400",
-    subtleBg: "bg-amber-950/40",
-    cardBg: "bg-white/[0.04]",
-    border: "border-amber-800/40",
-    iconColor: "text-amber-400",
-    cursorRing: "border-amber-400 bg-amber-500/20",
-    cursorDot: "bg-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.9)]",
-    dockBg: "border-amber-900/60 bg-[#1c0f08]/80 shadow-[0_15px_40px_rgba(0,0,0,0.7)] backdrop-blur-xl",
-    terminal: {
-      bg: "#0c0603",
-      text: "#fbbf24",
-      dim: "#b45309",
-      glow: "rgba(251,191,36,0.45)",
-    },
-  },
-};
-
-const ThemeContext = createContext({
-  themeKey: "lavender-light",
-  theme: THEME_PRESETS["lavender-light"],
-  setThemeKey: () => {},
-});
 
 /* ------------------------------------------------------------------ */
 /*  Utilities                                                          */
@@ -319,8 +153,36 @@ function layoutBoardForest(boards, w, h) {
   return positions;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Calendar helpers                                                   */
+/* ------------------------------------------------------------------ */
+
+function dateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+}
+
+function getMonthCells(year, month) {
+  const first = new Date(year, month, 1);
+  const startOffset = (first.getDay() + 6) % 7; // Monday-first grid
+  const gridStart = new Date(year, month, 1 - startOffset);
+  const cells = [];
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(gridStart);
+    d.setDate(gridStart.getDate() + i);
+    cells.push(d);
+  }
+  return cells;
+}
+
 const STORAGE_KEY = "artemis-os-state-v2";
 
+/* Resolve a persistence backend at runtime: the platform's window.storage
+   API when it's present, otherwise a plain localStorage adapter (works in
+   any normal browser tab), otherwise null (in-memory only, for this
+   session). Every call is wrapped so a blocked or missing API degrades
+   gracefully instead of throwing. */
 function resolvePersistBackend() {
   if (typeof window === "undefined") return null;
   if (window.storage && typeof window.storage.get === "function") {
@@ -351,6 +213,115 @@ function resolvePersistBackend() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  OS-level themes (chrome, windows, dock) — independent of the       */
+/*  terminal's own CRT phosphor themes.                                */
+/* ------------------------------------------------------------------ */
+
+const OS_THEMES = {
+  aurora: {
+    label: "Aurora",
+    mode: "light",
+    vars: {
+      "--bg-a": "#f4f1fc",
+      "--bg-b": "#eae2fa",
+      "--bg-c": "#ddd0f4",
+      "--surface": "rgba(255,255,255,0.78)",
+      "--surface-solid": "#ffffff",
+      "--surface-muted": "rgba(255,255,255,0.46)",
+      "--border": "rgba(88,66,178,0.14)",
+      "--border-strong": "rgba(88,66,178,0.26)",
+      "--accent": "#6d5ae6",
+      "--accent-soft": "rgba(109,90,230,0.12)",
+      "--accent-contrast": "#ffffff",
+      "--text": "#231c3f",
+      "--text-muted": "#726a96",
+      "--text-faint": "#a9a1c8",
+      "--dock-bg": "rgba(255,255,255,0.66)",
+      "--ring": "rgba(109,90,230,0.32)",
+      "--danger": "#e2536e",
+      "--success": "#1ea672",
+      "--scrim": "rgba(35,28,63,0.14)",
+    },
+  },
+  linen: {
+    label: "Linen",
+    mode: "light",
+    vars: {
+      "--bg-a": "#f8f4ea",
+      "--bg-b": "#f0ead9",
+      "--bg-c": "#e6dcc3",
+      "--surface": "rgba(255,255,255,0.7)",
+      "--surface-solid": "#fffdf8",
+      "--surface-muted": "rgba(255,255,255,0.4)",
+      "--border": "rgba(52,87,166,0.14)",
+      "--border-strong": "rgba(52,87,166,0.26)",
+      "--accent": "#33569f",
+      "--accent-soft": "rgba(51,86,159,0.1)",
+      "--accent-contrast": "#ffffff",
+      "--text": "#312b1f",
+      "--text-muted": "#847a63",
+      "--text-faint": "#b3a68a",
+      "--dock-bg": "rgba(255,253,248,0.72)",
+      "--ring": "rgba(51,86,159,0.3)",
+      "--danger": "#c1543f",
+      "--success": "#3c7d4f",
+      "--scrim": "rgba(49,43,31,0.14)",
+    },
+  },
+  nightfall: {
+    label: "Nightfall",
+    mode: "dark",
+    vars: {
+      "--bg-a": "#171827",
+      "--bg-b": "#12131d",
+      "--bg-c": "#0d0e16",
+      "--surface": "rgba(255,255,255,0.055)",
+      "--surface-solid": "#1b1c29",
+      "--surface-muted": "rgba(255,255,255,0.035)",
+      "--border": "rgba(255,255,255,0.09)",
+      "--border-strong": "rgba(255,255,255,0.16)",
+      "--accent": "#8b93ff",
+      "--accent-soft": "rgba(139,147,255,0.16)",
+      "--accent-contrast": "#12131d",
+      "--text": "#e8e8f5",
+      "--text-muted": "#9a9ac0",
+      "--text-faint": "#5f5f82",
+      "--dock-bg": "rgba(23,24,39,0.72)",
+      "--ring": "rgba(139,147,255,0.4)",
+      "--danger": "#ff7a8a",
+      "--success": "#5fd6a3",
+      "--scrim": "rgba(0,0,0,0.4)",
+    },
+  },
+  onyx: {
+    label: "Onyx",
+    mode: "dark",
+    vars: {
+      "--bg-a": "#131313",
+      "--bg-b": "#0e0e0e",
+      "--bg-c": "#0a0a0a",
+      "--surface": "rgba(255,255,255,0.045)",
+      "--surface-solid": "#161616",
+      "--surface-muted": "rgba(255,255,255,0.03)",
+      "--border": "rgba(255,255,255,0.08)",
+      "--border-strong": "rgba(255,255,255,0.15)",
+      "--accent": "#e8a24a",
+      "--accent-soft": "rgba(232,162,74,0.15)",
+      "--accent-contrast": "#161616",
+      "--text": "#ececea",
+      "--text-muted": "#96968f",
+      "--text-faint": "#5c5c57",
+      "--dock-bg": "rgba(19,19,19,0.72)",
+      "--ring": "rgba(232,162,74,0.4)",
+      "--danger": "#ff8b7a",
+      "--success": "#6fd18f",
+      "--scrim": "rgba(0,0,0,0.5)",
+    },
+  },
+};
+const OS_THEME_ORDER = ["aurora", "linen", "nightfall", "onyx"];
+
+/* ------------------------------------------------------------------ */
 /*  Initial state                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -366,7 +337,7 @@ function makeInitialState() {
           { id: t1, name: "Open the File Manager", done: true, parentId: null },
           { id: t2, name: "Press Shift+T to summon the terminal", done: false, parentId: null },
           { id: t3, name: "Try: board -add sprint-1", done: false, parentId: null },
-          { id: t4, name: "Click Palette in Dock to switch Theme", done: false, parentId: null },
+          { id: t4, name: "Drag a task onto another to nest it", done: false, parentId: null },
         ],
         parent: null,
         tags: ["demo"],
@@ -376,6 +347,7 @@ function makeInitialState() {
     projects: ["artemis-os"],
     windows: [],
     activeBoard: null,
+    calendarEvents: {},
   };
 }
 
@@ -626,9 +598,28 @@ function osReducer(state, action) {
     case "SET_ACTIVE_BOARD":
       return { ...state, activeBoard: action.name };
 
+    case "ADD_EVENT": {
+      const { date, text } = action;
+      const clean = text.trim();
+      if (!clean) return state;
+      const list = state.calendarEvents[date] || [];
+      return {
+        ...state,
+        calendarEvents: { ...state.calendarEvents, [date]: [...list, { id: uid("ev"), text: clean }] },
+      };
+    }
+    case "DELETE_EVENT": {
+      const { date, id } = action;
+      const list = state.calendarEvents[date] || [];
+      return {
+        ...state,
+        calendarEvents: { ...state.calendarEvents, [date]: list.filter((e) => e.id !== id) },
+      };
+    }
+
     case "OPEN_WINDOW": {
       const { kind, boardName, projectName, rect } = action;
-      const singleton = kind === "terminal" || kind === "file-manager" || kind === "graph";
+      const singleton = kind === "terminal" || kind === "file-manager" || kind === "graph" || kind === "calendar";
       let existing = null;
       if (singleton) existing = state.windows.find((w) => w.kind === kind);
       else if (kind === "board") existing = state.windows.find((w) => w.kind === "board" && w.boardName === boardName);
@@ -647,6 +638,7 @@ function osReducer(state, action) {
         board: { w: 640, h: 460 },
         graph: { w: 620, h: 440 },
         project: { w: 480, h: 380 },
+        calendar: { w: 600, h: 420 },
       }[kind] || { w: 560, h: 400 };
       const maxX = Math.max(40, (rect?.width || 1200) - dims.w - 20);
       const maxY = Math.max(40, (rect?.height || 700) - dims.h - 20);
@@ -726,7 +718,6 @@ function osReducer(state, action) {
 /* ------------------------------------------------------------------ */
 
 function CustomCursor({ containerRef }) {
-  const { theme } = useContext(ThemeContext);
   const dotRef = useRef(null);
   const ringRef = useRef(null);
   const pos = useRef({ x: -100, y: -100 });
@@ -772,14 +763,14 @@ function CustomCursor({ containerRef }) {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  const ringClass =
+  const ringStyle =
     variant === "pointer"
-      ? `w-9 h-9 border-2 ${theme.cursorRing}`
+      ? { width: 34, height: 34, border: "1.5px solid var(--accent)", background: "var(--accent-soft)", borderRadius: "9999px" }
       : variant === "drag"
-      ? `w-10 h-10 border-2 border-dashed ${theme.cursorRing}`
+      ? { width: 38, height: 38, border: "1.5px dashed var(--accent)", background: "var(--accent-soft)", borderRadius: "9999px" }
       : variant === "text"
-      ? "w-[3px] h-5 rounded-sm border-none bg-current opacity-80"
-      : `w-6 h-6 border ${theme.cursorRing} opacity-60`;
+      ? { width: 2, height: 18, borderRadius: 2, background: "var(--accent)" }
+      : { width: 22, height: 22, border: "1px solid var(--border-strong)", background: "transparent", borderRadius: "9999px" };
 
   return (
     <div
@@ -788,38 +779,38 @@ function CustomCursor({ containerRef }) {
     >
       <div
         ref={ringRef}
-        className={`pointer-events-none absolute left-0 top-0 rounded-full transition-[width,height,background-color,border-color] duration-150 ${ringClass}`}
+        className="pointer-events-none absolute left-0 top-0 transition-[width,height,background-color,border-color] duration-150"
+        style={ringStyle}
       />
       <div
         ref={dotRef}
-        className={`pointer-events-none absolute left-0 top-0 h-1.5 w-1.5 rounded-full ${theme.cursorDot}`}
+        className="pointer-events-none absolute left-0 top-0 h-1 w-1 rounded-full"
+        style={{ background: "var(--accent)" }}
       />
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Modals                                                             */
+/*  Small reusable UI: modal dialog (replaces window.prompt/confirm)   */
 /* ------------------------------------------------------------------ */
 
 function Modal({ title, children, onClose }) {
-  const { theme } = useContext(ThemeContext);
-  const isDark = theme.mode === "dark";
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-[fadeIn_120ms_ease-out]"
+      className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm animate-[fadeIn_120ms_ease-out]"
+      style={{ background: "var(--scrim)" }}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className={`w-[360px] scale-100 animate-[popIn_180ms_ease-out] rounded-2xl border shadow-2xl backdrop-blur-xl p-5 ${
-          isDark
-            ? "border-white/10 bg-stone-900/90 text-white"
-            : "border-white/60 bg-white/90 text-stone-900"
-        }`}
+        className="w-[340px] scale-100 animate-[popIn_160ms_ease-out] rounded-xl border shadow-2xl backdrop-blur-xl p-5"
+        style={{ background: "var(--surface-solid)", borderColor: "var(--border)" }}
       >
-        <div className="mb-3 text-sm font-semibold">{title}</div>
+        <div className="mb-3 text-[13px] font-semibold" style={{ color: "var(--text)" }}>
+          {title}
+        </div>
         {children}
       </div>
     </div>
@@ -827,8 +818,6 @@ function Modal({ title, children, onClose }) {
 }
 
 function PromptModal({ title, initial = "", confirmLabel = "Create", onSubmit, onClose }) {
-  const { theme } = useContext(ThemeContext);
-  const isDark = theme.mode === "dark";
   const [value, setValue] = useState(initial);
   const ref = useRef(null);
   useEffect(() => {
@@ -847,25 +836,22 @@ function PromptModal({ title, initial = "", confirmLabel = "Create", onSubmit, o
           ref={ref}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 ${
-            isDark
-              ? "border-stone-700 bg-stone-800/80 text-white focus:ring-stone-500"
-              : "border-stone-200 bg-white text-stone-900 focus:ring-stone-400"
-          }`}
+          className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
+          style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--text)" }}
         />
         <div className="mt-4 flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className={`rounded-lg px-3 py-1.5 text-sm transition-transform active:scale-95 ${
-              isDark ? "text-stone-400 hover:bg-stone-800" : "text-stone-600 hover:bg-stone-100"
-            }`}
+            className="rounded-lg px-3 py-1.5 text-sm transition-transform active:scale-95"
+            style={{ color: "var(--text-muted)" }}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-transform active:scale-95 ${theme.accentBg}`}
+            className="rounded-lg px-3 py-1.5 text-sm font-medium transition-transform active:scale-95"
+            style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
           >
             {confirmLabel}
           </button>
@@ -876,17 +862,16 @@ function PromptModal({ title, initial = "", confirmLabel = "Create", onSubmit, o
 }
 
 function ConfirmModal({ title, message, danger, onConfirm, onClose }) {
-  const { theme } = useContext(ThemeContext);
-  const isDark = theme.mode === "dark";
   return (
     <Modal title={title} onClose={onClose}>
-      <p className={`text-sm ${isDark ? "text-stone-300" : "text-stone-600"}`}>{message}</p>
+      <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+        {message}
+      </p>
       <div className="mt-4 flex justify-end gap-2">
         <button
           onClick={onClose}
-          className={`rounded-lg px-3 py-1.5 text-sm transition-transform active:scale-95 ${
-            isDark ? "text-stone-400 hover:bg-stone-800" : "text-stone-600 hover:bg-stone-100"
-          }`}
+          className="rounded-lg px-3 py-1.5 text-sm transition-transform active:scale-95"
+          style={{ color: "var(--text-muted)" }}
         >
           Cancel
         </button>
@@ -895,9 +880,8 @@ function ConfirmModal({ title, message, danger, onConfirm, onClose }) {
             onConfirm();
             onClose();
           }}
-          className={`rounded-lg px-3 py-1.5 text-sm font-medium text-white transition-transform active:scale-95 ${
-            danger ? "bg-rose-600 hover:bg-rose-700" : theme.accentBg
-          }`}
+          className="rounded-lg px-3 py-1.5 text-sm font-medium text-white transition-transform active:scale-95"
+          style={{ background: danger ? "var(--danger)" : "var(--accent)" }}
         >
           Confirm
         </button>
@@ -911,25 +895,32 @@ function ConfirmModal({ title, message, danger, onConfirm, onClose }) {
 /* ------------------------------------------------------------------ */
 
 function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onToggleMax, onFocus, onDragStart, children }) {
-  const { theme } = useContext(ThemeContext);
-  const isDark = theme.mode === "dark";
   if (win.minimized) return null;
-
   return (
     <div
-      className={`absolute flex flex-col overflow-hidden rounded-xl border shadow-2xl transition-shadow duration-200 will-change-transform ${
-        dark
-          ? "animate-[terminalIn_320ms_ease-out] border-stone-800/80 bg-[#080604]"
-          : `animate-[winIn_260ms_cubic-bezier(0.16,1,0.3,1)] ${theme.windowBg}`
-      } ${isTop ? theme.windowFocusRing : ""}`}
-      style={{ left: win.x, top: win.y, width: win.width, height: win.height, zIndex: win.z }}
+      className={`absolute flex flex-col overflow-hidden rounded-lg border shadow-xl transition-shadow duration-200 will-change-transform ${
+        dark ? "animate-[terminalIn_280ms_ease-out]" : "animate-[winIn_220ms_cubic-bezier(0.16,1,0.3,1)]"
+      }`}
+      style={{
+        left: win.x,
+        top: win.y,
+        width: win.width,
+        height: win.height,
+        zIndex: win.z,
+        background: dark ? "#0b0906" : "var(--surface)",
+        borderColor: dark ? "rgba(120,80,20,0.35)" : isTop ? "var(--border-strong)" : "var(--border)",
+        backdropFilter: dark ? "none" : "blur(18px)",
+      }}
       onMouseDown={onFocus}
     >
       <div
-        className={`flex select-none items-center gap-2 px-3 py-2 ${
-          dark ? "bg-stone-900/90 text-stone-200 border-b border-stone-800" : theme.windowHeader
-        }`}
-        style={{ cursor: "inherit" }}
+        className="group/traffic flex select-none items-center gap-2 px-3 py-2"
+        style={{
+          background: dark ? "linear-gradient(180deg, rgba(60,38,0,0.55), rgba(11,9,6,0))" : "transparent",
+          borderBottom: `1px solid ${dark ? "rgba(120,80,20,0.3)" : "var(--border)"}`,
+          color: dark ? "#c98f2e" : "var(--text)",
+          cursor: "inherit",
+        }}
         data-cursor-drag
         onMouseDown={(e) => {
           onFocus();
@@ -937,38 +928,39 @@ function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onTog
         }}
         onDoubleClick={onToggleMax}
       >
-        <span className={dark ? "text-amber-400" : theme.accentText}>{icon}</span>
-        <span className="text-xs font-semibold tracking-wide">{title}</span>
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 mr-1">
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={onClose}
+            className="grid h-2.5 w-2.5 place-items-center rounded-full transition-transform hover:scale-125 active:scale-90"
+            style={{ background: "#ec6a5e" }}
+            title="Close"
+          >
+            <X size={7} className="opacity-0 group-hover/traffic:opacity-70" style={{ color: "#5b130b" }} />
+          </button>
           <button
             onMouseDown={(e) => e.stopPropagation()}
             onClick={onMinimize}
-            className={`grid h-5 w-5 place-items-center rounded-full transition-transform hover:scale-110 active:scale-90 ${
-              isDark || dark ? "bg-white/10 hover:bg-white/20 text-white/80" : "bg-black/5 hover:bg-black/10 text-black/70"
-            }`}
+            className="grid h-2.5 w-2.5 place-items-center rounded-full transition-transform hover:scale-125 active:scale-90"
+            style={{ background: "#f4bd4f" }}
             title="Minimize"
           >
-            <Minus size={11} />
+            <Minus size={7} className="opacity-0 group-hover/traffic:opacity-70" style={{ color: "#6b4a05" }} />
           </button>
           <button
             onMouseDown={(e) => e.stopPropagation()}
             onClick={onToggleMax}
-            className={`grid h-5 w-5 place-items-center rounded-full transition-transform hover:scale-110 active:scale-90 ${
-              isDark || dark ? "bg-white/10 hover:bg-white/20 text-white/80" : "bg-black/5 hover:bg-black/10 text-black/70"
-            }`}
+            className="grid h-2.5 w-2.5 place-items-center rounded-full transition-transform hover:scale-125 active:scale-90"
+            style={{ background: "#61c454" }}
             title="Maximize"
           >
-            {win.maximized ? <Square size={9} /> : <Maximize2 size={9} />}
-          </button>
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={onClose}
-            className="grid h-5 w-5 place-items-center rounded-full bg-rose-500 text-white transition-transform hover:scale-110 hover:bg-rose-600 active:scale-90"
-            title="Close"
-          >
-            <X size={11} />
+            <Maximize2 size={6} className="opacity-0 group-hover/traffic:opacity-70" style={{ color: "#0f4a0a" }} />
           </button>
         </div>
+        <span style={{ color: dark ? "#c98f2e" : "var(--text-faint)" }}>{icon}</span>
+        <span className="text-[11px] font-medium tracking-wide" style={{ color: dark ? "#e7b45b" : "var(--text)" }}>
+          {title}
+        </span>
       </div>
       <div className={`min-h-0 flex-1 ${dark ? "" : "overflow-auto"}`}>{children}</div>
     </div>
@@ -980,8 +972,6 @@ function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onTog
 /* ------------------------------------------------------------------ */
 
 function FileManagerApp({ boards, dispatch, openWindow }) {
-  const { theme } = useContext(ThemeContext);
-  const isDark = theme.mode === "dark";
   const [menu, setMenu] = useState(null);
   const [modal, setModal] = useState(null);
 
@@ -994,20 +984,23 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
   const names = Object.keys(boards).sort();
 
   return (
-    <div className={`flex h-full flex-col ${theme.subtleBg}`}>
-      <div className={`flex items-center justify-between border-b ${theme.border} px-4 py-2`}>
-        <div className={`text-xs font-medium opacity-70`}>Boards · {names.length}</div>
+    <div className="flex h-full flex-col" style={{ background: "var(--surface-muted)" }}>
+      <div className="flex items-center justify-between border-b px-4 py-2.5" style={{ borderColor: "var(--border)" }}>
+        <div className="text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>
+          Boards · {names.length}
+        </div>
         <button
           onClick={() => setModal({ type: "new" })}
-          className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium shadow transition-transform active:scale-95 ${theme.accentBg}`}
+          className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-transform active:scale-95"
+          style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
         >
           <Kanban size={13} /> New Board
         </button>
       </div>
 
-      <div className="grid flex-1 auto-rows-min grid-cols-3 gap-4 overflow-auto p-4 sm:grid-cols-4">
+      <div className="grid flex-1 auto-rows-min grid-cols-3 gap-3 overflow-auto p-4 sm:grid-cols-4">
         {names.length === 0 && (
-          <div className="col-span-full mt-10 text-center text-sm opacity-50">
+          <div className="col-span-full mt-10 text-center text-sm" style={{ color: "var(--text-faint)" }}>
             No boards yet — create one to get started.
           </div>
         )}
@@ -1017,27 +1010,37 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
           return (
             <button
               key={name}
-              style={{ animationDelay: `${Math.min(i, 12) * 25}ms` }}
+              style={{ animationDelay: `${Math.min(i, 12) * 20}ms` }}
               onClick={() => openWindow("board", { boardName: name })}
               onContextMenu={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 setMenu({ name, x: e.clientX, y: e.clientY });
               }}
-              className={`group flex animate-[popIn_220ms_ease-out_backwards] flex-col items-center gap-1.5 rounded-xl p-2 text-center transition-transform hover:-translate-y-0.5 ${
-                isDark ? "hover:bg-white/10" : "hover:bg-black/5"
-              }`}
+              className="group flex animate-[popIn_200ms_ease-out_backwards] flex-col items-center gap-1.5 rounded-lg p-2 text-center transition-colors"
             >
               <div className="relative">
-                <Folder size={40} className={`${theme.iconColor} opacity-80 drop-shadow-sm transition-all group-hover:opacity-100 group-hover:scale-105`} strokeWidth={1.5} />
-                <span className="absolute -bottom-1 -right-1 rounded-full bg-stone-900 px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
+                <Folder size={36} strokeWidth={1.4} style={{ color: "var(--text-faint)" }} />
+                <span
+                  className="absolute -bottom-1 -right-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
+                  style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
+                >
                   {done}/{total}
                 </span>
               </div>
-              <span className="line-clamp-1 max-w-[92px] text-[11px] font-medium">{name}</span>
-              {parent && <span className="text-[9px] opacity-60">in {parent}</span>}
-              <div className="h-1 w-16 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
-                <div className="h-full bg-current transition-all duration-500" style={{ width: `${pct}%`, color: theme.accent }} />
+              <span className="line-clamp-1 max-w-[92px] text-[11px] font-medium" style={{ color: "var(--text)" }}>
+                {name}
+              </span>
+              {parent && (
+                <span className="text-[9px]" style={{ color: "var(--text-faint)" }}>
+                  in {parent}
+                </span>
+              )}
+              <div className="h-1 w-14 overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
+                <div
+                  className="h-full transition-all duration-500"
+                  style={{ width: `${pct}%`, background: "var(--accent)" }}
+                />
               </div>
             </button>
           );
@@ -1046,10 +1049,8 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
 
       {menu && (
         <div
-          className={`fixed z-[9998] w-40 origin-top-left animate-[popIn_120ms_ease-out] overflow-hidden rounded-lg border shadow-xl ${
-            isDark ? "border-stone-700 bg-stone-900 text-stone-200" : "border-stone-200 bg-white text-stone-800"
-          }`}
-          style={{ left: menu.x, top: menu.y }}
+          className="fixed z-[9998] w-40 origin-top-left animate-[popIn_110ms_ease-out] overflow-hidden rounded-lg border shadow-xl"
+          style={{ left: menu.x, top: menu.y, background: "var(--surface-solid)", borderColor: "var(--border)" }}
           onMouseDown={(e) => e.stopPropagation()}
         >
           <button
@@ -1057,7 +1058,8 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
               openWindow("board", { boardName: menu.name });
               setMenu(null);
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-black/5 dark:hover:bg-white/10"
+            className="flex w-full items-center gap-2 px-3 py-2 text-xs"
+            style={{ color: "var(--text)" }}
           >
             <FolderOpen size={13} /> Open
           </button>
@@ -1066,7 +1068,8 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
               setModal({ type: "rename", name: menu.name });
               setMenu(null);
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-black/5 dark:hover:bg-white/10"
+            className="flex w-full items-center gap-2 px-3 py-2 text-xs"
+            style={{ color: "var(--text)" }}
           >
             <Pencil size={13} /> Rename
           </button>
@@ -1076,7 +1079,8 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
                 dispatch({ type: "UNSET_BOARD_PARENT", name: menu.name });
                 setMenu(null);
               }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-black/5 dark:hover:bg-white/10"
+              className="flex w-full items-center gap-2 px-3 py-2 text-xs"
+              style={{ color: "var(--text)" }}
             >
               <ListTree size={13} /> Move to top level
             </button>
@@ -1086,7 +1090,8 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
               setModal({ type: "delete", name: menu.name });
               setMenu(null);
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-xs text-rose-500 hover:bg-rose-500/10"
+            className="flex w-full items-center gap-2 px-3 py-2 text-xs"
+            style={{ color: "var(--danger)" }}
           >
             <Trash2 size={13} /> Delete
           </button>
@@ -1130,7 +1135,7 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Board window                                                       */
+/*  Board window (dual pending / done view)                            */
 /* ------------------------------------------------------------------ */
 
 function buildColumnTree(tasks) {
@@ -1144,8 +1149,6 @@ function buildColumnTree(tasks) {
 }
 
 function TaskRow({ task, depth, board, dispatch, onDrop }) {
-  const { theme } = useContext(ThemeContext);
-  const isDark = theme.mode === "dark";
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.name);
   const [over, setOver] = useState(false);
@@ -1167,25 +1170,24 @@ function TaskRow({ task, depth, board, dispatch, onDrop }) {
         const draggedId = e.dataTransfer.getData("text/plain");
         if (draggedId && draggedId !== task.id) onDrop(draggedId, task.id);
       }}
-      style={{ marginLeft: depth * 16 }}
-      className={`group flex animate-[slideIn_160ms_ease-out] items-center gap-2 rounded-lg px-2 py-1.5 transition-colors ${
-        over
-          ? isDark ? "bg-white/20 ring-1 ring-white/40" : "bg-black/10 ring-1 ring-black/20"
-          : isDark ? "hover:bg-white/10" : "hover:bg-white/70"
-      }`}
+      style={{
+        marginLeft: depth * 16,
+        background: over ? "var(--accent-soft)" : "transparent",
+        boxShadow: over ? "inset 0 0 0 1px var(--ring)" : "none",
+      }}
+      className="group flex animate-[slideIn_140ms_ease-out] items-center gap-2 rounded-md px-2 py-1.5 transition-colors"
     >
-      <GripVertical size={12} className="shrink-0 opacity-40" />
+      <GripVertical size={12} className="shrink-0" style={{ color: "var(--text-faint)" }} />
       <button
         onClick={() => dispatch({ type: "TOGGLE_TASK", board, taskId: task.id, done: !task.done })}
-        className={`grid h-4 w-4 shrink-0 place-items-center rounded border transition-transform active:scale-90 ${
-          task.done
-            ? theme.accentBg
-            : isDark
-            ? "border-stone-600 bg-stone-800"
-            : "border-stone-300 bg-white"
-        }`}
+        className="grid h-4 w-4 shrink-0 place-items-center rounded-[4px] border transition-transform active:scale-90"
+        style={{
+          borderColor: task.done ? "var(--accent)" : "var(--border-strong)",
+          background: task.done ? "var(--accent)" : "transparent",
+          color: "var(--accent-contrast)",
+        }}
       >
-        {task.done && <Check size={11} strokeWidth={3} className="animate-[popIn_180ms_ease-out]" />}
+        {task.done && <Check size={11} strokeWidth={3} className="animate-[popIn_160ms_ease-out]" />}
       </button>
       {editing ? (
         <input
@@ -1203,21 +1205,22 @@ function TaskRow({ task, depth, board, dispatch, onDrop }) {
               setEditing(false);
             }
           }}
-          className={`flex-1 rounded border px-1.5 py-0.5 text-xs outline-none ${
-            isDark ? "border-stone-700 bg-stone-900 text-white" : "border-stone-300 bg-white text-stone-900"
-          }`}
+          className="flex-1 rounded border px-1.5 py-0.5 text-xs outline-none"
+          style={{ borderColor: "var(--border-strong)", background: "var(--surface-solid)", color: "var(--text)" }}
         />
       ) : (
         <span
           onDoubleClick={() => setEditing(true)}
-          className={`flex-1 truncate text-xs transition-colors ${task.done ? "line-through opacity-40" : ""}`}
+          className="flex-1 truncate text-xs transition-colors"
+          style={{ color: task.done ? "var(--text-faint)" : "var(--text)", textDecoration: task.done ? "line-through" : "none" }}
         >
           {task.name}
         </span>
       )}
       <button
         onClick={() => dispatch({ type: "DELETE_TASK", board, taskId: task.id })}
-        className="invisible shrink-0 rounded p-1 opacity-50 transition-transform hover:text-rose-500 group-hover:visible active:scale-90"
+        className="invisible shrink-0 rounded p-1 transition-transform group-hover:visible active:scale-90"
+        style={{ color: "var(--text-faint)" }}
       >
         <Trash2 size={12} />
       </button>
@@ -1225,8 +1228,7 @@ function TaskRow({ task, depth, board, dispatch, onDrop }) {
   );
 }
 
-function TaskColumn({ label, tasks, board, dispatch, accent }) {
-  const { theme } = useContext(ThemeContext);
+function TaskColumn({ label, tasks, board, dispatch }) {
   const tree = useMemo(() => buildColumnTree(tasks), [tasks]);
 
   const handleDrop = useCallback(
@@ -1251,15 +1253,24 @@ function TaskColumn({ label, tasks, board, dispatch, accent }) {
         const draggedId = e.dataTransfer.getData("text/plain");
         if (draggedId) dispatch({ type: "SET_TASK_PARENT", board, taskId: draggedId, parentId: null });
       }}
-      className={`flex min-h-0 flex-1 flex-col rounded-xl p-2.5 ${theme.cardBg} border ${theme.border}`}
+      className="flex min-h-0 flex-1 flex-col rounded-lg p-2"
+      style={{ background: "var(--surface)" }}
     >
-      <div className={`mb-1.5 flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide ${accent}`}>
-        <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      <div
+        className="mb-1.5 flex items-center border-b px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wide"
+        style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+      >
         {label}
-        <span className="ml-auto opacity-70">{tasks.length}</span>
+        <span className="ml-auto" style={{ color: "var(--text-faint)" }}>
+          {tasks.length}
+        </span>
       </div>
       <div className="flex-1 space-y-0.5 overflow-auto pr-1">
-        {tasks.length === 0 && <div className="px-2 py-3 text-[11px] opacity-40">Nothing here</div>}
+        {tasks.length === 0 && (
+          <div className="px-2 py-3 text-[11px]" style={{ color: "var(--text-faint)" }}>
+            Nothing here
+          </div>
+        )}
         {renderLevel("__root__", 0)}
       </div>
     </div>
@@ -1267,29 +1278,38 @@ function TaskColumn({ label, tasks, board, dispatch, accent }) {
 }
 
 function BoardApp({ boardName, boards, dispatch }) {
-  const { theme } = useContext(ThemeContext);
-  const isDark = theme.mode === "dark";
   const board = boards[boardName];
   const [draft, setDraft] = useState("");
   if (!board) {
-    return <div className="grid h-full place-items-center text-sm opacity-50">Board deleted.</div>;
+    return (
+      <div className="grid h-full place-items-center text-sm" style={{ color: "var(--text-faint)" }}>
+        Board deleted.
+      </div>
+    );
   }
   const pending = board.tasks.filter((t) => !t.done);
   const done = board.tasks.filter((t) => t.done);
   const { pct, total } = countStats(board);
 
   return (
-    <div className={`flex h-full flex-col ${theme.subtleBg}`}>
-      <div className={`border-b ${theme.border} px-4 py-2.5`}>
+    <div className="flex h-full flex-col" style={{ background: "var(--surface-muted)" }}>
+      <div className="border-b px-4 py-3" style={{ borderColor: "var(--border)" }}>
         <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold">{boardName}</div>
-          <div className="text-[11px] opacity-70">{total} tasks · {pct}% done</div>
+          <div className="text-[13px] font-semibold" style={{ color: "var(--text)" }}>
+            {boardName}
+          </div>
+          <div className="text-[10px]" style={{ color: "var(--text-faint)" }}>
+            {total} tasks · {pct}% done
+          </div>
         </div>
-        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
-          <div className="h-full transition-all duration-500" style={{ width: `${pct}%`, background: theme.accent }} />
+        <div className="mt-2 h-1 overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
+          <div
+            className="h-full transition-all duration-500"
+            style={{ width: `${pct}%`, background: "var(--accent)" }}
+          />
         </div>
         <form
-          className="mt-2.5 flex gap-2"
+          className="mt-3 flex gap-2"
           onSubmit={(e) => {
             e.preventDefault();
             if (draft.trim()) {
@@ -1302,30 +1322,31 @@ function BoardApp({ boardName, boards, dispatch }) {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Add a task and press Enter…"
-            className={`flex-1 rounded-lg border px-3 py-1.5 text-xs outline-none focus:ring-2 ${
-              isDark ? "border-stone-700 bg-stone-900/80 text-white focus:ring-stone-500" : "border-stone-200 bg-white text-stone-900 focus:ring-stone-300"
-            }`}
+            className="flex-1 rounded-lg border px-3 py-1.5 text-xs outline-none"
+            style={{ background: "var(--surface-solid)", borderColor: "var(--border)", color: "var(--text)" }}
           />
-          <button type="submit" className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-transform active:scale-95 ${theme.accentBg}`}>
+          <button
+            type="submit"
+            className="rounded-lg px-3 py-1.5 text-xs font-medium transition-transform active:scale-95"
+            style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
+          >
             <Plus size={13} />
           </button>
         </form>
       </div>
-      <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 p-3">
-        <TaskColumn label="Pending" tasks={pending} board={boardName} dispatch={dispatch} accent="text-amber-500" />
-        <TaskColumn label="Done" tasks={done} board={boardName} dispatch={dispatch} accent="text-emerald-500" />
+      <div className="grid min-h-0 flex-1 grid-cols-2 gap-2.5 p-2.5">
+        <TaskColumn label="Pending" tasks={pending} board={boardName} dispatch={dispatch} />
+        <TaskColumn label="Done" tasks={done} board={boardName} dispatch={dispatch} />
       </div>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Graph view                                                         */
+/*  Graph view (real board hierarchy, radial layout)                   */
 /* ------------------------------------------------------------------ */
 
 function GraphApp({ boards, openWindow }) {
-  const { theme } = useContext(ThemeContext);
-  const isDark = theme.mode === "dark";
   const [ref, setRef] = useState(null);
   const [size, setSize] = useState({ width: 600, height: 420 });
   useEffect(() => {
@@ -1341,11 +1362,15 @@ function GraphApp({ boards, openWindow }) {
   const positions = keys.length ? layoutBoardForest(boards, size.width, size.height) : {};
 
   return (
-    <div className={`flex h-full flex-col p-3 ${theme.subtleBg}`}>
-      <div className="mb-1 text-xs font-medium opacity-70">Board relationship graph</div>
+    <div className="flex h-full flex-col p-3" style={{ background: "var(--surface-muted)" }}>
+      <div className="mb-1 text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>
+        Board relationship graph
+      </div>
       <div ref={setRef} className="relative flex-1 overflow-hidden">
         {keys.length === 0 && (
-          <div className="grid h-full place-items-center text-xs opacity-40">No boards yet</div>
+          <div className="grid h-full place-items-center text-xs" style={{ color: "var(--text-faint)" }}>
+            No boards yet
+          </div>
         )}
         <svg width={size.width} height={size.height} className="absolute inset-0">
           {keys.map((k) => {
@@ -1354,7 +1379,15 @@ function GraphApp({ boards, openWindow }) {
             const p1 = positions[parent];
             const p2 = positions[k];
             return (
-              <line key={`e-${k}`} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={isDark ? "#4b5563" : "#cbd5e1"} strokeWidth={1.5} />
+              <line
+                key={`e-${k}`}
+                x1={p1.x}
+                y1={p1.y}
+                x2={p2.x}
+                y2={p2.y}
+                stroke="var(--border-strong)"
+                strokeWidth={1.5}
+              />
             );
           })}
         </svg>
@@ -1374,16 +1407,21 @@ function GraphApp({ boards, openWindow }) {
                 height: radius * 2,
                 transform: "translate(-50%, -50%)",
                 animationDelay: `${i * 40}ms`,
+                borderColor: "var(--accent)",
+                background: complete ? "var(--accent)" : "var(--accent-soft)",
               }}
               onClick={() => openWindow("board", { boardName: k })}
-              className={`absolute flex flex-col items-center justify-center rounded-full border-2 text-center transition-transform animate-[popIn_220ms_ease-out_backwards] hover:scale-110 ${
-                complete
-                  ? isDark ? "border-emerald-400 bg-emerald-950 text-emerald-100" : "border-emerald-500 bg-emerald-100 text-emerald-900"
-                  : isDark ? "border-stone-600 bg-stone-800 text-stone-200" : "border-stone-300 bg-white text-stone-800"
-              } ${complete ? "animate-[pulse_2.4s_ease-in-out_infinite]" : ""}`}
+              className="absolute flex flex-col items-center justify-center rounded-full border-2 text-center transition-transform animate-[popIn_200ms_ease-out_backwards] hover:scale-110"
             >
-              <span className="w-full truncate px-1 text-[9px] font-semibold">{k}</span>
-              <span className="text-[8px] opacity-70">{done}/{total}</span>
+              <span
+                className="w-full truncate px-1 text-[9px] font-semibold"
+                style={{ color: complete ? "var(--accent-contrast)" : "var(--text)" }}
+              >
+                {k}
+              </span>
+              <span className="text-[8px]" style={{ color: complete ? "var(--accent-contrast)" : "var(--text-muted)" }}>
+                {done}/{total}
+              </span>
             </button>
           );
         })}
@@ -1397,21 +1435,21 @@ function GraphApp({ boards, openWindow }) {
 /* ------------------------------------------------------------------ */
 
 function ProjectApp({ projectName, boards, openWindow }) {
-  const { theme } = useContext(ThemeContext);
-  const isDark = theme.mode === "dark";
   const keys = Object.keys(boards).filter((k) => (boards[k].tags || []).some((t) => norm(t) === norm(projectName)));
   return (
-    <div className={`flex h-full flex-col gap-3 p-4 ${theme.subtleBg}`}>
+    <div className="flex h-full flex-col gap-3 p-4" style={{ background: "var(--surface-muted)" }}>
       <div className="flex items-center gap-2">
-        <Rocket size={16} className={theme.accentText} />
-        <div className="text-sm font-semibold">@{projectName}</div>
+        <Rocket size={15} style={{ color: "var(--accent)" }} />
+        <div className="text-[13px] font-semibold" style={{ color: "var(--text)" }}>
+          @{projectName}
+        </div>
       </div>
-      <div className={`min-h-0 flex-1 overflow-auto rounded-xl p-3 ${theme.cardBg} border ${theme.border}`}>
-        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide opacity-60">
+      <div className="min-h-0 flex-1 overflow-auto rounded-lg p-3" style={{ background: "var(--surface)" }}>
+        <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-faint)" }}>
           Tagged boards ({keys.length})
         </div>
         {keys.length === 0 && (
-          <div className="px-1 text-xs opacity-60">
+          <div className="px-1 text-xs" style={{ color: "var(--text-faint)" }}>
             No boards tagged @{projectName} yet — try <code>board -tag &lt;name&gt; @{projectName}</code> in the terminal.
           </div>
         )}
@@ -1422,12 +1460,13 @@ function ProjectApp({ projectName, boards, openWindow }) {
               <button
                 key={n}
                 onClick={() => openWindow("board", { boardName: n })}
-                className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-transform hover:translate-x-0.5 ${
-                  isDark ? "hover:bg-white/10" : "hover:bg-black/5"
-                }`}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-transform hover:translate-x-0.5"
+                style={{ color: "var(--text)" }}
               >
-                <Folder size={13} className={theme.iconColor} /> {n}
-                <span className="ml-auto opacity-60">{done}/{total}</span>
+                <Folder size={13} style={{ color: "var(--text-faint)" }} /> {n}
+                <span className="ml-auto" style={{ color: "var(--text-faint)" }}>
+                  {done}/{total}
+                </span>
               </button>
             );
           })}
@@ -1438,8 +1477,163 @@ function ProjectApp({ projectName, boards, openWindow }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Terminal                                                           */
+/*  Calendar view                                                      */
 /* ------------------------------------------------------------------ */
+
+const WEEKDAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+
+function CalendarApp({ events, dispatch }) {
+  const [cursor, setCursor] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
+  const [selected, setSelected] = useState(() => dateKey(new Date()));
+  const [draft, setDraft] = useState("");
+
+  const today = dateKey(new Date());
+  const cells = useMemo(() => getMonthCells(cursor.getFullYear(), cursor.getMonth()), [cursor]);
+  const monthLabel = cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const dayEvents = events[selected] || [];
+
+  return (
+    <div className="flex h-full" style={{ background: "var(--surface-muted)" }}>
+      <div className="flex min-w-0 flex-1 flex-col p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <button
+            onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+            className="grid h-6 w-6 place-items-center rounded-md text-xs transition-colors"
+            style={{ color: "var(--text-muted)" }}
+          >
+            ‹
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="text-[12px] font-semibold" style={{ color: "var(--text)" }}>
+              {monthLabel}
+            </div>
+            <button
+              onClick={() => {
+                const n = new Date();
+                setCursor(new Date(n.getFullYear(), n.getMonth(), 1));
+                setSelected(dateKey(n));
+              }}
+              className="rounded-md px-1.5 py-0.5 text-[9px] font-medium"
+              style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
+            >
+              Today
+            </button>
+          </div>
+          <button
+            onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+            className="grid h-6 w-6 place-items-center rounded-md text-xs transition-colors"
+            style={{ color: "var(--text-muted)" }}
+          >
+            ›
+          </button>
+        </div>
+        <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[9px] font-medium uppercase" style={{ color: "var(--text-faint)" }}>
+          {WEEKDAY_LABELS.map((d) => (
+            <div key={d}>{d}</div>
+          ))}
+        </div>
+        <div className="grid flex-1 grid-cols-7 gap-1">
+          {cells.map((d, i) => {
+            const key = dateKey(d);
+            const inMonth = d.getMonth() === cursor.getMonth();
+            const has = (events[key] || []).length > 0;
+            const isToday = key === today;
+            const isSel = key === selected;
+            return (
+              <button
+                key={i}
+                onClick={() => setSelected(key)}
+                className="relative flex flex-col items-center justify-center rounded-md text-[11px] transition-colors"
+                style={{
+                  background: isSel ? "var(--accent)" : isToday ? "var(--accent-soft)" : "transparent",
+                  color: isSel ? "var(--accent-contrast)" : inMonth ? "var(--text)" : "var(--text-faint)",
+                  fontWeight: isToday && !isSel ? 700 : 500,
+                }}
+              >
+                {d.getDate()}
+                {has && (
+                  <span
+                    className="absolute bottom-1 h-1 w-1 rounded-full"
+                    style={{ background: isSel ? "var(--accent-contrast)" : "var(--accent)" }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="flex w-48 shrink-0 flex-col border-l p-3" style={{ borderColor: "var(--border)" }}>
+        <div className="mb-2 text-[11px] font-semibold" style={{ color: "var(--text)" }}>
+          {new Date(selected + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+        </div>
+        <form
+          className="mb-2 flex gap-1"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (draft.trim()) {
+              dispatch({ type: "ADD_EVENT", date: selected, text: draft });
+              setDraft("");
+            }
+          }}
+        >
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Add event…"
+            className="flex-1 rounded-md border px-2 py-1 text-[11px] outline-none"
+            style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--text)" }}
+          />
+          <button
+            type="submit"
+            className="rounded-md px-2 text-[11px]"
+            style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
+          >
+            <Plus size={12} />
+          </button>
+        </form>
+        <div className="flex-1 space-y-1 overflow-auto">
+          {dayEvents.length === 0 && (
+            <div className="text-[11px]" style={{ color: "var(--text-faint)" }}>
+              No events
+            </div>
+          )}
+          {dayEvents.map((ev) => (
+            <div
+              key={ev.id}
+              className="group flex items-center gap-1.5 rounded-md px-2 py-1"
+              style={{ background: "var(--surface)" }}
+            >
+              <span className="flex-1 truncate text-[11px]" style={{ color: "var(--text)" }}>
+                {ev.text}
+              </span>
+              <button
+                onClick={() => dispatch({ type: "DELETE_EVENT", date: selected, id: ev.id })}
+                className="opacity-0 transition-opacity group-hover:opacity-100"
+                style={{ color: "var(--text-faint)" }}
+              >
+                <X size={11} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Terminal — rich command engine                                     */
+/* ------------------------------------------------------------------ */
+
+const THEMES = {
+  amber: { text: "#ffb200", dim: "#a97a1f", faint: "#6b4c17", glow: "rgba(255,178,0,0.45)" },
+  green: { text: "#33ff66", dim: "#1f9e42", faint: "#155c29", glow: "rgba(51,255,102,0.45)" },
+  cyan: { text: "#4ee7ff", dim: "#2b93a8", faint: "#1a5866", glow: "rgba(78,231,255,0.45)" },
+  paper: { text: "#f2ead8", dim: "#a89d84", faint: "#5f5748", glow: "rgba(242,234,216,0.35)" },
+};
 
 const HELP_LINES = [
   "commands:",
@@ -1473,15 +1667,24 @@ const HELP_LINES = [
   "  projects                           list projects and their board counts",
   "  open -project <name>               open every board tagged with a project",
   "  graph                              open the board relationship graph",
+  "  cal                                open the calendar",
   "",
-  "  theme <name>                       switch themes: lavender-light, rose-light,",
-  "                                     arctic-light, midnight-dark, cyber-dark, amber-dark",
-  "  find <text> · stats · history · date · whoami · clear · help",
+  "  boards open automatically the moment you create or `cd` into them —",
+  "  click a board in the Boards window or dock to bring it back up.",
+  "",
+  "  find <text>                        search task names across all boards",
+  "  stats                              show overall progress",
+  "  history                            show recently run commands",
+  "  theme <amber|green|cyan|paper>      change terminal theme",
+  "  date · whoami · clear · help",
   "  reset -yes                         erase every board & task",
+  "",
+  "  aliases: mkdir = board -add   touch = task -add",
+  "           rmdir = board -del   rm = task -del / board -del",
 ];
 
 const COMMAND_WORDS = [
-  "board", "task", "graph", "open", "init", "projects", "ls", "cd", "pwd",
+  "board", "task", "graph", "cal", "open", "init", "projects", "ls", "cd", "pwd",
   "whoami", "clear", "help", "find", "stats", "history", "theme", "date",
   "reset", "mkdir", "touch", "rm", "rmdir",
 ];
@@ -1490,8 +1693,7 @@ function getPromptStr(cwd) {
   return cwd ? `guest:~/${cwd}$` : "guest:~$";
 }
 
-function TerminalApp({ boards, projects, dispatch, openWindow, windows }) {
-  const { theme, themeKey, setThemeKey } = useContext(ThemeContext);
+function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, setTheme }) {
   const [cwd, setCwd] = useState(null);
   const [lines, setLines] = useState([
     { id: uid("l"), kind: "sys", text: "Artemis Terminal — type 'help' for commands." },
@@ -1516,7 +1718,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows }) {
     setLines((L) => [...L, { id: uid("l"), kind, text }]);
   }, []);
 
-  const th = theme.terminal;
+  const th = THEMES[theme] || THEMES.amber;
 
   const printBoardList = useCallback(() => {
     const allKeys = Object.keys(boards);
@@ -1811,6 +2013,9 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows }) {
         case "graph":
           openWindow("graph");
           return print("opened board graph", "ok");
+        case "cal":
+          openWindow("calendar");
+          return print("opened calendar", "ok");
         case "find": {
           const query = tokens.slice(1).join(" ");
           if (!query) return print("usage: find <text>", "err");
@@ -1847,11 +2052,11 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows }) {
           return print(cmdLog.length ? cmdLog.map((c, i) => `  ${i + 1}  ${c}`).join("\n") : "no commands yet");
         case "theme": {
           const arg = (tokens[1] || "").toLowerCase();
-          const validKeys = Object.keys(THEME_PRESETS);
-          if (!arg) return print(`current theme: ${themeKey}\navailable: ${validKeys.join(", ")}`);
-          if (!validKeys.includes(arg)) return print(`unknown theme '${arg}' — try: ${validKeys.join(", ")}`, "err");
-          setThemeKey(arg);
-          return print(`theme set to '${THEME_PRESETS[arg].name}'`, "ok");
+          const names = Object.keys(THEMES);
+          if (!arg) return print(`current theme: ${theme}\navailable: ${names.join(", ")}`);
+          if (!names.includes(arg)) return print(`unknown theme '${arg}' — try: ${names.join(", ")}`, "err");
+          setTheme(arg);
+          return print(`theme set to '${arg}'`, "ok");
         }
         case "init": {
           if (tokens[1] === "-del") {
@@ -1959,7 +2164,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows }) {
         }
       }
     },
-    [boards, projects, cwd, cmdLog, dispatch, openWindow, print, printBoardList, printBoardTasks, setThemeKey, themeKey, windows]
+    [boards, projects, cwd, cmdLog, dispatch, openWindow, print, printBoardList, printBoardTasks, setTheme, theme, windows]
   );
 
   /* ---------- suggestions ---------- */
@@ -1990,7 +2195,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows }) {
       return [];
     }
     if (head === "cd") return boardNames;
-    if (head === "theme") return Object.keys(THEME_PRESETS);
+    if (head === "theme") return Object.keys(THEMES);
     if (head === "open") {
       if (ctx.length === 1) return ["-project"];
       if (ctx[1] === "-project") return projects;
@@ -2085,7 +2290,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows }) {
   return (
     <div
       className="relative flex h-full flex-col overflow-hidden font-mono"
-      style={{ background: th.bg, color: th.text }}
+      style={{ background: "#0b0906", color: th.text }}
       onMouseDown={() => inputRef.current?.focus()}
     >
       <div
@@ -2137,7 +2342,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows }) {
           {showSuggestions && (
             <div
               className="absolute left-0 z-[500] max-h-48 min-w-[220px] max-w-[360px] animate-[fadeIn_120ms_ease-out] overflow-y-auto border"
-              style={{ bottom: "calc(100% + 6px)", background: "#11100f", borderColor: th.dim, boxShadow: "0 10px 28px rgba(0,0,0,0.55)" }}
+              style={{ bottom: "calc(100% + 6px)", background: "#1e1509", borderColor: th.dim, boxShadow: "0 10px 28px rgba(0,0,0,0.55)" }}
             >
               {suggestions.map((s, i) => {
                 const active = i === activeIndex;
@@ -2165,34 +2370,80 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Dock & Theme Switcher                                              */
+/*  Dock / Taskbar                                                     */
 /* ------------------------------------------------------------------ */
 
 function Clock24() {
-  const { theme } = useContext(ThemeContext);
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000 * 15);
     return () => clearInterval(id);
   }, []);
   return (
-    <div className={`flex items-center gap-1.5 text-[11px] font-medium opacity-80 ${theme.mode === "dark" ? "text-white" : "text-stone-800"}`}>
+    <div className="flex items-center gap-1.5 text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>
       <Clock size={12} />
       {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
     </div>
   );
 }
 
-function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow }) {
-  const { theme, themeKey, setThemeKey } = useContext(ThemeContext);
-  const isDark = theme.mode === "dark";
+function ThemeSwitcher({ osTheme, setOsTheme }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = () => setOpen(false);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, [open]);
+
+  return (
+    <div className="relative" onMouseDown={(e) => e.stopPropagation()}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="grid h-8 w-8 place-items-center rounded-lg transition-transform hover:scale-110 active:scale-95"
+        style={{ color: "var(--text-muted)" }}
+        title="Theme"
+      >
+        <Palette size={15} />
+      </button>
+      {open && (
+        <div
+          className="absolute bottom-11 right-0 w-40 origin-bottom-right animate-[popIn_120ms_ease-out] overflow-hidden rounded-xl border shadow-2xl"
+          style={{ background: "var(--surface-solid)", borderColor: "var(--border)" }}
+        >
+          {OS_THEME_ORDER.map((key) => {
+            const t = OS_THEMES[key];
+            const active = key === osTheme;
+            return (
+              <button
+                key={key}
+                onClick={() => {
+                  setOsTheme(key);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-xs"
+                style={{ color: "var(--text)", background: active ? "var(--accent-soft)" : "transparent" }}
+              >
+                {t.mode === "dark" ? <Moon size={12} /> : <Sun size={12} />}
+                {t.label}
+                {active && <Check size={11} className="ml-auto" style={{ color: "var(--accent)" }} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow, osTheme, setOsTheme }) {
   const [startOpen, setStartOpen] = useState(false);
-  const [themePickerOpen, setThemePickerOpen] = useState(false);
 
   const label = (w) => {
     if (w.kind === "terminal") return "Terminal";
     if (w.kind === "file-manager") return "Boards";
     if (w.kind === "graph") return "Graph";
+    if (w.kind === "calendar") return "Calendar";
     if (w.kind === "board") return w.boardName;
     if (w.kind === "project") return w.projectName;
     return w.kind;
@@ -2201,30 +2452,30 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow 
     kind === "terminal" ? <TerminalIcon size={13} /> :
     kind === "file-manager" ? <Kanban size={13} /> :
     kind === "graph" ? <Network size={13} /> :
+    kind === "calendar" ? <CalendarIcon size={13} /> :
     kind === "project" ? <Rocket size={13} /> : <Folder size={13} />;
 
   const topZ = windows.reduce((m, w) => Math.max(m, w.z), 0);
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-3 z-[9000] flex justify-center">
-      <div className={`pointer-events-auto flex animate-[slideUp_260ms_cubic-bezier(0.16,1,0.3,1)] items-center gap-1 rounded-2xl border px-2 py-1.5 ${theme.dockBg}`}>
-        {/* Start / Launch Menu */}
+      <div
+        className="pointer-events-auto flex animate-[slideUp_220ms_cubic-bezier(0.16,1,0.3,1)] items-center gap-1 rounded-2xl border px-2 py-1.5 shadow-xl backdrop-blur-xl"
+        style={{ background: "var(--dock-bg)", borderColor: "var(--border)" }}
+      >
         <div className="relative">
           <button
-            onClick={() => {
-              setStartOpen((s) => !s);
-              setThemePickerOpen(false);
-            }}
-            className={`grid h-9 w-9 place-items-center rounded-xl shadow transition-transform hover:scale-110 active:scale-95 ${theme.accentBg}`}
+            onClick={() => setStartOpen((s) => !s)}
+            className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95"
+            style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
             title="Artemis"
           >
             <Sparkles size={16} />
           </button>
           {startOpen && (
             <div
-              className={`absolute bottom-12 left-0 w-44 origin-bottom-left animate-[popIn_140ms_ease-out] overflow-hidden rounded-xl border shadow-2xl ${
-                isDark ? "border-stone-700 bg-stone-900/95 text-stone-200" : "border-stone-200 bg-white/95 text-stone-800"
-              }`}
+              className="absolute bottom-12 left-0 w-44 origin-bottom-left animate-[popIn_130ms_ease-out] overflow-hidden rounded-xl border shadow-2xl"
+              style={{ background: "var(--surface-solid)", borderColor: "var(--border)" }}
               onMouseLeave={() => setStartOpen(false)}
             >
               <button
@@ -2232,7 +2483,8 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow 
                   openWindow("terminal");
                   setStartOpen(false);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-black/5 dark:hover:bg-white/10"
+                className="flex w-full items-center gap-2 px-3 py-2 text-xs"
+                style={{ color: "var(--text)" }}
               >
                 <TerminalIcon size={13} /> Open Terminal
               </button>
@@ -2241,16 +2493,28 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow 
                   openWindow("file-manager");
                   setStartOpen(false);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-black/5 dark:hover:bg-white/10"
+                className="flex w-full items-center gap-2 px-3 py-2 text-xs"
+                style={{ color: "var(--text)" }}
               >
                 <Kanban size={13} /> Boards
+              </button>
+              <button
+                onClick={() => {
+                  openWindow("calendar");
+                  setStartOpen(false);
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-xs"
+                style={{ color: "var(--text)" }}
+              >
+                <CalendarIcon size={13} /> Calendar
               </button>
               <button
                 onClick={() => {
                   openWindow("graph");
                   setStartOpen(false);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-black/5 dark:hover:bg-white/10"
+                className="flex w-full items-center gap-2 px-3 py-2 text-xs"
+                style={{ color: "var(--text)" }}
               >
                 <Network size={13} /> Graph View
               </button>
@@ -2260,95 +2524,30 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow 
 
         <button
           onClick={() => openWindow("file-manager")}
-          className={`grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95 ${
-            isDark ? "text-stone-300 hover:bg-white/10" : "text-stone-700 hover:bg-black/5"
-          }`}
+          className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95"
+          style={{ color: "var(--text-muted)" }}
           title="Boards"
         >
           <Kanban size={17} />
         </button>
         <button
           onClick={() => openWindow("terminal")}
-          className={`grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95 ${
-            isDark ? "text-stone-300 hover:bg-white/10" : "text-stone-700 hover:bg-black/5"
-          }`}
+          className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95"
+          style={{ color: "var(--text-muted)" }}
           title="Terminal (Shift+T)"
         >
           <TerminalIcon size={17} />
         </button>
+        <button
+          onClick={() => openWindow("calendar")}
+          className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95"
+          style={{ color: "var(--text-muted)" }}
+          title="Calendar"
+        >
+          <CalendarIcon size={17} />
+        </button>
 
-        {/* Theme Switcher Button */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              setThemePickerOpen((p) => !p);
-              setStartOpen(false);
-            }}
-            className={`grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95 ${
-              isDark ? "text-stone-300 hover:bg-white/10" : "text-stone-700 hover:bg-black/5"
-            }`}
-            title="Themes"
-          >
-            <Palette size={17} />
-          </button>
-          {themePickerOpen && (
-            <div
-              className={`absolute bottom-12 left-1/2 -translate-x-1/2 w-56 origin-bottom animate-[popIn_140ms_ease-out] overflow-hidden rounded-xl border p-2 shadow-2xl ${
-                isDark ? "border-stone-700 bg-stone-900/95 text-stone-200" : "border-stone-200 bg-white/95 text-stone-800"
-              }`}
-              onMouseLeave={() => setThemePickerOpen(false)}
-            >
-              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider opacity-50">Light Themes</div>
-              {Object.entries(THEME_PRESETS)
-                .filter(([, t]) => t.mode === "light")
-                .map(([key, t]) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setThemeKey(key);
-                      setThemePickerOpen(false);
-                    }}
-                    className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors ${
-                      themeKey === key
-                        ? "bg-black/10 dark:bg-white/15 font-semibold"
-                        : "hover:bg-black/5 dark:hover:bg-white/5"
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: t.accent }} />
-                      {t.name}
-                    </span>
-                    {themeKey === key && <Check size={12} />}
-                  </button>
-                ))}
-              <div className="mt-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider opacity-50">Dark Themes</div>
-              {Object.entries(THEME_PRESETS)
-                .filter(([, t]) => t.mode === "dark")
-                .map(([key, t]) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setThemeKey(key);
-                      setThemePickerOpen(false);
-                    }}
-                    className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition-colors ${
-                      themeKey === key
-                        ? "bg-black/10 dark:bg-white/15 font-semibold"
-                        : "hover:bg-black/5 dark:hover:bg-white/5"
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: t.accent }} />
-                      {t.name}
-                    </span>
-                    {themeKey === key && <Check size={12} />}
-                  </button>
-                ))}
-            </div>
-          )}
-        </div>
-
-        {windows.length > 0 && <div className="mx-1 h-6 w-px bg-black/10 dark:bg-white/10" />}
+        {windows.length > 0 && <div className="mx-1 h-6 w-px" style={{ background: "var(--border)" }} />}
 
         {windows.map((w) => {
           const active = !w.minimized && w.z === topZ;
@@ -2356,13 +2555,11 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow 
             <button
               key={w.id}
               onClick={() => (w.minimized ? restoreWindow(w.id) : active ? minimizeWindow(w.id) : focusWindow(w.id))}
-              className={`flex max-w-[120px] animate-[popIn_180ms_ease-out] items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-medium transition-transform hover:scale-105 active:scale-95 ${
-                active
-                  ? theme.accentBg
-                  : isDark
-                  ? "bg-white/10 text-stone-200 hover:bg-white/20"
-                  : "bg-black/5 text-stone-700 hover:bg-black/10"
-              }`}
+              className="flex max-w-[120px] animate-[popIn_160ms_ease-out] items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-medium transition-transform hover:scale-105 active:scale-95"
+              style={{
+                background: active ? "var(--accent)" : "var(--accent-soft)",
+                color: active ? "var(--accent-contrast)" : "var(--text-muted)",
+              }}
             >
               {iconFor(w.kind)}
               <span className="truncate">{label(w)}</span>
@@ -2370,9 +2567,12 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow 
           );
         })}
 
-        <div className="mx-1 h-6 w-px bg-black/10 dark:bg-white/10" />
-        <div className="flex items-center gap-2 px-2">
-          <Clock24 />
+        <div className="mx-1 h-6 w-px" style={{ background: "var(--border)" }} />
+        <div className="flex items-center gap-1 px-1">
+          <ThemeSwitcher osTheme={osTheme} setOsTheme={setOsTheme} />
+          <div className="px-1">
+            <Clock24 />
+          </div>
         </div>
       </div>
     </div>
@@ -2384,19 +2584,20 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow 
 /* ------------------------------------------------------------------ */
 
 function DesktopIcon({ icon, label, onOpen }) {
-  const { theme } = useContext(ThemeContext);
-  const isDark = theme.mode === "dark";
   return (
     <button
       onClick={onOpen}
-      className={`flex w-20 flex-col items-center gap-1 rounded-lg p-2 text-center transition-transform hover:-translate-y-0.5 active:scale-95 ${
-        isDark ? "hover:bg-white/10" : "hover:bg-black/5"
-      }`}
+      className="flex w-20 flex-col items-center gap-1 rounded-lg p-2 text-center transition-transform hover:-translate-y-0.5 active:scale-95"
     >
-      <div className={`grid h-10 w-10 place-items-center rounded-xl shadow backdrop-blur ${isDark ? "bg-white/10 text-white" : "bg-white/60 text-stone-800"}`}>
+      <div
+        className="grid h-10 w-10 place-items-center rounded-xl shadow backdrop-blur"
+        style={{ background: "var(--surface)", color: "var(--accent)" }}
+      >
         {icon}
       </div>
-      <span className={`text-[10px] font-medium drop-shadow-sm ${theme.desktopText}`}>{label}</span>
+      <span className="text-[10px] font-medium drop-shadow-sm" style={{ color: "var(--text)" }}>
+        {label}
+      </span>
     </button>
   );
 }
@@ -2407,7 +2608,8 @@ function DesktopIcon({ icon, label, onOpen }) {
 
 export default function ArtemisOS() {
   const [state, dispatch] = useReducer(osReducer, undefined, makeInitialState);
-  const [themeKey, setThemeKey] = useState("lavender-light");
+  const [theme, setTheme] = useState("amber"); // terminal CRT theme
+  const [osTheme, setOsTheme] = useState("aurora"); // window-chrome theme
   const desktopRef = useRef(null);
   const dragRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
@@ -2415,15 +2617,13 @@ export default function ArtemisOS() {
   if (backendRef.current === null) backendRef.current = resolvePersistBackend() || false;
   const backend = backendRef.current || null;
 
-  const activeTheme = THEME_PRESETS[themeKey] || THEME_PRESETS["lavender-light"];
-
   const getRect = () => desktopRef.current?.getBoundingClientRect() || { width: 1200, height: 700 };
 
   const openWindow = useCallback((kind, extra = {}) => {
     dispatch({ type: "OPEN_WINDOW", kind, rect: getRect(), ...extra });
   }, []);
 
-  /* Hydrate state */
+  /* load persisted state once */
   useEffect(() => {
     let cancelled = false;
     if (!backend) {
@@ -2442,12 +2642,14 @@ export default function ArtemisOS() {
               projects: Array.isArray(data.projects) ? data.projects : [],
               windows: Array.isArray(data.windows) ? data.windows : [],
               activeBoard: data.activeBoard ?? null,
+              calendarEvents: data.calendarEvents || {},
             },
           });
-          if (data.themeKey && THEME_PRESETS[data.themeKey]) setThemeKey(data.themeKey);
+          if (data.theme) setTheme(data.theme);
+          if (data.osTheme && OS_THEMES[data.osTheme]) setOsTheme(data.osTheme);
         }
       } catch (e) {
-        /* starting fresh */
+        /* nothing saved yet, or the saved data was corrupt — start fresh */
       } finally {
         if (!cancelled) setLoaded(true);
       }
@@ -2455,15 +2657,17 @@ export default function ArtemisOS() {
     return () => {
       cancelled = true;
     };
-  }, [backend]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  /* Default window */
+  /* open the file manager by default once we know whether we hydrated */
   useEffect(() => {
     if (!loaded) return;
     if (state.windows.length === 0) openWindow("file-manager");
-  }, [loaded, openWindow, state.windows.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
 
-  /* Debounced save without UI indicator */
+  /* debounced, silent autosave */
   useEffect(() => {
     if (!loaded || !backend) return undefined;
     const t = setTimeout(async () => {
@@ -2475,15 +2679,17 @@ export default function ArtemisOS() {
             projects: state.projects,
             windows: state.windows,
             activeBoard: state.activeBoard,
-            themeKey,
+            calendarEvents: state.calendarEvents,
+            theme,
+            osTheme,
           })
         );
       } catch (e) {
-        // silent fail
+        /* best-effort — a failed save doesn't interrupt the session */
       }
     }, 400);
     return () => clearTimeout(t);
-  }, [state.boards, state.projects, state.windows, state.activeBoard, themeKey, loaded, backend]);
+  }, [state.boards, state.projects, state.windows, state.activeBoard, state.calendarEvents, theme, osTheme, loaded, backend]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -2525,107 +2731,116 @@ export default function ArtemisOS() {
   }, [state.windows]);
 
   const topZ = state.windows.reduce((m, w) => Math.max(m, w.z), 0);
+  const themeVars = OS_THEMES[osTheme].vars;
+  const rootVarsCss = `:root { ${Object.entries(themeVars).map(([k, v]) => `${k}: ${v};`).join(" ")} }`;
 
   return (
-    <ThemeContext.Provider value={{ themeKey, theme: activeTheme, setThemeKey }}>
-      <div
-        ref={desktopRef}
-        className="relative h-[700px] w-full select-none overflow-hidden rounded-2xl transition-all duration-500 font-sans"
-        style={{
-          cursor: "none",
-          background: activeTheme.bg,
-        }}
-      >
-        <style>{`
-          @keyframes winIn { 0% { opacity:0; transform: scale(0.9) translateY(10px);} 60% { opacity:1; transform: scale(1.015) translateY(0);} 100% { opacity:1; transform: scale(1) translateY(0);} }
-          @keyframes terminalIn { 0% { opacity:0; transform: scale(0.94); clip-path: inset(0 0 100% 0);} 45% { opacity:1; clip-path: inset(0 0 0% 0);} 100% { opacity:1; transform: scale(1); clip-path: inset(0 0 0% 0);} }
-          @keyframes popIn { 0% { opacity:0; transform: scale(0.85);} 100% { opacity:1; transform: scale(1);} }
-          @keyframes fadeIn { 0% { opacity:0;} 100% { opacity:1;} }
-          @keyframes slideIn { 0% { opacity:0; transform: translateX(-4px);} 100% { opacity:1; transform: translateX(0);} }
-          @keyframes slideUp { 0% { opacity:0; transform: translateY(14px);} 100% { opacity:1; transform: translateY(0);} }
-          @keyframes lineIn { 0% { opacity:0; transform: translateY(3px);} 100% { opacity:1; transform: translateY(0);} }
-          @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(124,58,237,0.35);} 50% { box-shadow: 0 0 0 6px rgba(124,58,237,0);} }
-          .line-clamp-1 { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
-          * { cursor: none !important; }
-          @media (prefers-reduced-motion: reduce) {
-            * { animation: none !important; transition: none !important; cursor: auto !important; }
-          }
-        `}</style>
+    <div
+      ref={desktopRef}
+      className="relative h-[700px] w-full select-none overflow-hidden rounded-2xl"
+      style={{
+        cursor: "none",
+        background:
+          "radial-gradient(1200px 600px at 15% -10%, var(--bg-a) 0%, transparent 60%), radial-gradient(1000px 700px at 100% 110%, var(--bg-b) 0%, transparent 55%), linear-gradient(160deg, var(--bg-a) 0%, var(--bg-b) 45%, var(--bg-c) 100%)",
+      }}
+    >
+      <style>{`
+        ${rootVarsCss}
+        @keyframes winIn { 0% { opacity:0; transform: scale(0.94) translateY(6px);} 100% { opacity:1; transform: scale(1) translateY(0);} }
+        @keyframes terminalIn { 0% { opacity:0; transform: scale(0.96); clip-path: inset(0 0 100% 0);} 45% { opacity:1; clip-path: inset(0 0 0% 0);} 100% { opacity:1; transform: scale(1); clip-path: inset(0 0 0% 0);} }
+        @keyframes popIn { 0% { opacity:0; transform: scale(0.9);} 100% { opacity:1; transform: scale(1);} }
+        @keyframes fadeIn { 0% { opacity:0;} 100% { opacity:1;} }
+        @keyframes slideIn { 0% { opacity:0; transform: translateX(-4px);} 100% { opacity:1; transform: translateX(0);} }
+        @keyframes slideUp { 0% { opacity:0; transform: translateY(10px);} 100% { opacity:1; transform: translateY(0);} }
+        @keyframes lineIn { 0% { opacity:0; transform: translateY(3px);} 100% { opacity:1; transform: translateY(0);} }
+        .line-clamp-1 { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
+        * { cursor: none !important; }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation: none !important; transition: none !important; cursor: auto !important; }
+        }
+      `}</style>
 
-        {/* Desktop Application Shortcuts */}
-        <div className="absolute left-6 top-6 flex flex-col gap-1">
-          <DesktopIcon icon={<Kanban size={19} />} label="Boards" onOpen={() => openWindow("file-manager")} />
-          <DesktopIcon icon={<TerminalIcon size={19} />} label="Terminal" onOpen={() => openWindow("terminal")} />
-          <DesktopIcon icon={<Network size={19} />} label="Graph" onOpen={() => openWindow("graph")} />
-        </div>
-
-        {/* Window Manager */}
-        {state.windows.map((w) => {
-          const commonProps = {
-            win: w,
-            isTop: w.z === topZ,
-            onClose: () => dispatch({ type: "CLOSE_WINDOW", id: w.id }),
-            onMinimize: () => dispatch({ type: "MINIMIZE_WINDOW", id: w.id }),
-            onToggleMax: () => dispatch({ type: "TOGGLE_MAXIMIZE", id: w.id, rect: getRect() }),
-            onFocus: () => dispatch({ type: "FOCUS_WINDOW", id: w.id }),
-            onDragStart: (e) => startDrag(w, e),
-          };
-          if (w.kind === "terminal") {
-            return (
-              <WindowFrame key={w.id} {...commonProps} title="terminal — artemis" icon={<TerminalIcon size={13} />} dark>
-                <TerminalApp
-                  boards={state.boards}
-                  projects={state.projects}
-                  windows={state.windows}
-                  dispatch={dispatch}
-                  openWindow={openWindow}
-                />
-              </WindowFrame>
-            );
-          }
-          if (w.kind === "file-manager") {
-            return (
-              <WindowFrame key={w.id} {...commonProps} title="Boards" icon={<Kanban size={13} />}>
-                <FileManagerApp boards={state.boards} dispatch={dispatch} openWindow={openWindow} />
-              </WindowFrame>
-            );
-          }
-          if (w.kind === "board") {
-            return (
-              <WindowFrame key={w.id} {...commonProps} title={w.boardName} icon={<ListTree size={13} />}>
-                <BoardApp boardName={w.boardName} boards={state.boards} dispatch={dispatch} />
-              </WindowFrame>
-            );
-          }
-          if (w.kind === "graph") {
-            return (
-              <WindowFrame key={w.id} {...commonProps} title="Graph View" icon={<Network size={13} />}>
-                <GraphApp boards={state.boards} openWindow={openWindow} />
-              </WindowFrame>
-            );
-          }
-          if (w.kind === "project") {
-            return (
-              <WindowFrame key={w.id} {...commonProps} title={w.projectName} icon={<Rocket size={13} />}>
-                <ProjectApp projectName={w.projectName} boards={state.boards} dispatch={dispatch} openWindow={openWindow} />
-              </WindowFrame>
-            );
-          }
-          return null;
-        })}
-
-        {/* Global Dock */}
-        <Dock
-          windows={state.windows}
-          openWindow={openWindow}
-          focusWindow={(id) => dispatch({ type: "FOCUS_WINDOW", id })}
-          restoreWindow={(id) => dispatch({ type: "RESTORE_WINDOW", id })}
-          minimizeWindow={(id) => dispatch({ type: "MINIMIZE_WINDOW", id })}
-        />
-
-        {/* Adaptive Custom Cursor */}
-        <CustomCursor containerRef={desktopRef} />
+      <div className="absolute left-6 top-6 flex flex-col gap-1">
+        <DesktopIcon icon={<Kanban size={19} />} label="Boards" onOpen={() => openWindow("file-manager")} />
+        <DesktopIcon icon={<TerminalIcon size={19} />} label="Terminal" onOpen={() => openWindow("terminal")} />
+        <DesktopIcon icon={<CalendarIcon size={19} />} label="Calendar" onOpen={() => openWindow("calendar")} />
+        <DesktopIcon icon={<Network size={19} />} label="Graph" onOpen={() => openWindow("graph")} />
       </div>
-    </ThemeContext.Provider>
+
+      {state.windows.map((w) => {
+        const commonProps = {
+          win: w,
+          isTop: w.z === topZ,
+          onClose: () => dispatch({ type: "CLOSE_WINDOW", id: w.id }),
+          onMinimize: () => dispatch({ type: "MINIMIZE_WINDOW", id: w.id }),
+          onToggleMax: () => dispatch({ type: "TOGGLE_MAXIMIZE", id: w.id, rect: getRect() }),
+          onFocus: () => dispatch({ type: "FOCUS_WINDOW", id: w.id }),
+          onDragStart: (e) => startDrag(w, e),
+        };
+        if (w.kind === "terminal") {
+          return (
+            <WindowFrame key={w.id} {...commonProps} title="terminal — artemis" icon={<TerminalIcon size={13} />} dark>
+              <TerminalApp
+                boards={state.boards}
+                projects={state.projects}
+                windows={state.windows}
+                dispatch={dispatch}
+                openWindow={openWindow}
+                theme={theme}
+                setTheme={setTheme}
+              />
+            </WindowFrame>
+          );
+        }
+        if (w.kind === "file-manager") {
+          return (
+            <WindowFrame key={w.id} {...commonProps} title="Boards" icon={<Kanban size={13} />}>
+              <FileManagerApp boards={state.boards} dispatch={dispatch} openWindow={openWindow} />
+            </WindowFrame>
+          );
+        }
+        if (w.kind === "board") {
+          return (
+            <WindowFrame key={w.id} {...commonProps} title={w.boardName} icon={<ListTree size={13} />}>
+              <BoardApp boardName={w.boardName} boards={state.boards} dispatch={dispatch} />
+            </WindowFrame>
+          );
+        }
+        if (w.kind === "graph") {
+          return (
+            <WindowFrame key={w.id} {...commonProps} title="Graph View" icon={<Network size={13} />}>
+              <GraphApp boards={state.boards} openWindow={openWindow} />
+            </WindowFrame>
+          );
+        }
+        if (w.kind === "calendar") {
+          return (
+            <WindowFrame key={w.id} {...commonProps} title="Calendar" icon={<CalendarIcon size={13} />}>
+              <CalendarApp events={state.calendarEvents} dispatch={dispatch} />
+            </WindowFrame>
+          );
+        }
+        if (w.kind === "project") {
+          return (
+            <WindowFrame key={w.id} {...commonProps} title={w.projectName} icon={<Rocket size={13} />}>
+              <ProjectApp projectName={w.projectName} boards={state.boards} openWindow={openWindow} />
+            </WindowFrame>
+          );
+        }
+        return null;
+      })}
+
+      <Dock
+        windows={state.windows}
+        openWindow={openWindow}
+        focusWindow={(id) => dispatch({ type: "FOCUS_WINDOW", id })}
+        restoreWindow={(id) => dispatch({ type: "RESTORE_WINDOW", id })}
+        minimizeWindow={(id) => dispatch({ type: "MINIMIZE_WINDOW", id })}
+        osTheme={osTheme}
+        setOsTheme={setOsTheme}
+      />
+
+      <CustomCursor containerRef={desktopRef} />
+    </div>
   );
 }
