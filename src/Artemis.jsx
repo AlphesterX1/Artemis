@@ -28,10 +28,12 @@ import {
   Palette,
   Sun,
   Moon,
+  Paperclip,
+  StickyNote,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
-/*  Utilities                                                          */
+/* Utilities                                                           */
 /* ------------------------------------------------------------------ */
 
 let __uidCounter = 0;
@@ -154,7 +156,7 @@ function layoutBoardForest(boards, w, h) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Calendar helpers                                                   */
+/* Calendar helpers                                                    */
 /* ------------------------------------------------------------------ */
 
 function dateKey(d) {
@@ -176,13 +178,15 @@ function getMonthCells(year, month) {
   return cells;
 }
 
-const STORAGE_KEY = "artemis-os-state-v2";
+const PROJECT_PALETTE = ["#6d5ae6", "#e2536e", "#1ea672", "#e8a24a", "#4ee7ff", "#ff8b7a", "#9b6bff"];
+function projectColorFor(projects, name) {
+  const idx = projects.findIndex((p) => norm(p) === norm(name));
+  if (idx === -1) return "var(--accent)";
+  return PROJECT_PALETTE[idx % PROJECT_PALETTE.length];
+}
 
-/* Resolve a persistence backend at runtime: the platform's window.storage
-   API when it's present, otherwise a plain localStorage adapter (works in
-   any normal browser tab), otherwise null (in-memory only, for this
-   session). Every call is wrapped so a blocked or missing API degrades
-   gracefully instead of throwing. */
+const STORAGE_KEY = "artemis-os-state-v3";
+
 function resolvePersistBackend() {
   if (typeof window === "undefined") return null;
   if (window.storage && typeof window.storage.get === "function") {
@@ -193,7 +197,7 @@ function resolvePersistBackend() {
     };
   }
   try {
-    const probeKey = "__artemis_probe__";
+    const probeKey = "artemis_probe";
     window.localStorage.setItem(probeKey, "1");
     window.localStorage.removeItem(probeKey);
     return {
@@ -213,8 +217,7 @@ function resolvePersistBackend() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  OS-level themes (chrome, windows, dock) — independent of the       */
-/*  terminal's own CRT phosphor themes.                                */
+/* OS themes — 4 light, 4 dark                                        */
 /* ------------------------------------------------------------------ */
 
 const OS_THEMES = {
@@ -222,107 +225,111 @@ const OS_THEMES = {
     label: "Aurora",
     mode: "light",
     vars: {
-      "--bg-a": "#f4f1fc",
-      "--bg-b": "#eae2fa",
-      "--bg-c": "#ddd0f4",
-      "--surface": "rgba(255,255,255,0.78)",
-      "--surface-solid": "#ffffff",
-      "--surface-muted": "rgba(255,255,255,0.46)",
-      "--border": "rgba(88,66,178,0.14)",
-      "--border-strong": "rgba(88,66,178,0.26)",
-      "--accent": "#6d5ae6",
-      "--accent-soft": "rgba(109,90,230,0.12)",
-      "--accent-contrast": "#ffffff",
-      "--text": "#231c3f",
-      "--text-muted": "#726a96",
-      "--text-faint": "#a9a1c8",
-      "--dock-bg": "rgba(255,255,255,0.66)",
-      "--ring": "rgba(109,90,230,0.32)",
-      "--danger": "#e2536e",
-      "--success": "#1ea672",
-      "--scrim": "rgba(35,28,63,0.14)",
+      "--bg-a": "#f4f1fc", "--bg-b": "#eae2fa", "--bg-c": "#ddd0f4",
+      "--surface": "rgba(255,255,255,0.78)", "--surface-solid": "#ffffff", "--surface-muted": "rgba(255,255,255,0.46)",
+      "--border": "rgba(88,66,178,0.14)", "--border-strong": "rgba(88,66,178,0.26)",
+      "--accent": "#6d5ae6", "--accent-soft": "rgba(109,90,230,0.12)", "--accent-contrast": "#ffffff",
+      "--text": "#231c3f", "--text-muted": "#726a96", "--text-faint": "#a9a1c8",
+      "--dock-bg": "rgba(255,255,255,0.66)", "--ring": "rgba(109,90,230,0.32)",
+      "--danger": "#e2536e", "--success": "#1ea672", "--scrim": "rgba(35,28,63,0.14)",
     },
   },
   linen: {
     label: "Linen",
     mode: "light",
     vars: {
-      "--bg-a": "#f8f4ea",
-      "--bg-b": "#f0ead9",
-      "--bg-c": "#e6dcc3",
-      "--surface": "rgba(255,255,255,0.7)",
-      "--surface-solid": "#fffdf8",
-      "--surface-muted": "rgba(255,255,255,0.4)",
-      "--border": "rgba(52,87,166,0.14)",
-      "--border-strong": "rgba(52,87,166,0.26)",
-      "--accent": "#33569f",
-      "--accent-soft": "rgba(51,86,159,0.1)",
-      "--accent-contrast": "#ffffff",
-      "--text": "#312b1f",
-      "--text-muted": "#847a63",
-      "--text-faint": "#b3a68a",
-      "--dock-bg": "rgba(255,253,248,0.72)",
-      "--ring": "rgba(51,86,159,0.3)",
-      "--danger": "#c1543f",
-      "--success": "#3c7d4f",
-      "--scrim": "rgba(49,43,31,0.14)",
+      "--bg-a": "#f8f4ea", "--bg-b": "#f0ead9", "--bg-c": "#e6dcc3",
+      "--surface": "rgba(255,255,255,0.7)", "--surface-solid": "#fffdf8", "--surface-muted": "rgba(255,255,255,0.4)",
+      "--border": "rgba(52,87,166,0.14)", "--border-strong": "rgba(52,87,166,0.26)",
+      "--accent": "#33569f", "--accent-soft": "rgba(51,86,159,0.1)", "--accent-contrast": "#ffffff",
+      "--text": "#312b1f", "--text-muted": "#847a63", "--text-faint": "#b3a68a",
+      "--dock-bg": "rgba(255,253,248,0.72)", "--ring": "rgba(51,86,159,0.3)",
+      "--danger": "#c1543f", "--success": "#3c7d4f", "--scrim": "rgba(49,43,31,0.14)",
+    },
+  },
+  blossom: {
+    label: "Blossom",
+    mode: "light",
+    vars: {
+      "--bg-a": "#fdf1f5", "--bg-b": "#fbe4ec", "--bg-c": "#f6d0dd",
+      "--surface": "rgba(255,255,255,0.75)", "--surface-solid": "#fffbfc", "--surface-muted": "rgba(255,255,255,0.45)",
+      "--border": "rgba(199,66,120,0.14)", "--border-strong": "rgba(199,66,120,0.26)",
+      "--accent": "#d84c7f", "--accent-soft": "rgba(216,76,127,0.12)", "--accent-contrast": "#ffffff",
+      "--text": "#3a2130", "--text-muted": "#8c6c7a", "--text-faint": "#c39fac",
+      "--dock-bg": "rgba(255,251,252,0.7)", "--ring": "rgba(216,76,127,0.32)",
+      "--danger": "#e2536e", "--success": "#3c9d6d", "--scrim": "rgba(58,33,48,0.14)",
+    },
+  },
+  mint: {
+    label: "Mint",
+    mode: "light",
+    vars: {
+      "--bg-a": "#f0faf4", "--bg-b": "#e0f4e8", "--bg-c": "#cbe9d7",
+      "--surface": "rgba(255,255,255,0.75)", "--surface-solid": "#fbfffc", "--surface-muted": "rgba(255,255,255,0.45)",
+      "--border": "rgba(30,130,90,0.14)", "--border-strong": "rgba(30,130,90,0.26)",
+      "--accent": "#1f9d6c", "--accent-soft": "rgba(31,157,108,0.12)", "--accent-contrast": "#ffffff",
+      "--text": "#1e332a", "--text-muted": "#6d8c7c", "--text-faint": "#a3c2b2",
+      "--dock-bg": "rgba(251,255,252,0.7)", "--ring": "rgba(31,157,108,0.32)",
+      "--danger": "#d1495b", "--success": "#1ea672", "--scrim": "rgba(30,51,42,0.14)",
     },
   },
   nightfall: {
     label: "Nightfall",
     mode: "dark",
     vars: {
-      "--bg-a": "#171827",
-      "--bg-b": "#12131d",
-      "--bg-c": "#0d0e16",
-      "--surface": "rgba(255,255,255,0.055)",
-      "--surface-solid": "#1b1c29",
-      "--surface-muted": "rgba(255,255,255,0.035)",
-      "--border": "rgba(255,255,255,0.09)",
-      "--border-strong": "rgba(255,255,255,0.16)",
-      "--accent": "#8b93ff",
-      "--accent-soft": "rgba(139,147,255,0.16)",
-      "--accent-contrast": "#12131d",
-      "--text": "#e8e8f5",
-      "--text-muted": "#9a9ac0",
-      "--text-faint": "#5f5f82",
-      "--dock-bg": "rgba(23,24,39,0.72)",
-      "--ring": "rgba(139,147,255,0.4)",
-      "--danger": "#ff7a8a",
-      "--success": "#5fd6a3",
-      "--scrim": "rgba(0,0,0,0.4)",
+      "--bg-a": "#171827", "--bg-b": "#12131d", "--bg-c": "#0d0e16",
+      "--surface": "rgba(255,255,255,0.055)", "--surface-solid": "#1b1c29", "--surface-muted": "rgba(255,255,255,0.035)",
+      "--border": "rgba(255,255,255,0.09)", "--border-strong": "rgba(255,255,255,0.16)",
+      "--accent": "#8b93ff", "--accent-soft": "rgba(139,147,255,0.16)", "--accent-contrast": "#12131d",
+      "--text": "#e8e8f5", "--text-muted": "#9a9ac0", "--text-faint": "#5f5f82",
+      "--dock-bg": "rgba(23,24,39,0.72)", "--ring": "rgba(139,147,255,0.4)",
+      "--danger": "#ff7a8a", "--success": "#5fd6a3", "--scrim": "rgba(0,0,0,0.4)",
     },
   },
   onyx: {
     label: "Onyx",
     mode: "dark",
     vars: {
-      "--bg-a": "#131313",
-      "--bg-b": "#0e0e0e",
-      "--bg-c": "#0a0a0a",
-      "--surface": "rgba(255,255,255,0.045)",
-      "--surface-solid": "#161616",
-      "--surface-muted": "rgba(255,255,255,0.03)",
-      "--border": "rgba(255,255,255,0.08)",
-      "--border-strong": "rgba(255,255,255,0.15)",
-      "--accent": "#e8a24a",
-      "--accent-soft": "rgba(232,162,74,0.15)",
-      "--accent-contrast": "#161616",
-      "--text": "#ececea",
-      "--text-muted": "#96968f",
-      "--text-faint": "#5c5c57",
-      "--dock-bg": "rgba(19,19,19,0.72)",
-      "--ring": "rgba(232,162,74,0.4)",
-      "--danger": "#ff8b7a",
-      "--success": "#6fd18f",
-      "--scrim": "rgba(0,0,0,0.5)",
+      "--bg-a": "#131313", "--bg-b": "#0e0e0e", "--bg-c": "#0a0a0a",
+      "--surface": "rgba(255,255,255,0.045)", "--surface-solid": "#161616", "--surface-muted": "rgba(255,255,255,0.03)",
+      "--border": "rgba(255,255,255,0.08)", "--border-strong": "rgba(255,255,255,0.15)",
+      "--accent": "#e8a24a", "--accent-soft": "rgba(232,162,74,0.15)", "--accent-contrast": "#161616",
+      "--text": "#ececea", "--text-muted": "#96968f", "--text-faint": "#5c5c57",
+      "--dock-bg": "rgba(19,19,19,0.72)", "--ring": "rgba(232,162,74,0.4)",
+      "--danger": "#ff8b7a", "--success": "#6fd18f", "--scrim": "rgba(0,0,0,0.5)",
+    },
+  },
+  abyss: {
+    label: "Abyss",
+    mode: "dark",
+    vars: {
+      "--bg-a": "#0c1420", "--bg-b": "#0a1119", "--bg-c": "#070c12",
+      "--surface": "rgba(255,255,255,0.05)", "--surface-solid": "#111b28", "--surface-muted": "rgba(255,255,255,0.03)",
+      "--border": "rgba(255,255,255,0.09)", "--border-strong": "rgba(255,255,255,0.16)",
+      "--accent": "#4ec5ff", "--accent-soft": "rgba(78,197,255,0.16)", "--accent-contrast": "#071018",
+      "--text": "#e3edf5", "--text-muted": "#8fa4b8", "--text-faint": "#4f6478",
+      "--dock-bg": "rgba(12,20,32,0.72)", "--ring": "rgba(78,197,255,0.4)",
+      "--danger": "#ff7a8a", "--success": "#5fd6a3", "--scrim": "rgba(0,0,0,0.45)",
+    },
+  },
+  ember: {
+    label: "Ember",
+    mode: "dark",
+    vars: {
+      "--bg-a": "#1c1210", "--bg-b": "#170e0c", "--bg-c": "#120a08",
+      "--surface": "rgba(255,255,255,0.05)", "--surface-solid": "#221512", "--surface-muted": "rgba(255,255,255,0.03)",
+      "--border": "rgba(255,255,255,0.09)", "--border-strong": "rgba(255,255,255,0.16)",
+      "--accent": "#ff7847", "--accent-soft": "rgba(255,120,71,0.16)", "--accent-contrast": "#221512",
+      "--text": "#f3e6df", "--text-muted": "#b39187", "--text-faint": "#6f544c",
+      "--dock-bg": "rgba(28,18,16,0.72)", "--ring": "rgba(255,120,71,0.4)",
+      "--danger": "#ff6a6a", "--success": "#6fd18f", "--scrim": "rgba(0,0,0,0.5)",
     },
   },
 };
-const OS_THEME_ORDER = ["aurora", "linen", "nightfall", "onyx"];
+const OS_THEME_ORDER = ["aurora", "linen", "blossom", "mint", "nightfall", "onyx", "abyss", "ember"];
 
 /* ------------------------------------------------------------------ */
-/*  Initial state                                                      */
+/* Initial state                                                       */
 /* ------------------------------------------------------------------ */
 
 function makeInitialState() {
@@ -334,25 +341,30 @@ function makeInitialState() {
     boards: {
       "getting-started": {
         tasks: [
-          { id: t1, name: "Open the File Manager", done: true, parentId: null },
-          { id: t2, name: "Press Shift+T to summon the terminal", done: false, parentId: null },
-          { id: t3, name: "Try: board -add sprint-1", done: false, parentId: null },
-          { id: t4, name: "Drag a task onto another to nest it", done: false, parentId: null },
+          { id: t1, name: "Open the File Manager", done: true, parentId: null, x: 40, y: 40 },
+          { id: t2, name: "Press Shift+T to summon the terminal", done: false, parentId: null, x: 40, y: 160 },
+          { id: t3, name: "Try: board -add sprint-1", done: false, parentId: null, x: 340, y: 40 },
+          { id: t4, name: "Drag tasks & notes anywhere, or draw on the canvas", done: false, parentId: null, x: 340, y: 160 },
         ],
+        notes: [
+          { id: uid("note"), x: 40, y: 300, color: "#fff6c9", noteType: "sticky", text: "This board is a free canvas now — scroll around, drag things, sketch ideas." },
+        ],
+        drawings: [],
         parent: null,
         tags: ["demo"],
       },
-      "sprint-1": { tasks: [], parent: null, tags: [] },
+      "sprint-1": { tasks: [], notes: [], drawings: [], parent: null, tags: [] },
     },
     projects: ["artemis-os"],
     windows: [],
     activeBoard: null,
     calendarEvents: {},
+    files: [],
   };
 }
 
 /* ------------------------------------------------------------------ */
-/*  Reducer                                                             */
+/* Reducer                                                             */
 /* ------------------------------------------------------------------ */
 
 function osReducer(state, action) {
@@ -369,7 +381,7 @@ function osReducer(state, action) {
         ...state,
         boards: {
           ...state.boards,
-          [name]: { tasks: [], parent, tags: action.tags || [] },
+          [name]: { tasks: [], notes: [], drawings: [], parent, tags: action.tags || [] },
         },
       };
     }
@@ -443,13 +455,30 @@ function osReducer(state, action) {
       };
     }
     case "ADD_TASK": {
-      const { board, name, parentId } = action;
+      const { board, name, parentId, x, y } = action;
       const b = state.boards[board];
       if (!b) return state;
       const clean = name.trim();
       if (!clean) return state;
-      const task = { id: uid("task"), name: clean, done: false, parentId: parentId || null };
+      const count = b.tasks.length;
+      const task = {
+        id: uid("task"),
+        name: clean,
+        done: false,
+        parentId: parentId || null,
+        x: x != null ? x : 40 + (count % 5) * 220,
+        y: y != null ? y : 40 + Math.floor(count / 5) * 160,
+      };
       return { ...state, boards: { ...state.boards, [board]: { ...b, tasks: [...b.tasks, task] } } };
+    }
+    case "MOVE_TASK_POS": {
+      const { board, taskId, x, y } = action;
+      const b = state.boards[board];
+      if (!b) return state;
+      return {
+        ...state,
+        boards: { ...state.boards, [board]: { ...b, tasks: b.tasks.map((t) => (t.id === taskId ? { ...t, x, y } : t)) } },
+      };
     }
     case "TOGGLE_TASK": {
       const { board, taskId, done } = action;
@@ -560,6 +589,66 @@ function osReducer(state, action) {
         },
       };
     }
+    case "ADD_NOTE": {
+      const { board, x, y, color, noteType, fileId, fileName, text } = action;
+      const b = state.boards[board];
+      if (!b) return state;
+      const note = {
+        id: uid("note"),
+        x: x != null ? x : 40,
+        y: y != null ? y : 40,
+        color: color || "#fff6c9",
+        noteType: noteType || "sticky",
+        text: text || "",
+        fileId: fileId || null,
+        fileName: fileName || null,
+      };
+      return { ...state, boards: { ...state.boards, [board]: { ...b, notes: [...(b.notes || []), note] } } };
+    }
+    case "MOVE_NOTE_POS": {
+      const { board, noteId, x, y } = action;
+      const b = state.boards[board];
+      if (!b) return state;
+      return {
+        ...state,
+        boards: { ...state.boards, [board]: { ...b, notes: (b.notes || []).map((n) => (n.id === noteId ? { ...n, x, y } : n)) } },
+      };
+    }
+    case "UPDATE_NOTE_TEXT": {
+      const { board, noteId, text } = action;
+      const b = state.boards[board];
+      if (!b) return state;
+      return {
+        ...state,
+        boards: { ...state.boards, [board]: { ...b, notes: (b.notes || []).map((n) => (n.id === noteId ? { ...n, text } : n)) } },
+      };
+    }
+    case "DELETE_NOTE": {
+      const { board, noteId } = action;
+      const b = state.boards[board];
+      if (!b) return state;
+      return {
+        ...state,
+        boards: { ...state.boards, [board]: { ...b, notes: (b.notes || []).filter((n) => n.id !== noteId) } },
+      };
+    }
+    case "ADD_DRAWING": {
+      const { board, path } = action;
+      const b = state.boards[board];
+      if (!b) return state;
+      return { ...state, boards: { ...state.boards, [board]: { ...b, drawings: [...(b.drawings || []), path] } } };
+    }
+    case "CLEAR_DRAWINGS": {
+      const { board } = action;
+      const b = state.boards[board];
+      if (!b) return state;
+      return { ...state, boards: { ...state.boards, [board]: { ...b, drawings: [] } } };
+    }
+    case "ADD_FILE":
+      return { ...state, files: [...(state.files || []), action.file] };
+    case "DELETE_FILE":
+      return { ...state, files: (state.files || []).filter((f) => f.id !== action.id) };
+
     case "ADD_PROJECT": {
       const name = action.name.trim();
       if (!name || state.projects.includes(name)) return state;
@@ -599,13 +688,16 @@ function osReducer(state, action) {
       return { ...state, activeBoard: action.name };
 
     case "ADD_EVENT": {
-      const { date, text } = action;
+      const { date, text, project, time } = action;
       const clean = text.trim();
       if (!clean) return state;
       const list = state.calendarEvents[date] || [];
       return {
         ...state,
-        calendarEvents: { ...state.calendarEvents, [date]: [...list, { id: uid("ev"), text: clean }] },
+        calendarEvents: {
+          ...state.calendarEvents,
+          [date]: [...list, { id: uid("ev"), text: clean, project: project || null, time: time || null }],
+        },
       };
     }
     case "DELETE_EVENT": {
@@ -619,7 +711,7 @@ function osReducer(state, action) {
 
     case "OPEN_WINDOW": {
       const { kind, boardName, projectName, rect } = action;
-      const singleton = kind === "terminal" || kind === "file-manager" || kind === "graph" || kind === "calendar";
+      const singleton = kind === "terminal" || kind === "file-manager" || kind === "graph" || kind === "calendar" || kind === "files";
       let existing = null;
       if (singleton) existing = state.windows.find((w) => w.kind === kind);
       else if (kind === "board") existing = state.windows.find((w) => w.kind === "board" && w.boardName === boardName);
@@ -635,10 +727,11 @@ function osReducer(state, action) {
       const dims = {
         terminal: { w: 720, h: 460 },
         "file-manager": { w: 680, h: 460 },
-        board: { w: 640, h: 460 },
+        board: { w: 760, h: 520 },
         graph: { w: 620, h: 440 },
         project: { w: 480, h: 380 },
-        calendar: { w: 600, h: 420 },
+        calendar: { w: 660, h: 440 },
+        files: { w: 560, h: 420 },
       }[kind] || { w: 560, h: 400 };
       const maxX = Math.max(40, (rect?.width || 1200) - dims.w - 20);
       const maxY = Math.max(40, (rect?.height || 700) - dims.h - 20);
@@ -714,7 +807,7 @@ function osReducer(state, action) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Custom cursor                                                      */
+/* Custom cursor                                                       */
 /* ------------------------------------------------------------------ */
 
 function CustomCursor({ containerRef }) {
@@ -777,22 +870,14 @@ function CustomCursor({ containerRef }) {
       className="pointer-events-none absolute inset-0 z-[10000]"
       style={{ opacity: visible ? 1 : 0, transition: "opacity 150ms ease" }}
     >
-      <div
-        ref={ringRef}
-        className="pointer-events-none absolute left-0 top-0 transition-[width,height,background-color,border-color] duration-150"
-        style={ringStyle}
-      />
-      <div
-        ref={dotRef}
-        className="pointer-events-none absolute left-0 top-0 h-1 w-1 rounded-full"
-        style={{ background: "var(--accent)" }}
-      />
+      <div ref={ringRef} className="pointer-events-none absolute left-0 top-0 transition-[width,height,background-color,border-color] duration-150" style={ringStyle} />
+      <div ref={dotRef} className="pointer-events-none absolute left-0 top-0 h-1 w-1 rounded-full" style={{ background: "var(--accent)" }} />
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Small reusable UI: modal dialog (replaces window.prompt/confirm)   */
+/* Modals                                                               */
 /* ------------------------------------------------------------------ */
 
 function Modal({ title, children, onClose }) {
@@ -840,19 +925,10 @@ function PromptModal({ title, initial = "", confirmLabel = "Create", onSubmit, o
           style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--text)" }}
         />
         <div className="mt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg px-3 py-1.5 text-sm transition-transform active:scale-95"
-            style={{ color: "var(--text-muted)" }}
-          >
+          <button type="button" onClick={onClose} className="rounded-lg px-3 py-1.5 text-sm transition-transform active:scale-95" style={{ color: "var(--text-muted)" }}>
             Cancel
           </button>
-          <button
-            type="submit"
-            className="rounded-lg px-3 py-1.5 text-sm font-medium transition-transform active:scale-95"
-            style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
-          >
+          <button type="submit" className="rounded-lg px-3 py-1.5 text-sm font-medium transition-transform active:scale-95" style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}>
             {confirmLabel}
           </button>
         </div>
@@ -868,11 +944,7 @@ function ConfirmModal({ title, message, danger, onConfirm, onClose }) {
         {message}
       </p>
       <div className="mt-4 flex justify-end gap-2">
-        <button
-          onClick={onClose}
-          className="rounded-lg px-3 py-1.5 text-sm transition-transform active:scale-95"
-          style={{ color: "var(--text-muted)" }}
-        >
+        <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-sm transition-transform active:scale-95" style={{ color: "var(--text-muted)" }}>
           Cancel
         </button>
         <button
@@ -891,7 +963,7 @@ function ConfirmModal({ title, message, danger, onConfirm, onClose }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Window frame                                                       */
+/* Window frame                                                        */
 /* ------------------------------------------------------------------ */
 
 function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onToggleMax, onFocus, onDragStart, children }) {
@@ -929,31 +1001,13 @@ function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onTog
         onDoubleClick={onToggleMax}
       >
         <div className="flex items-center gap-1.5 mr-1">
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={onClose}
-            className="grid h-2.5 w-2.5 place-items-center rounded-full transition-transform hover:scale-125 active:scale-90"
-            style={{ background: "#ec6a5e" }}
-            title="Close"
-          >
+          <button onMouseDown={(e) => e.stopPropagation()} onClick={onClose} className="grid h-2.5 w-2.5 place-items-center rounded-full transition-transform hover:scale-125 active:scale-90" style={{ background: "#ec6a5e" }} title="Close">
             <X size={7} className="opacity-0 group-hover/traffic:opacity-70" style={{ color: "#5b130b" }} />
           </button>
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={onMinimize}
-            className="grid h-2.5 w-2.5 place-items-center rounded-full transition-transform hover:scale-125 active:scale-90"
-            style={{ background: "#f4bd4f" }}
-            title="Minimize"
-          >
+          <button onMouseDown={(e) => e.stopPropagation()} onClick={onMinimize} className="grid h-2.5 w-2.5 place-items-center rounded-full transition-transform hover:scale-125 active:scale-90" style={{ background: "#f4bd4f" }} title="Minimize">
             <Minus size={7} className="opacity-0 group-hover/traffic:opacity-70" style={{ color: "#6b4a05" }} />
           </button>
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={onToggleMax}
-            className="grid h-2.5 w-2.5 place-items-center rounded-full transition-transform hover:scale-125 active:scale-90"
-            style={{ background: "#61c454" }}
-            title="Maximize"
-          >
+          <button onMouseDown={(e) => e.stopPropagation()} onClick={onToggleMax} className="grid h-2.5 w-2.5 place-items-center rounded-full transition-transform hover:scale-125 active:scale-90" style={{ background: "#61c454" }} title="Maximize">
             <Maximize2 size={6} className="opacity-0 group-hover/traffic:opacity-70" style={{ color: "#0f4a0a" }} />
           </button>
         </div>
@@ -968,7 +1022,7 @@ function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onTog
 }
 
 /* ------------------------------------------------------------------ */
-/*  File Manager                                                       */
+/* File Manager (boards)                                               */
 /* ------------------------------------------------------------------ */
 
 function FileManagerApp({ boards, dispatch, openWindow }) {
@@ -989,11 +1043,7 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
         <div className="text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>
           Boards · {names.length}
         </div>
-        <button
-          onClick={() => setModal({ type: "new" })}
-          className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-transform active:scale-95"
-          style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
-        >
+        <button onClick={() => setModal({ type: "new" })} className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-transform active:scale-95" style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}>
           <Kanban size={13} /> New Board
         </button>
       </div>
@@ -1021,10 +1071,7 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
             >
               <div className="relative">
                 <Folder size={36} strokeWidth={1.4} style={{ color: "var(--text-faint)" }} />
-                <span
-                  className="absolute -bottom-1 -right-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
-                  style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
-                >
+                <span className="absolute -bottom-1 -right-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}>
                   {done}/{total}
                 </span>
               </div>
@@ -1037,10 +1084,7 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
                 </span>
               )}
               <div className="h-1 w-14 overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
-                <div
-                  className="h-full transition-all duration-500"
-                  style={{ width: `${pct}%`, background: "var(--accent)" }}
-                />
+                <div className="h-full transition-all duration-500" style={{ width: `${pct}%`, background: "var(--accent)" }} />
               </div>
             </button>
           );
@@ -1048,238 +1092,204 @@ function FileManagerApp({ boards, dispatch, openWindow }) {
       </div>
 
       {menu && (
-        <div
-          className="fixed z-[9998] w-40 origin-top-left animate-[popIn_110ms_ease-out] overflow-hidden rounded-lg border shadow-xl"
-          style={{ left: menu.x, top: menu.y, background: "var(--surface-solid)", borderColor: "var(--border)" }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => {
-              openWindow("board", { boardName: menu.name });
-              setMenu(null);
-            }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-xs"
-            style={{ color: "var(--text)" }}
-          >
+        <div className="fixed z-[9998] w-40 origin-top-left animate-[popIn_110ms_ease-out] overflow-hidden rounded-lg border shadow-xl" style={{ left: menu.x, top: menu.y, background: "var(--surface-solid)", borderColor: "var(--border)" }} onMouseDown={(e) => e.stopPropagation()}>
+          <button onClick={() => { openWindow("board", { boardName: menu.name }); setMenu(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}>
             <FolderOpen size={13} /> Open
           </button>
-          <button
-            onClick={() => {
-              setModal({ type: "rename", name: menu.name });
-              setMenu(null);
-            }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-xs"
-            style={{ color: "var(--text)" }}
-          >
+          <button onClick={() => { setModal({ type: "rename", name: menu.name }); setMenu(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}>
             <Pencil size={13} /> Rename
           </button>
           {boards[menu.name]?.parent && (
-            <button
-              onClick={() => {
-                dispatch({ type: "UNSET_BOARD_PARENT", name: menu.name });
-                setMenu(null);
-              }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-xs"
-              style={{ color: "var(--text)" }}
-            >
+            <button onClick={() => { dispatch({ type: "UNSET_BOARD_PARENT", name: menu.name }); setMenu(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}>
               <ListTree size={13} /> Move to top level
             </button>
           )}
-          <button
-            onClick={() => {
-              setModal({ type: "delete", name: menu.name });
-              setMenu(null);
-            }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-xs"
-            style={{ color: "var(--danger)" }}
-          >
+          <button onClick={() => { setModal({ type: "delete", name: menu.name }); setMenu(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--danger)" }}>
             <Trash2 size={13} /> Delete
           </button>
         </div>
       )}
 
       {modal?.type === "new" && (
-        <PromptModal
-          title="Name your new board"
-          confirmLabel="Create board"
-          onClose={() => setModal(null)}
-          onSubmit={(val) => {
-            dispatch({ type: "ADD_BOARD", name: val });
-            setModal(null);
-          }}
-        />
+        <PromptModal title="Name your new board" confirmLabel="Create board" onClose={() => setModal(null)} onSubmit={(val) => { dispatch({ type: "ADD_BOARD", name: val }); setModal(null); }} />
       )}
       {modal?.type === "rename" && (
-        <PromptModal
-          title={`Rename "${modal.name}"`}
-          initial={modal.name}
-          confirmLabel="Rename"
-          onClose={() => setModal(null)}
-          onSubmit={(val) => {
-            dispatch({ type: "RENAME_BOARD", oldName: modal.name, newName: val });
-            setModal(null);
-          }}
-        />
+        <PromptModal title={`Rename "${modal.name}"`} initial={modal.name} confirmLabel="Rename" onClose={() => setModal(null)} onSubmit={(val) => { dispatch({ type: "RENAME_BOARD", oldName: modal.name, newName: val }); setModal(null); }} />
       )}
       {modal?.type === "delete" && (
-        <ConfirmModal
-          title="Delete board"
-          message={`Delete "${modal.name}" and all of its tasks? This can't be undone.`}
-          danger
-          onClose={() => setModal(null)}
-          onConfirm={() => dispatch({ type: "DELETE_BOARD", name: modal.name })}
-        />
+        <ConfirmModal title="Delete board" message={`Delete "${modal.name}" and all of its tasks? This can't be undone.`} danger onClose={() => setModal(null)} onConfirm={() => dispatch({ type: "DELETE_BOARD", name: modal.name })} />
       )}
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Board window (dual pending / done view)                            */
+/* Board canvas — Milanote-style freeform board                        */
 /* ------------------------------------------------------------------ */
 
-function buildColumnTree(tasks) {
-  const byParent = {};
-  tasks.forEach((t) => {
-    const key = tasks.some((x) => x.id === t.parentId) ? t.parentId : "__root__";
-    byParent[key] = byParent[key] || [];
-    byParent[key].push(t);
-  });
-  return byParent;
-}
+const NOTE_COLORS = ["#fff6c9", "#ffe1e8", "#d9f2e6", "#dbe7ff", "#f1e0ff", "#ffe8cf"];
+const DRAW_COLORS = ["#ff6b6b", "#4d96ff", "#37b874", "#f2b134", "#7c5cff", "#222222"];
+const CANVAS_W = 2600;
+const CANVAS_H = 1800;
 
-function TaskRow({ task, depth, board, dispatch, onDrop }) {
+function TaskCardOnCanvas({ task, board, allTasks, dispatch, onDragStart }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.name);
-  const [over, setOver] = useState(false);
+  const [newSub, setNewSub] = useState("");
+  const children = allTasks.filter((t) => t.parentId === task.id);
 
   return (
     <div
-      draggable={!editing}
-      data-cursor-drag
-      onDragStart={(e) => e.dataTransfer.setData("text/plain", task.id)}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setOver(true);
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setOver(false);
-        const draggedId = e.dataTransfer.getData("text/plain");
-        if (draggedId && draggedId !== task.id) onDrop(draggedId, task.id);
-      }}
-      style={{
-        marginLeft: depth * 16,
-        background: over ? "var(--accent-soft)" : "transparent",
-        boxShadow: over ? "inset 0 0 0 1px var(--ring)" : "none",
-      }}
-      className="group flex animate-[slideIn_140ms_ease-out] items-center gap-2 rounded-md px-2 py-1.5 transition-colors"
-    >
-      <GripVertical size={12} className="shrink-0" style={{ color: "var(--text-faint)" }} />
-      <button
-        onClick={() => dispatch({ type: "TOGGLE_TASK", board, taskId: task.id, done: !task.done })}
-        className="grid h-4 w-4 shrink-0 place-items-center rounded-[4px] border transition-transform active:scale-90"
-        style={{
-          borderColor: task.done ? "var(--accent)" : "var(--border-strong)",
-          background: task.done ? "var(--accent)" : "transparent",
-          color: "var(--accent-contrast)",
-        }}
-      >
-        {task.done && <Check size={11} strokeWidth={3} className="animate-[popIn_160ms_ease-out]" />}
-      </button>
-      {editing ? (
-        <input
-          autoFocus
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => {
-            setEditing(false);
-            if (draft.trim()) dispatch({ type: "RENAME_TASK", board, taskId: task.id, name: draft });
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") e.currentTarget.blur();
-            if (e.key === "Escape") {
-              setDraft(task.name);
-              setEditing(false);
-            }
-          }}
-          className="flex-1 rounded border px-1.5 py-0.5 text-xs outline-none"
-          style={{ borderColor: "var(--border-strong)", background: "var(--surface-solid)", color: "var(--text)" }}
-        />
-      ) : (
-        <span
-          onDoubleClick={() => setEditing(true)}
-          className="flex-1 truncate text-xs transition-colors"
-          style={{ color: task.done ? "var(--text-faint)" : "var(--text)", textDecoration: task.done ? "line-through" : "none" }}
-        >
-          {task.name}
-        </span>
-      )}
-      <button
-        onClick={() => dispatch({ type: "DELETE_TASK", board, taskId: task.id })}
-        className="invisible shrink-0 rounded p-1 transition-transform group-hover:visible active:scale-90"
-        style={{ color: "var(--text-faint)" }}
-      >
-        <Trash2 size={12} />
-      </button>
-    </div>
-  );
-}
-
-function TaskColumn({ label, tasks, board, dispatch }) {
-  const tree = useMemo(() => buildColumnTree(tasks), [tasks]);
-
-  const handleDrop = useCallback(
-    (draggedId, targetId) => {
-      dispatch({ type: "SET_TASK_PARENT", board, taskId: draggedId, parentId: targetId });
-    },
-    [board, dispatch]
-  );
-
-  const renderLevel = (parentKey, depth) =>
-    (tree[parentKey] || []).map((t) => (
-      <div key={t.id}>
-        <TaskRow task={t} depth={depth} board={board} dispatch={dispatch} onDrop={handleDrop} />
-        {renderLevel(t.id, depth + 1)}
-      </div>
-    ));
-
-  return (
-    <div
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => {
-        const draggedId = e.dataTransfer.getData("text/plain");
-        if (draggedId) dispatch({ type: "SET_TASK_PARENT", board, taskId: draggedId, parentId: null });
-      }}
-      className="flex min-h-0 flex-1 flex-col rounded-lg p-2"
-      style={{ background: "var(--surface)" }}
+      className="absolute w-56 animate-[popIn_160ms_ease-out] rounded-xl border shadow-lg"
+      style={{ left: task.x || 0, top: task.y || 0, background: "var(--surface-solid)", borderColor: "var(--border)" }}
     >
       <div
-        className="mb-1.5 flex items-center border-b px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wide"
-        style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
+        className="flex cursor-grab items-center gap-2 rounded-t-xl border-b px-3 py-2"
+        style={{ borderColor: "var(--border)", background: "var(--accent-soft)" }}
+        data-cursor-drag
+        onMouseDown={(e) => onDragStart("task", task.id, task.x || 0, task.y || 0, e)}
       >
-        {label}
-        <span className="ml-auto" style={{ color: "var(--text-faint)" }}>
-          {tasks.length}
-        </span>
-      </div>
-      <div className="flex-1 space-y-0.5 overflow-auto pr-1">
-        {tasks.length === 0 && (
-          <div className="px-2 py-3 text-[11px]" style={{ color: "var(--text-faint)" }}>
-            Nothing here
-          </div>
+        <button
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={() => dispatch({ type: "TOGGLE_TASK", board, taskId: task.id, done: !task.done })}
+          className="grid h-4 w-4 shrink-0 place-items-center rounded-[4px] border transition-transform active:scale-90"
+          style={{ borderColor: task.done ? "var(--accent)" : "var(--border-strong)", background: task.done ? "var(--accent)" : "transparent", color: "var(--accent-contrast)" }}
+        >
+          {task.done && <Check size={11} strokeWidth={3} />}
+        </button>
+        {editing ? (
+          <input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onMouseDown={(e) => e.stopPropagation()}
+            onBlur={() => { setEditing(false); if (draft.trim()) dispatch({ type: "RENAME_TASK", board, taskId: task.id, name: draft }); }}
+            onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+            className="flex-1 rounded border px-1 text-xs outline-none"
+            style={{ borderColor: "var(--border-strong)", background: "var(--surface-solid)", color: "var(--text)" }}
+          />
+        ) : (
+          <span
+            onMouseDown={(e) => e.stopPropagation()}
+            onDoubleClick={() => setEditing(true)}
+            className="flex-1 truncate text-xs font-medium"
+            style={{ color: task.done ? "var(--text-faint)" : "var(--text)", textDecoration: task.done ? "line-through" : "none" }}
+          >
+            {task.name}
+          </span>
         )}
-        {renderLevel("__root__", 0)}
+        <button onMouseDown={(e) => e.stopPropagation()} onClick={() => dispatch({ type: "DELETE_TASK", board, taskId: task.id })} style={{ color: "var(--text-faint)" }}>
+          <Trash2 size={12} />
+        </button>
+      </div>
+      <div className="max-h-40 space-y-1 overflow-auto p-2" onMouseDown={(e) => e.stopPropagation()}>
+        {children.map((c) => (
+          <div key={c.id} className="flex items-center gap-1.5 rounded px-1 py-0.5">
+            <button
+              onClick={() => dispatch({ type: "TOGGLE_TASK", board, taskId: c.id, done: !c.done })}
+              className="grid h-3.5 w-3.5 shrink-0 place-items-center rounded border"
+              style={{ borderColor: c.done ? "var(--accent)" : "var(--border-strong)", background: c.done ? "var(--accent)" : "transparent" }}
+            >
+              {c.done && <Check size={9} strokeWidth={3} style={{ color: "var(--accent-contrast)" }} />}
+            </button>
+            <span className="flex-1 truncate text-[11px]" style={{ color: c.done ? "var(--text-faint)" : "var(--text)", textDecoration: c.done ? "line-through" : "none" }}>
+              {c.name}
+            </span>
+            <button onClick={() => dispatch({ type: "DELETE_TASK", board, taskId: c.id })} style={{ color: "var(--text-faint)" }}>
+              <X size={10} />
+            </button>
+          </div>
+        ))}
+        <form
+          onSubmit={(e) => { e.preventDefault(); if (newSub.trim()) { dispatch({ type: "ADD_TASK", board, name: newSub, parentId: task.id }); setNewSub(""); } }}
+        >
+          <input value={newSub} onChange={(e) => setNewSub(e.target.value)} placeholder="+ subtask" className="w-full rounded border px-1.5 py-0.5 text-[11px] outline-none" style={{ borderColor: "var(--border)", background: "var(--surface-muted)", color: "var(--text)" }} />
+        </form>
       </div>
     </div>
   );
 }
 
-function BoardApp({ boardName, boards, dispatch }) {
+function NoteCardOnCanvas({ note, board, dispatch, onDragStart }) {
+  const [text, setText] = useState(note.text);
+  return (
+    <div className="absolute w-48 animate-[popIn_160ms_ease-out] rounded-xl border p-2 shadow-lg" style={{ left: note.x, top: note.y, background: note.color || "#fff6c9", borderColor: "rgba(0,0,0,0.08)" }}>
+      <div className="mb-1 flex cursor-grab items-center justify-between" data-cursor-drag onMouseDown={(e) => onDragStart("note", note.id, note.x, note.y, e)}>
+        <GripVertical size={12} style={{ color: "rgba(0,0,0,0.35)" }} />
+        <button onMouseDown={(e) => e.stopPropagation()} onClick={() => dispatch({ type: "DELETE_NOTE", board, noteId: note.id })} style={{ color: "rgba(0,0,0,0.4)" }}>
+          <X size={12} />
+        </button>
+      </div>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onMouseDown={(e) => e.stopPropagation()}
+        onBlur={() => dispatch({ type: "UPDATE_NOTE_TEXT", board, noteId: note.id, text })}
+        placeholder="Write something…"
+        className="w-full resize-none bg-transparent text-[12px] outline-none"
+        style={{ color: "#3a3320", minHeight: 60 }}
+      />
+    </div>
+  );
+}
+
+function FileCardOnCanvas({ note, board, dispatch, onDragStart, files }) {
+  const file = files.find((f) => f.id === note.fileId);
+  return (
+    <div className="absolute w-40 animate-[popIn_160ms_ease-out] rounded-xl border p-2 text-center shadow-lg" style={{ left: note.x, top: note.y, background: "var(--surface-solid)", borderColor: "var(--border)" }}>
+      <div className="mb-1 flex cursor-grab items-center justify-between" data-cursor-drag onMouseDown={(e) => onDragStart("note", note.id, note.x, note.y, e)}>
+        <GripVertical size={12} style={{ color: "var(--text-faint)" }} />
+        <button onMouseDown={(e) => e.stopPropagation()} onClick={() => dispatch({ type: "DELETE_NOTE", board, noteId: note.id })} style={{ color: "var(--text-faint)" }}>
+          <X size={12} />
+        </button>
+      </div>
+      {file && file.type?.startsWith("image/") ? (
+        <img src={file.dataUrl} alt={file.name} className="mx-auto h-20 w-full rounded object-cover" />
+      ) : (
+        <div className="mx-auto grid h-20 w-full place-items-center rounded text-[9px] font-semibold" style={{ background: "var(--surface-muted)", color: "var(--text-faint)" }}>
+          {(note.fileName || "file").split(".").pop()?.toUpperCase() || "FILE"}
+        </div>
+      )}
+      <div className="mt-1 line-clamp-1 text-[10px]" style={{ color: "var(--text)" }}>
+        {note.fileName}
+      </div>
+    </div>
+  );
+}
+
+function BoardApp({ boardName, boards, dispatch, files }) {
   const board = boards[boardName];
-  const [draft, setDraft] = useState("");
+  const canvasRef = useRef(null);
+  const dragRef = useRef(null);
+  const [tool, setTool] = useState("select");
+  const [drawColor, setDrawColor] = useState(DRAW_COLORS[0]);
+  const [currentPath, setCurrentPath] = useState(null);
+  const [taskDraft, setTaskDraft] = useState("");
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    function onMove(e) {
+      const d = dragRef.current;
+      if (!d || !canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left + canvasRef.current.scrollLeft - d.offsetX;
+      const y = e.clientY - rect.top + canvasRef.current.scrollTop - d.offsetY;
+      const cx = clamp(x, 0, CANVAS_W - 60);
+      const cy = clamp(y, 0, CANVAS_H - 40);
+      if (d.kind === "task") dispatch({ type: "MOVE_TASK_POS", board: boardName, taskId: d.id, x: cx, y: cy });
+      else dispatch({ type: "MOVE_NOTE_POS", board: boardName, noteId: d.id, x: cx, y: cy });
+    }
+    function onUp() {
+      dragRef.current = null;
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [boardName, dispatch]);
+
   if (!board) {
     return (
       <div className="grid h-full place-items-center text-sm" style={{ color: "var(--text-faint)" }}>
@@ -1287,63 +1297,171 @@ function BoardApp({ boardName, boards, dispatch }) {
       </div>
     );
   }
-  const pending = board.tasks.filter((t) => !t.done);
-  const done = board.tasks.filter((t) => t.done);
-  const { pct, total } = countStats(board);
+
+  const rootTasks = board.tasks.filter((t) => !t.parentId);
+  const notes = board.notes || [];
+  const drawings = board.drawings || [];
+  const stats = countStats(board);
+
+  function startDrag(kind, id, x, y, e) {
+    if (tool === "draw") return;
+    e.stopPropagation();
+    const rect = canvasRef.current.getBoundingClientRect();
+    const pointerX = e.clientX - rect.left + canvasRef.current.scrollLeft;
+    const pointerY = e.clientY - rect.top + canvasRef.current.scrollTop;
+    dragRef.current = { kind, id, offsetX: pointerX - x, offsetY: pointerY - y };
+  }
+
+  function canvasPoint(e) {
+    const rect = canvasRef.current.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left + canvasRef.current.scrollLeft,
+      y: e.clientY - rect.top + canvasRef.current.scrollTop,
+    };
+  }
+
+  function handleCanvasMouseDown(e) {
+    if (tool !== "draw") return;
+    setCurrentPath({ id: uid("d"), color: drawColor, width: 3, points: [canvasPoint(e)] });
+  }
+  function handleCanvasMouseMove(e) {
+    if (!currentPath) return;
+    const p = canvasPoint(e);
+    setCurrentPath((cp) => (cp ? { ...cp, points: [...cp.points, p] } : cp));
+  }
+  function handleCanvasMouseUp() {
+    if (currentPath && currentPath.points.length > 1) {
+      dispatch({ type: "ADD_DRAWING", board: boardName, path: currentPath });
+    }
+    setCurrentPath(null);
+  }
+
+  function addTaskAtRandom(name) {
+    dispatch({ type: "ADD_TASK", board: boardName, name, parentId: null, x: 60 + Math.random() * 420, y: 60 + Math.random() * 260 });
+  }
+  function addNoteAtRandom() {
+    dispatch({
+      type: "ADD_NOTE",
+      board: boardName,
+      x: 60 + Math.random() * 420,
+      y: 60 + Math.random() * 260,
+      color: NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)],
+    });
+  }
+  function handleFilePick(e) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const fileId = uid("file");
+      dispatch({ type: "ADD_FILE", file: { id: fileId, name: f.name, type: f.type, size: f.size, dataUrl: reader.result, addedAt: Date.now() } });
+      dispatch({
+        type: "ADD_NOTE",
+        board: boardName,
+        x: 60 + Math.random() * 420,
+        y: 60 + Math.random() * 260,
+        noteType: "file",
+        fileId,
+        fileName: f.name,
+      });
+    };
+    reader.readAsDataURL(f);
+  }
 
   return (
     <div className="flex h-full flex-col" style={{ background: "var(--surface-muted)" }}>
-      <div className="border-b px-4 py-3" style={{ borderColor: "var(--border)" }}>
-        <div className="flex items-center justify-between">
-          <div className="text-[13px] font-semibold" style={{ color: "var(--text)" }}>
-            {boardName}
-          </div>
-          <div className="text-[10px]" style={{ color: "var(--text-faint)" }}>
-            {total} tasks · {pct}% done
-          </div>
-        </div>
-        <div className="mt-2 h-1 overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
-          <div
-            className="h-full transition-all duration-500"
-            style={{ width: `${pct}%`, background: "var(--accent)" }}
-          />
-        </div>
-        <form
-          className="mt-3 flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (draft.trim()) {
-              dispatch({ type: "ADD_TASK", board: boardName, name: draft, parentId: null });
-              setDraft("");
-            }
-          }}
-        >
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Add a task and press Enter…"
-            className="flex-1 rounded-lg border px-3 py-1.5 text-xs outline-none"
-            style={{ background: "var(--surface-solid)", borderColor: "var(--border)", color: "var(--text)" }}
-          />
-          <button
-            type="submit"
-            className="rounded-lg px-3 py-1.5 text-xs font-medium transition-transform active:scale-95"
-            style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
+      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2" style={{ borderColor: "var(--border)" }}>
+        <span className="text-[12px] font-semibold" style={{ color: "var(--text)" }}>{boardName}</span>
+        <span className="text-[10px]" style={{ color: "var(--text-faint)" }}>{stats.done}/{stats.total} done</span>
+        <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          <form
+            className="flex items-center gap-1"
+            onSubmit={(e) => { e.preventDefault(); if (taskDraft.trim()) { addTaskAtRandom(taskDraft); setTaskDraft(""); } }}
           >
-            <Plus size={13} />
+            <input value={taskDraft} onChange={(e) => setTaskDraft(e.target.value)} placeholder="New task…" className="w-32 rounded-lg border px-2 py-1 text-[11px] outline-none" style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--text)" }} />
+            <button type="submit" className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}>
+              <Plus size={13} />
+            </button>
+          </form>
+          <button onClick={addNoteAtRandom} title="Add sticky note" className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+            <StickyNote size={13} />
           </button>
-        </form>
+          <button onClick={() => fileInputRef.current?.click()} title="Attach a local file" className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+            <Paperclip size={13} />
+          </button>
+          <input ref={fileInputRef} type="file" className="hidden" onChange={handleFilePick} />
+          <button
+            onClick={() => setTool((t) => (t === "draw" ? "select" : "draw"))}
+            title="Draw"
+            className="grid h-7 w-7 place-items-center rounded-lg"
+            style={{ background: tool === "draw" ? "var(--accent)" : "var(--accent-soft)", color: tool === "draw" ? "var(--accent-contrast)" : "var(--accent)" }}
+          >
+            <Palette size={13} />
+          </button>
+          {tool === "draw" && (
+            <div className="flex items-center gap-1">
+              {DRAW_COLORS.map((c) => (
+                <button key={c} onClick={() => setDrawColor(c)} className="h-5 w-5 rounded-full border-2 transition-transform hover:scale-110" style={{ background: c, borderColor: drawColor === c ? "var(--text)" : "transparent" }} />
+              ))}
+            </div>
+          )}
+          {drawings.length > 0 && (
+            <button onClick={() => dispatch({ type: "CLEAR_DRAWINGS", board: boardName })} title="Clear drawings" className="grid h-7 w-7 place-items-center rounded-lg" style={{ color: "var(--text-faint)" }}>
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
       </div>
-      <div className="grid min-h-0 flex-1 grid-cols-2 gap-2.5 p-2.5">
-        <TaskColumn label="Pending" tasks={pending} board={boardName} dispatch={dispatch} />
-        <TaskColumn label="Done" tasks={done} board={boardName} dispatch={dispatch} />
+
+      <div
+        ref={canvasRef}
+        className="canvas-surface relative flex-1 overflow-auto"
+        style={{
+          cursor: tool === "draw" ? "crosshair" : "default",
+          backgroundImage: "radial-gradient(circle, var(--border) 1px, transparent 1px)",
+          backgroundSize: "22px 22px",
+          backgroundColor: "var(--surface)",
+        }}
+        onMouseDown={handleCanvasMouseDown}
+        onMouseMove={handleCanvasMouseMove}
+        onMouseUp={handleCanvasMouseUp}
+        onMouseLeave={handleCanvasMouseUp}
+      >
+        <div className="relative" style={{ width: CANVAS_W, height: CANVAS_H }}>
+          <svg className="pointer-events-none absolute inset-0" width={CANVAS_W} height={CANVAS_H}>
+            {drawings.map((d) => (
+              <polyline key={d.id} points={d.points.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={d.color} strokeWidth={d.width} strokeLinecap="round" strokeLinejoin="round" />
+            ))}
+            {currentPath && (
+              <polyline points={currentPath.points.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={currentPath.color} strokeWidth={currentPath.width} strokeLinecap="round" strokeLinejoin="round" />
+            )}
+          </svg>
+
+          {rootTasks.length === 0 && notes.length === 0 && (
+            <div className="absolute left-10 top-10 text-xs" style={{ color: "var(--text-faint)" }}>
+              Empty canvas — add a task, a sticky note, attach a file, or start drawing.
+            </div>
+          )}
+
+          {rootTasks.map((t) => (
+            <TaskCardOnCanvas key={t.id} task={t} board={boardName} allTasks={board.tasks} dispatch={dispatch} onDragStart={startDrag} />
+          ))}
+          {notes.map((n) =>
+            n.noteType === "file" ? (
+              <FileCardOnCanvas key={n.id} note={n} board={boardName} dispatch={dispatch} onDragStart={startDrag} files={files} />
+            ) : (
+              <NoteCardOnCanvas key={n.id} note={n} board={boardName} dispatch={dispatch} onDragStart={startDrag} />
+            )
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Graph view (real board hierarchy, radial layout)                   */
+/* Graph view                                                          */
 /* ------------------------------------------------------------------ */
 
 function GraphApp({ boards, openWindow }) {
@@ -1378,17 +1496,7 @@ function GraphApp({ boards, openWindow }) {
             if (!parent || !positions[parent] || !positions[k]) return null;
             const p1 = positions[parent];
             const p2 = positions[k];
-            return (
-              <line
-                key={`e-${k}`}
-                x1={p1.x}
-                y1={p1.y}
-                x2={p2.x}
-                y2={p2.y}
-                stroke="var(--border-strong)"
-                strokeWidth={1.5}
-              />
-            );
+            return <line key={`e-${k}`} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="var(--border-strong)" strokeWidth={1.5} />;
           })}
         </svg>
         {keys.map((k, i) => {
@@ -1400,23 +1508,11 @@ function GraphApp({ boards, openWindow }) {
           return (
             <button
               key={k}
-              style={{
-                left: p.x,
-                top: p.y,
-                width: radius * 2,
-                height: radius * 2,
-                transform: "translate(-50%, -50%)",
-                animationDelay: `${i * 40}ms`,
-                borderColor: "var(--accent)",
-                background: complete ? "var(--accent)" : "var(--accent-soft)",
-              }}
+              style={{ left: p.x, top: p.y, width: radius * 2, height: radius * 2, transform: "translate(-50%, -50%)", animationDelay: `${i * 40}ms`, borderColor: "var(--accent)", background: complete ? "var(--accent)" : "var(--accent-soft)" }}
               onClick={() => openWindow("board", { boardName: k })}
               className="absolute flex flex-col items-center justify-center rounded-full border-2 text-center transition-transform animate-[popIn_200ms_ease-out_backwards] hover:scale-110"
             >
-              <span
-                className="w-full truncate px-1 text-[9px] font-semibold"
-                style={{ color: complete ? "var(--accent-contrast)" : "var(--text)" }}
-              >
+              <span className="w-full truncate px-1 text-[9px] font-semibold" style={{ color: complete ? "var(--accent-contrast)" : "var(--text)" }}>
                 {k}
               </span>
               <span className="text-[8px]" style={{ color: complete ? "var(--accent-contrast)" : "var(--text-muted)" }}>
@@ -1431,7 +1527,7 @@ function GraphApp({ boards, openWindow }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Project view                                                       */
+/* Project view                                                        */
 /* ------------------------------------------------------------------ */
 
 function ProjectApp({ projectName, boards, openWindow }) {
@@ -1440,9 +1536,7 @@ function ProjectApp({ projectName, boards, openWindow }) {
     <div className="flex h-full flex-col gap-3 p-4" style={{ background: "var(--surface-muted)" }}>
       <div className="flex items-center gap-2">
         <Rocket size={15} style={{ color: "var(--accent)" }} />
-        <div className="text-[13px] font-semibold" style={{ color: "var(--text)" }}>
-          @{projectName}
-        </div>
+        <div className="text-[13px] font-semibold" style={{ color: "var(--text)" }}>@{projectName}</div>
       </div>
       <div className="min-h-0 flex-1 overflow-auto rounded-lg p-3" style={{ background: "var(--surface)" }}>
         <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-faint)" }}>
@@ -1457,16 +1551,9 @@ function ProjectApp({ projectName, boards, openWindow }) {
           {keys.map((n) => {
             const { done, total } = countStats(boards[n]);
             return (
-              <button
-                key={n}
-                onClick={() => openWindow("board", { boardName: n })}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-transform hover:translate-x-0.5"
-                style={{ color: "var(--text)" }}
-              >
+              <button key={n} onClick={() => openWindow("board", { boardName: n })} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-transform hover:translate-x-0.5" style={{ color: "var(--text)" }}>
                 <Folder size={13} style={{ color: "var(--text-faint)" }} /> {n}
-                <span className="ml-auto" style={{ color: "var(--text-faint)" }}>
-                  {done}/{total}
-                </span>
+                <span className="ml-auto" style={{ color: "var(--text-faint)" }}>{done}/{total}</span>
               </button>
             );
           })}
@@ -1477,69 +1564,119 @@ function ProjectApp({ projectName, boards, openWindow }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Calendar view                                                      */
+/* Files app                                                            */
+/* ------------------------------------------------------------------ */
+
+function FilesApp({ files, dispatch }) {
+  const inputRef = useRef(null);
+
+  function handleFiles(fileList) {
+    Array.from(fileList).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        dispatch({
+          type: "ADD_FILE",
+          file: { id: uid("file"), name: file.name, type: file.type, size: file.size, dataUrl: reader.result, addedAt: Date.now() },
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  return (
+    <div className="flex h-full flex-col" style={{ background: "var(--surface-muted)" }}>
+      <div className="flex items-center justify-between border-b px-4 py-2.5" style={{ borderColor: "var(--border)" }}>
+        <div className="text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>Files · {files.length}</div>
+        <button onClick={() => inputRef.current?.click()} className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-transform active:scale-95" style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}>
+          <Plus size={13} /> Add file
+        </button>
+        <input ref={inputRef} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }} />
+      </div>
+      <div className="grid flex-1 auto-rows-min grid-cols-3 gap-3 overflow-auto p-4 sm:grid-cols-4">
+        {files.length === 0 && (
+          <div className="col-span-full mt-10 text-center text-sm" style={{ color: "var(--text-faint)" }}>
+            No files yet — add one from your computer, or attach one directly from a board.
+          </div>
+        )}
+        {files.map((f) => (
+          <div key={f.id} className="group flex flex-col items-center gap-1.5 rounded-lg p-2 text-center">
+            {f.type?.startsWith("image/") ? (
+              <img src={f.dataUrl} alt={f.name} className="h-14 w-14 rounded-lg border object-cover" style={{ borderColor: "var(--border)" }} />
+            ) : (
+              <div className="grid h-14 w-14 place-items-center rounded-lg border text-[9px] font-semibold" style={{ borderColor: "var(--border)", color: "var(--text-faint)" }}>
+                {(f.name.split(".").pop() || "file").slice(0, 4).toUpperCase()}
+              </div>
+            )}
+            <span className="line-clamp-1 max-w-[92px] text-[10px] font-medium" style={{ color: "var(--text)" }}>{f.name}</span>
+            <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+              <a href={f.dataUrl} download={f.name} className="rounded p-1" style={{ color: "var(--text-faint)" }}><FolderOpen size={11} /></a>
+              <button onClick={() => dispatch({ type: "DELETE_FILE", id: f.id })} className="rounded p-1" style={{ color: "var(--danger)" }}><Trash2 size={11} /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Calendar — with project tags + upcoming reminders                   */
 /* ------------------------------------------------------------------ */
 
 const WEEKDAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
-function CalendarApp({ events, dispatch }) {
+function CalendarApp({ events, projects, dispatch }) {
   const [cursor, setCursor] = useState(() => {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), 1);
   });
   const [selected, setSelected] = useState(() => dateKey(new Date()));
   const [draft, setDraft] = useState("");
+  const [draftProject, setDraftProject] = useState("");
+  const [draftTime, setDraftTime] = useState("");
 
   const today = dateKey(new Date());
   const cells = useMemo(() => getMonthCells(cursor.getFullYear(), cursor.getMonth()), [cursor]);
   const monthLabel = cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   const dayEvents = events[selected] || [];
 
+  const upcoming = useMemo(() => {
+    const out = [];
+    Object.keys(events).forEach((date) => {
+      if (date < today) return;
+      (events[date] || []).forEach((ev) => out.push({ ...ev, date }));
+    });
+    out.sort((a, b) => (a.date + (a.time || "99:99")).localeCompare(b.date + (b.time || "99:99")));
+    return out.slice(0, 8);
+  }, [events, today]);
+
+  function jumpTo(date) {
+    const d = new Date(date + "T00:00:00");
+    setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
+    setSelected(date);
+  }
+
   return (
     <div className="flex h-full" style={{ background: "var(--surface-muted)" }}>
       <div className="flex min-w-0 flex-1 flex-col p-3">
         <div className="mb-2 flex items-center justify-between">
-          <button
-            onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
-            className="grid h-6 w-6 place-items-center rounded-md text-xs transition-colors"
-            style={{ color: "var(--text-muted)" }}
-          >
-            ‹
-          </button>
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="grid h-6 w-6 place-items-center rounded-md text-xs transition-colors" style={{ color: "var(--text-muted)" }}>‹</button>
           <div className="flex items-center gap-2">
-            <div className="text-[12px] font-semibold" style={{ color: "var(--text)" }}>
-              {monthLabel}
-            </div>
-            <button
-              onClick={() => {
-                const n = new Date();
-                setCursor(new Date(n.getFullYear(), n.getMonth(), 1));
-                setSelected(dateKey(n));
-              }}
-              className="rounded-md px-1.5 py-0.5 text-[9px] font-medium"
-              style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-            >
-              Today
-            </button>
+            <div className="text-[12px] font-semibold" style={{ color: "var(--text)" }}>{monthLabel}</div>
+            <button onClick={() => { const n = new Date(); setCursor(new Date(n.getFullYear(), n.getMonth(), 1)); setSelected(dateKey(n)); }} className="rounded-md px-1.5 py-0.5 text-[9px] font-medium" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>Today</button>
           </div>
-          <button
-            onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
-            className="grid h-6 w-6 place-items-center rounded-md text-xs transition-colors"
-            style={{ color: "var(--text-muted)" }}
-          >
-            ›
-          </button>
+          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="grid h-6 w-6 place-items-center rounded-md text-xs transition-colors" style={{ color: "var(--text-muted)" }}>›</button>
         </div>
         <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[9px] font-medium uppercase" style={{ color: "var(--text-faint)" }}>
-          {WEEKDAY_LABELS.map((d) => (
-            <div key={d}>{d}</div>
-          ))}
+          {WEEKDAY_LABELS.map((d) => <div key={d}>{d}</div>)}
         </div>
         <div className="grid flex-1 grid-cols-7 gap-1">
           {cells.map((d, i) => {
             const key = dateKey(d);
             const inMonth = d.getMonth() === cursor.getMonth();
-            const has = (events[key] || []).length > 0;
+            const dayList = events[key] || [];
+            const has = dayList.length > 0;
+            const dotColor = has && dayList[0].project ? projectColorFor(projects, dayList[0].project) : "var(--accent)";
             const isToday = key === today;
             const isSel = key === selected;
             return (
@@ -1554,70 +1691,61 @@ function CalendarApp({ events, dispatch }) {
                 }}
               >
                 {d.getDate()}
-                {has && (
-                  <span
-                    className="absolute bottom-1 h-1 w-1 rounded-full"
-                    style={{ background: isSel ? "var(--accent-contrast)" : "var(--accent)" }}
-                  />
-                )}
+                {has && <span className="absolute bottom-1 h-1 w-1 rounded-full" style={{ background: isSel ? "var(--accent-contrast)" : dotColor }} />}
               </button>
             );
           })}
         </div>
       </div>
-      <div className="flex w-48 shrink-0 flex-col border-l p-3" style={{ borderColor: "var(--border)" }}>
+
+      <div className="flex w-56 shrink-0 flex-col border-l p-3" style={{ borderColor: "var(--border)" }}>
         <div className="mb-2 text-[11px] font-semibold" style={{ color: "var(--text)" }}>
           {new Date(selected + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
         </div>
         <form
-          className="mb-2 flex gap-1"
+          className="mb-2 flex flex-col gap-1"
           onSubmit={(e) => {
             e.preventDefault();
             if (draft.trim()) {
-              dispatch({ type: "ADD_EVENT", date: selected, text: draft });
+              dispatch({ type: "ADD_EVENT", date: selected, text: draft, project: draftProject || null, time: draftTime || null });
               setDraft("");
+              setDraftTime("");
             }
           }}
         >
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Add event…"
-            className="flex-1 rounded-md border px-2 py-1 text-[11px] outline-none"
-            style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--text)" }}
-          />
-          <button
-            type="submit"
-            className="rounded-md px-2 text-[11px]"
-            style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
-          >
-            <Plus size={12} />
-          </button>
+          <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Add event…" className="rounded-md border px-2 py-1 text-[11px] outline-none" style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--text)" }} />
+          <div className="flex gap-1">
+            <input type="time" value={draftTime} onChange={(e) => setDraftTime(e.target.value)} className="flex-1 rounded-md border px-1 py-1 text-[10px] outline-none" style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--text)" }} />
+            <select value={draftProject} onChange={(e) => setDraftProject(e.target.value)} className="flex-1 rounded-md border px-1 py-1 text-[10px] outline-none" style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--text)" }}>
+              <option value="">No project</option>
+              {projects.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <button type="submit" className="rounded-md px-2 text-[11px]" style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}><Plus size={12} /></button>
+          </div>
         </form>
-        <div className="flex-1 space-y-1 overflow-auto">
-          {dayEvents.length === 0 && (
-            <div className="text-[11px]" style={{ color: "var(--text-faint)" }}>
-              No events
-            </div>
-          )}
+        <div className="mb-2 max-h-32 space-y-1 overflow-auto">
+          {dayEvents.length === 0 && <div className="text-[11px]" style={{ color: "var(--text-faint)" }}>No events</div>}
           {dayEvents.map((ev) => (
-            <div
-              key={ev.id}
-              className="group flex items-center gap-1.5 rounded-md px-2 py-1"
-              style={{ background: "var(--surface)" }}
-            >
-              <span className="flex-1 truncate text-[11px]" style={{ color: "var(--text)" }}>
-                {ev.text}
-              </span>
-              <button
-                onClick={() => dispatch({ type: "DELETE_EVENT", date: selected, id: ev.id })}
-                className="opacity-0 transition-opacity group-hover:opacity-100"
-                style={{ color: "var(--text-faint)" }}
-              >
-                <X size={11} />
-              </button>
+            <div key={ev.id} className="group flex items-center gap-1.5 rounded-md px-2 py-1" style={{ background: "var(--surface)" }}>
+              {ev.project && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: projectColorFor(projects, ev.project) }} />}
+              {ev.time && <span className="text-[9px]" style={{ color: "var(--text-faint)" }}>{ev.time}</span>}
+              <span className="flex-1 truncate text-[11px]" style={{ color: "var(--text)" }}>{ev.text}</span>
+              <button onClick={() => dispatch({ type: "DELETE_EVENT", date: selected, id: ev.id })} className="opacity-0 transition-opacity group-hover:opacity-100" style={{ color: "var(--text-faint)" }}><X size={11} /></button>
             </div>
           ))}
+        </div>
+        <div className="mt-1 border-t pt-2" style={{ borderColor: "var(--border)" }}>
+          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-faint)" }}>Upcoming reminders</div>
+          <div className="max-h-40 space-y-1 overflow-auto">
+            {upcoming.length === 0 && <div className="text-[11px]" style={{ color: "var(--text-faint)" }}>Nothing coming up</div>}
+            {upcoming.map((ev) => (
+              <button key={ev.id} onClick={() => jumpTo(ev.date)} className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left" style={{ background: "var(--surface)" }}>
+                {ev.project && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: projectColorFor(projects, ev.project) }} />}
+                <span className="flex-1 truncate text-[10px]" style={{ color: "var(--text)" }}>{ev.text}</span>
+                <span className="text-[9px]" style={{ color: "var(--text-faint)" }}>{ev.date.slice(5)}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -1625,7 +1753,7 @@ function CalendarApp({ events, dispatch }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Terminal — rich command engine                                     */
+/* Terminal — rich command engine                                      */
 /* ------------------------------------------------------------------ */
 
 const THEMES = {
@@ -1637,54 +1765,55 @@ const THEMES = {
 
 const HELP_LINES = [
   "commands:",
-  "  board -add <name>                  create a new board",
-  "  board -add <name> | <parent>       create it as a subboard",
-  "  board -parent <board> | <parent>   move a board under a parent",
-  "  board -unparent <board>            make a board top-level again",
-  "  board -del <name>                  delete a board",
-  "  board -rename <old> -> <new>       rename a board",
-  "  board -tag <board> @<project>      tag an existing board",
-  "  board -untag <board> @<project>    remove a tag from a board",
-  "  board <name> -show                 show tasks in any board",
-  "  ls                                 list boards, or tasks if inside one",
-  "  cd <name> | cd ..                  enter / leave a board",
-  "  pwd                                show where you are",
+  "  board -add <name>                create a new board",
+  "  board -add <name> | <parent>     create it as a subboard",
+  "  board -parent <board> | <parent> move a board under a parent",
+  "  board -unparent <board>          make a board top-level again",
+  "  board -del <name>                delete a board",
+  "  board -rename <old> -> <new>     rename a board",
+  "  board -tag <board> @<project>    tag an existing board",
+  "  board -untag <board> @<project>  remove a tag from a board",
+  "  board <name> -show               show tasks in any board",
+  "  ls                               list boards, or tasks if inside one",
+  "  cd <name> | cd ..                enter / leave a board",
+  "  pwd                              show where you are",
   "",
-  "  task -add <name>                   add a task to the current board",
-  "  task -add <name> | <parent task>   add it as a subtask",
-  "  task -parent <task> | <parent>     move a task under a parent task",
-  "  task -unparent <task>              make a task top-level again",
-  "  task -check / -uncheck <name>      mark a task (+ subtasks) done/undone",
-  "  task -check-all / -uncheck-all     mark every task in the board",
-  "  task -del <name>                   delete a task (subtasks move up)",
-  "  task -clear                        delete all completed tasks",
-  "  task -rename <old> -> <new>        rename a task",
-  "  task -move <task> -> <board>       move a task (+ subtasks) to another board",
+  "  task -add <name>                 add a task to the current board",
+  "  task -add <name> | <parent task> add it as a subtask",
+  "  task -parent <task> | <parent>   move a task under a parent task",
+  "  task -unparent <task>            make a task top-level again",
+  "  task -check / -uncheck <name>    mark a task (+ subtasks) done/undone",
+  "  task -check-all / -uncheck-all   mark every task in the board",
+  "  task -del <name>                 delete a task (subtasks move up)",
+  "  task -clear                      delete all completed tasks",
+  "  task -rename <old> -> <new>      rename a task",
+  "  task -move <task> -> <board>     move a task (+ subtasks) to another board",
   "",
-  "  init <project>                     create a project tag",
-  "  init -rename <old> -> <new>        rename a project",
-  "  init -del <project>                remove a project (untags its boards)",
-  "  projects                           list projects and their board counts",
-  "  open -project <name>               open every board tagged with a project",
-  "  graph                              open the board relationship graph",
-  "  cal                                open the calendar",
+  "  init <project>                   create a project tag",
+  "  init -rename <old> -> <new>      rename a project",
+  "  init -del <project>              remove a project (untags its boards)",
+  "  projects                         list projects and their board counts",
+  "  open -project <name>             open every board tagged with a project",
+  "  graph                            open the board relationship graph",
+  "  cal                              open the calendar",
+  "  files                            open the Files app",
   "",
-  "  boards open automatically the moment you create or `cd` into them —",
-  "  click a board in the Boards window or dock to bring it back up.",
+  "  boards are now free-form canvases — drag tasks & sticky notes anywhere,",
+  "  attach local files, and draw directly on the board.",
   "",
-  "  find <text>                        search task names across all boards",
-  "  stats                              show overall progress",
-  "  history                            show recently run commands",
-  "  theme <amber|green|cyan|paper>      change terminal theme",
+  "  find <text>                      search task names across all boards",
+  "  stats                            show overall progress",
+  "  history                          show recently run commands",
+  "  theme <amber|green|cyan|paper>   change terminal theme",
   "  date · whoami · clear · help",
-  "  reset -yes                         erase every board & task",
+  "  reset -yes                       erase every board & task",
   "",
   "  aliases: mkdir = board -add   touch = task -add",
   "           rmdir = board -del   rm = task -del / board -del",
 ];
 
 const COMMAND_WORDS = [
-  "board", "task", "graph", "cal", "open", "init", "projects", "ls", "cd", "pwd",
+  "board", "task", "graph", "cal", "files", "open", "init", "projects", "ls", "cd", "pwd",
   "whoami", "clear", "help", "find", "stats", "history", "theme", "date",
   "reset", "mkdir", "touch", "rm", "rmdir",
 ];
@@ -1695,9 +1824,7 @@ function getPromptStr(cwd) {
 
 function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, setTheme }) {
   const [cwd, setCwd] = useState(null);
-  const [lines, setLines] = useState([
-    { id: uid("l"), kind: "sys", text: "Artemis Terminal — type 'help' for commands." },
-  ]);
+  const [lines, setLines] = useState([{ id: uid("l"), kind: "sys", text: "Artemis Terminal — type 'help' for commands." }]);
   const [input, setInput] = useState("");
   const [cmdLog, setCmdLog] = useState([]);
   const [cmdPtr, setCmdPtr] = useState(-1);
@@ -1723,7 +1850,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
   const printBoardList = useCallback(() => {
     const allKeys = Object.keys(boards);
     const rootKeys = allKeys.filter((k) => !boards[k].parent);
-    if (allKeys.length === 0) return print("no boards yet — try `board -add <name>`");
+    if (allKeys.length === 0) return print("no boards yet — try board -add <name>");
     if (rootKeys.length === 0) return print("no top-level boards — every board is nested somewhere");
     const width = Math.max(...rootKeys.map((k) => k.length)) + 2;
     const lines = [
@@ -1734,8 +1861,8 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
       const { total, done } = countStats(boards[k]);
       const kids = boardChildren(boards, k).length;
       const tags = boards[k].tags || [];
-      const tagBits = tags.length ? `  ${tags.map((t) => `@${t}`).join(" ")}` : "";
-      lines.push(`  ${k.padEnd(width)}${done}/${total} done${kids ? `  (${kids} sub)` : ""}${tagBits}`);
+      const tagBits = tags.length ? ` ${tags.map((t) => `@${t}`).join(" ")}` : "";
+      lines.push(`  ${k.padEnd(width)}${done}/${total} done${kids ? ` (${kids} sub)` : ""}${tagBits}`);
     });
     print(lines.join("\n"));
   }, [boards, print]);
@@ -1746,7 +1873,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
       const { total, done } = countStats(board);
       const out = [`board: ${key} — ${done}/${total} done`];
       if (total === 0) {
-        out.push("  (no tasks yet — try `task -add <name>`)");
+        out.push(" (no tasks yet — try task -add <name>)");
       } else {
         const flat = flattenWithDepth(buildTaskTree(board.tasks));
         flat.forEach((t) => out.push(`  ${"  ".repeat(t.depth)}[${t.done ? "x" : " "}] ${t.name}`));
@@ -1830,9 +1957,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
       if (!childKey) return print(`no board named '${childName}'`, "err");
       if (!parentKey) return print(`no board named '${parentName}'`, "err");
       if (norm(childKey) === norm(parentKey)) return print("a board can't be its own parent", "err");
-      if (isAncestorBoard(boards, childKey, parentKey)) {
-        return print(`can't link — '${parentKey}' is already inside '${childKey}'`, "err");
-      }
+      if (isAncestorBoard(boards, childKey, parentKey)) return print(`can't link — '${parentKey}' is already inside '${childKey}'`, "err");
       dispatch({ type: "SET_BOARD_PARENT", child: childKey, parent: parentKey });
       print(`'${childKey}' is now a subboard of '${parentKey}'`, "ok");
       return;
@@ -1872,7 +1997,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
   }
 
   function handleTaskCommand(tokens) {
-    if (!cwd) return print("you're not inside a board — try `cd <board>` first", "err");
+    if (!cwd) return print("you're not inside a board — try cd <board> first", "err");
     const sub = tokens[1];
     const name = tokens.slice(2).join(" ");
     const board = boards[cwd];
@@ -1961,9 +2086,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
       const targetKey = findBoardKey(boards, targetName);
       if (!targetKey) return print(`no board named '${targetName}'`, "err");
       if (norm(targetKey) === norm(cwd)) return print(`'${taskName}' is already in '${cwd}'`, "err");
-      if (findTaskByName(boards[targetKey].tasks, t.name)) {
-        return print(`'${targetKey}' already has a task named '${t.name}'`, "err");
-      }
+      if (findTaskByName(boards[targetKey].tasks, t.name)) return print(`'${targetKey}' already has a task named '${t.name}'`, "err");
       dispatch({ type: "MOVE_TASK", fromBoard: cwd, toBoard: targetKey, taskId: t.id });
       print(`moved '${t.name}' to '${targetKey}'`, "ok");
       return;
@@ -2016,6 +2139,9 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
         case "cal":
           openWindow("calendar");
           return print("opened calendar", "ok");
+        case "files":
+          openWindow("files");
+          return print("opened files", "ok");
         case "find": {
           const query = tokens.slice(1).join(" ");
           if (!query) return print("usage: find <text>", "err");
@@ -2044,9 +2170,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
             done += s.done;
           });
           const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-          return print(
-            [`boards: ${keys.length}`, `tasks:  ${done}/${total} done (${pct}%)`, `open windows: ${windows.length}`].join("\n")
-          );
+          return print([`boards: ${keys.length}`, `tasks:  ${done}/${total} done (${pct}%)`, `open windows: ${windows.length}`].join("\n"));
         }
         case "history":
           return print(cmdLog.length ? cmdLog.map((c, i) => `  ${i + 1}  ${c}`).join("\n") : "no commands yet");
@@ -2107,9 +2231,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
         case "date":
           return print(new Date().toString());
         case "reset": {
-          if (tokens[1] !== "-yes") {
-            return print("this deletes every board & task — type `reset -yes` to confirm", "err");
-          }
+          if (tokens[1] !== "-yes") return print("this deletes every board & task — type `reset -yes` to confirm", "err");
           dispatch({ type: "RESET" });
           setCwd(null);
           return print("everything cleared", "ok");
@@ -2167,7 +2289,6 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
     [boards, projects, cwd, cmdLog, dispatch, openWindow, print, printBoardList, printBoardTasks, setTheme, theme, windows]
   );
 
-  /* ---------- suggestions ---------- */
   function splitInputContext(val) {
     const trailingSpace = /\s$/.test(val);
     const rawTokens = val.split(/\s+/).filter(Boolean);
@@ -2209,18 +2330,14 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
     if (head === "board" || headIsProject) {
       const sub = ctx[1];
       if (ctx.length === 1) {
-        return headIsProject && head !== "board"
-          ? ["-add"]
-          : ["-add", "-del", "-parent", "-unparent", "-rename", "-tag", "-untag", "-show"];
+        return headIsProject && head !== "board" ? ["-add"] : ["-add", "-del", "-parent", "-unparent", "-rename", "-tag", "-untag", "-show"];
       }
       if (["-del", "-unparent", "-parent", "-rename", "-tag", "-untag"].includes(sub)) return boardNames;
       return [];
     }
     if (head === "task") {
       const sub = ctx[1];
-      if (ctx.length === 1) {
-        return ["-add", "-check", "-uncheck", "-check-all", "-uncheck-all", "-del", "-clear", "-rename", "-move", "-parent", "-unparent"];
-      }
+      if (ctx.length === 1) return ["-add", "-check", "-uncheck", "-check-all", "-uncheck-all", "-del", "-clear", "-rename", "-move", "-parent", "-unparent"];
       if (["-check", "-uncheck", "-del", "-rename", "-move", "-parent", "-unparent"].includes(sub)) return taskNames;
       return [];
     }
@@ -2248,10 +2365,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
       return;
     }
     if (e.key === "Escape") {
-      if (showSuggestions) {
-        e.preventDefault();
-        setSuggestOpen(false);
-      }
+      if (showSuggestions) { e.preventDefault(); setSuggestOpen(false); }
       return;
     }
     if (e.key === "Enter") {
@@ -2275,64 +2389,32 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
       if (showSuggestions) return setSuggestIndex((i) => (i + 1) % suggestions.length);
       if (cmdPtr === -1) return;
       const idx = cmdPtr + 1;
-      if (idx >= cmdLog.length) {
-        setCmdPtr(-1);
-        setInput("");
-      } else {
-        setCmdPtr(idx);
-        setInput(cmdLog[idx]);
-      }
+      if (idx >= cmdLog.length) { setCmdPtr(-1); setInput(""); } else { setCmdPtr(idx); setInput(cmdLog[idx]); }
     }
   };
 
   const promptStr = getPromptStr(cwd);
 
   return (
-    <div
-      className="relative flex h-full flex-col overflow-hidden font-mono"
-      style={{ background: "#0b0906", color: th.text }}
-      onMouseDown={() => inputRef.current?.focus()}
-    >
-      <div
-        className="pointer-events-none absolute inset-0 z-10 opacity-[0.15]"
-        style={{ backgroundImage: "repeating-linear-gradient(0deg, #000 0px, transparent 1px, transparent 2px, #000 3px)" }}
-      />
+    <div className="relative flex h-full flex-col overflow-hidden font-mono" style={{ background: "#0b0906", color: th.text }} onMouseDown={() => inputRef.current?.focus()}>
+      <div className="pointer-events-none absolute inset-0 z-10 opacity-[0.15]" style={{ backgroundImage: "repeating-linear-gradient(0deg, #000 0px, transparent 1px, transparent 2px, #000 3px)" }} />
       <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(0,0,0,0.55)_100%)]" />
       <div className="relative z-0 flex-1 overflow-auto px-3 py-2 text-[12.5px] leading-[1.5]" style={{ textShadow: `0 0 6px ${th.glow}` }}>
         {lines.map((l) => (
-          <pre
-            key={l.id}
-            className="animate-[lineIn_140ms_ease-out] whitespace-pre-wrap break-words"
-            style={{
-              color: l.kind === "err" ? "#ff5c5c" : l.kind === "ok" ? "#8dffb0" : l.kind === "sys" ? th.dim : th.text,
-              opacity: l.kind === "cmd" ? 0.85 : 1,
-            }}
-          >
+          <pre key={l.id} className="animate-[lineIn_140ms_ease-out] whitespace-pre-wrap break-words" style={{ color: l.kind === "err" ? "#ff5c5c" : l.kind === "ok" ? "#8dffb0" : l.kind === "sys" ? th.dim : th.text, opacity: l.kind === "cmd" ? 0.85 : 1 }}>
             {l.text}
           </pre>
         ))}
         <div ref={bottomRef} />
       </div>
-      <form
-        className="relative z-0 flex items-center gap-1.5 border-t px-3 py-2 text-[12.5px]"
-        style={{ borderColor: th.dim }}
-        onSubmit={(e) => {
-          e.preventDefault();
-          run(input);
-          setInput("");
-        }}
-      >
+      <form className="relative z-0 flex items-center gap-1.5 border-t px-3 py-2 text-[12.5px]" style={{ borderColor: th.dim }} onSubmit={(e) => { e.preventDefault(); run(input); setInput(""); }}>
         <span style={{ color: th.text, textShadow: `0 0 6px ${th.glow}` }}>{promptStr}</span>
         <div className="relative flex-1">
           <input
             ref={inputRef}
             autoFocus
             value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              setSuggestIndex(0);
-              setSuggestOpen(true);
-            }}
+            onChange={(e) => { setInput(e.target.value); setSuggestIndex(0); setSuggestOpen(true); }}
             onKeyDown={onKeyDown}
             className="w-full bg-transparent outline-none caret-current"
             style={{ color: th.text, textShadow: `0 0 6px ${th.glow}` }}
@@ -2340,23 +2422,11 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
             autoComplete="off"
           />
           {showSuggestions && (
-            <div
-              className="absolute left-0 z-[500] max-h-48 min-w-[220px] max-w-[360px] animate-[fadeIn_120ms_ease-out] overflow-y-auto border"
-              style={{ bottom: "calc(100% + 6px)", background: "#1e1509", borderColor: th.dim, boxShadow: "0 10px 28px rgba(0,0,0,0.55)" }}
-            >
+            <div className="absolute left-0 z-[500] max-h-48 min-w-[220px] max-w-[360px] animate-[fadeIn_120ms_ease-out] overflow-y-auto border" style={{ bottom: "calc(100% + 6px)", background: "#1e1509", borderColor: th.dim, boxShadow: "0 10px 28px rgba(0,0,0,0.55)" }}>
               {suggestions.map((s, i) => {
                 const active = i === activeIndex;
                 return (
-                  <button
-                    key={s}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      acceptSuggestion(s);
-                    }}
-                    onMouseEnter={() => setSuggestIndex(i)}
-                    className="flex w-full items-center px-2.5 py-1 text-left text-xs"
-                    style={{ background: active ? th.text : "transparent", color: active ? "#0b0906" : th.text }}
-                  >
+                  <button key={s} onMouseDown={(e) => { e.preventDefault(); acceptSuggestion(s); }} onMouseEnter={() => setSuggestIndex(i)} className="flex w-full items-center px-2.5 py-1 text-left text-xs" style={{ background: active ? th.text : "transparent", color: active ? "#0b0906" : th.text }}>
                     {s}
                   </button>
                 );
@@ -2370,7 +2440,7 @@ function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, s
 }
 
 /* ------------------------------------------------------------------ */
-/*  Dock / Taskbar                                                     */
+/* Dock / Taskbar                                                       */
 /* ------------------------------------------------------------------ */
 
 function Clock24() {
@@ -2389,48 +2459,38 @@ function Clock24() {
 
 function ThemeSwitcher({ osTheme, setOsTheme }) {
   const [open, setOpen] = useState(false);
+  const lightThemes = OS_THEME_ORDER.filter((k) => OS_THEMES[k].mode === "light");
+  const darkThemes = OS_THEME_ORDER.filter((k) => OS_THEMES[k].mode === "dark");
+
+  const renderRow = (key) => {
+    const t = OS_THEMES[key];
+    const active = key === osTheme;
+    return (
+      <button
+        key={key}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); setOsTheme(key); setOpen(false); }}
+        className="flex w-full items-center gap-2 px-3 py-2 text-xs"
+        style={{ color: "var(--text)", background: active ? "var(--accent-soft)" : "transparent" }}
+      >
+        {t.mode === "dark" ? <Moon size={12} /> : <Sun size={12} />}
+        {t.label}
+        {active && <Check size={11} className="ml-auto" style={{ color: "var(--accent)" }} />}
+      </button>
+    );
+  };
 
   return (
     <div className="relative">
-      <button
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((o) => !o);
-        }}
-        className="grid h-8 w-8 place-items-center rounded-lg transition-transform hover:scale-110 active:scale-95"
-        style={{ color: "var(--text-muted)" }}
-        title="Theme"
-      >
+      <button onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }} className="grid h-8 w-8 place-items-center rounded-lg transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)" }} title="Theme">
         <Palette size={15} />
       </button>
       {open && (
-        <div
-          className="absolute bottom-11 right-0 w-40 origin-bottom-right animate-[popIn_120ms_ease-out] overflow-hidden rounded-xl border shadow-2xl"
-          style={{ background: "var(--surface-solid)", borderColor: "var(--border)" }}
-          onMouseLeave={() => setOpen(false)}
-        >
-          {OS_THEME_ORDER.map((key) => {
-            const t = OS_THEMES[key];
-            const active = key === osTheme;
-            return (
-              <button
-                key={key}
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOsTheme(key);
-                  setOpen(false);
-                }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs"
-                style={{ color: "var(--text)", background: active ? "var(--accent-soft)" : "transparent" }}
-              >
-                {t.mode === "dark" ? <Moon size={12} /> : <Sun size={12} />}
-                {t.label}
-                {active && <Check size={11} className="ml-auto" style={{ color: "var(--accent)" }} />}
-              </button>
-            );
-          })}
+        <div className="absolute bottom-11 right-0 w-44 origin-bottom-right animate-[popIn_120ms_ease-out] overflow-hidden rounded-xl border shadow-2xl" style={{ background: "var(--surface-solid)", borderColor: "var(--border)" }} onMouseLeave={() => setOpen(false)}>
+          <div className="px-3 pb-1 pt-2 text-[9px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-faint)" }}>Light</div>
+          {lightThemes.map(renderRow)}
+          <div className="mt-1 border-t px-3 pb-1 pt-2 text-[9px] font-semibold uppercase tracking-wide" style={{ borderColor: "var(--border)", color: "var(--text-faint)" }}>Dark</div>
+          {darkThemes.map(renderRow)}
         </div>
       )}
     </div>
@@ -2445,6 +2505,7 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
     if (w.kind === "file-manager") return "Boards";
     if (w.kind === "graph") return "Graph";
     if (w.kind === "calendar") return "Calendar";
+    if (w.kind === "files") return "Files";
     if (w.kind === "board") return w.boardName;
     if (w.kind === "project") return w.projectName;
     return w.kind;
@@ -2454,114 +2515,40 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
     kind === "file-manager" ? <Kanban size={13} /> :
     kind === "graph" ? <Network size={13} /> :
     kind === "calendar" ? <CalendarIcon size={13} /> :
+    kind === "files" ? <Paperclip size={13} /> :
     kind === "project" ? <Rocket size={13} /> : <Folder size={13} />;
 
   const topZ = windows.reduce((m, w) => Math.max(m, w.z), 0);
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-3 z-[9000] flex justify-center">
-      <div
-        className="pointer-events-auto flex animate-[slideUp_220ms_cubic-bezier(0.16,1,0.3,1)] items-center gap-1 rounded-2xl border px-2 py-1.5 shadow-xl backdrop-blur-xl"
-        style={{ background: "var(--dock-bg)", borderColor: "var(--border)" }}
-      >
+      <div className="pointer-events-auto flex animate-[slideUp_220ms_cubic-bezier(0.16,1,0.3,1)] items-center gap-1 rounded-2xl border px-2 py-1.5 shadow-xl backdrop-blur-xl" style={{ background: "var(--dock-bg)", borderColor: "var(--border)" }}>
         <div className="relative">
-          <button
-            onClick={() => setStartOpen((s) => !s)}
-            className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95"
-            style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
-            title="Artemis"
-          >
+          <button onClick={() => setStartOpen((s) => !s)} className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95" style={{ background: "var(--accent)", color: "var(--accent-contrast)" }} title="Artemis">
             <Sparkles size={16} />
           </button>
           {startOpen && (
-            <div
-              className="absolute bottom-12 left-0 w-44 origin-bottom-left animate-[popIn_130ms_ease-out] overflow-hidden rounded-xl border shadow-2xl"
-              style={{ background: "var(--surface-solid)", borderColor: "var(--border)" }}
-              onMouseLeave={() => setStartOpen(false)}
-            >
-              <button
-                onClick={() => {
-                  openWindow("terminal");
-                  setStartOpen(false);
-                }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs"
-                style={{ color: "var(--text)" }}
-              >
-                <TerminalIcon size={13} /> Open Terminal
-              </button>
-              <button
-                onClick={() => {
-                  openWindow("file-manager");
-                  setStartOpen(false);
-                }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs"
-                style={{ color: "var(--text)" }}
-              >
-                <Kanban size={13} /> Boards
-              </button>
-              <button
-                onClick={() => {
-                  openWindow("calendar");
-                  setStartOpen(false);
-                }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs"
-                style={{ color: "var(--text)" }}
-              >
-                <CalendarIcon size={13} /> Calendar
-              </button>
-              <button
-                onClick={() => {
-                  openWindow("graph");
-                  setStartOpen(false);
-                }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs"
-                style={{ color: "var(--text)" }}
-              >
-                <Network size={13} /> Graph View
-              </button>
+            <div className="absolute bottom-12 left-0 w-44 origin-bottom-left animate-[popIn_130ms_ease-out] overflow-hidden rounded-xl border shadow-2xl" style={{ background: "var(--surface-solid)", borderColor: "var(--border)" }} onMouseLeave={() => setStartOpen(false)}>
+              <button onClick={() => { openWindow("terminal"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><TerminalIcon size={13} /> Open Terminal</button>
+              <button onClick={() => { openWindow("file-manager"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><Kanban size={13} /> Boards</button>
+              <button onClick={() => { openWindow("calendar"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><CalendarIcon size={13} /> Calendar</button>
+              <button onClick={() => { openWindow("files"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><Paperclip size={13} /> Files</button>
+              <button onClick={() => { openWindow("graph"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><Network size={13} /> Graph View</button>
             </div>
           )}
         </div>
 
-        <button
-          onClick={() => openWindow("file-manager")}
-          className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95"
-          style={{ color: "var(--text-muted)" }}
-          title="Boards"
-        >
-          <Kanban size={17} />
-        </button>
-        <button
-          onClick={() => openWindow("terminal")}
-          className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95"
-          style={{ color: "var(--text-muted)" }}
-          title="Terminal (Shift+T)"
-        >
-          <TerminalIcon size={17} />
-        </button>
-        <button
-          onClick={() => openWindow("calendar")}
-          className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95"
-          style={{ color: "var(--text-muted)" }}
-          title="Calendar"
-        >
-          <CalendarIcon size={17} />
-        </button>
+        <button onClick={() => openWindow("file-manager")} className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)" }} title="Boards"><Kanban size={17} /></button>
+        <button onClick={() => openWindow("terminal")} className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)" }} title="Terminal (Shift+T)"><TerminalIcon size={17} /></button>
+        <button onClick={() => openWindow("calendar")} className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)" }} title="Calendar"><CalendarIcon size={17} /></button>
+        <button onClick={() => openWindow("files")} className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)" }} title="Files"><Paperclip size={17} /></button>
 
         {windows.length > 0 && <div className="mx-1 h-6 w-px" style={{ background: "var(--border)" }} />}
 
         {windows.map((w) => {
           const active = !w.minimized && w.z === topZ;
           return (
-            <button
-              key={w.id}
-              onClick={() => (w.minimized ? restoreWindow(w.id) : active ? minimizeWindow(w.id) : focusWindow(w.id))}
-              className="flex max-w-[120px] animate-[popIn_160ms_ease-out] items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-medium transition-transform hover:scale-105 active:scale-95"
-              style={{
-                background: active ? "var(--accent)" : "var(--accent-soft)",
-                color: active ? "var(--accent-contrast)" : "var(--text-muted)",
-              }}
-            >
+            <button key={w.id} onClick={() => (w.minimized ? restoreWindow(w.id) : active ? minimizeWindow(w.id) : focusWindow(w.id))} className="flex max-w-[120px] animate-[popIn_160ms_ease-out] items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-medium transition-transform hover:scale-105 active:scale-95" style={{ background: active ? "var(--accent)" : "var(--accent-soft)", color: active ? "var(--accent-contrast)" : "var(--text-muted)" }}>
               {iconFor(w.kind)}
               <span className="truncate">{label(w)}</span>
             </button>
@@ -2571,9 +2558,7 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
         <div className="mx-1 h-6 w-px" style={{ background: "var(--border)" }} />
         <div className="flex items-center gap-1 px-1">
           <ThemeSwitcher osTheme={osTheme} setOsTheme={setOsTheme} />
-          <div className="px-1">
-            <Clock24 />
-          </div>
+          <div className="px-1"><Clock24 /></div>
         </div>
       </div>
     </div>
@@ -2581,36 +2566,28 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
 }
 
 /* ------------------------------------------------------------------ */
-/*  Desktop icons                                                      */
+/* Desktop icons                                                        */
 /* ------------------------------------------------------------------ */
 
 function DesktopIcon({ icon, label, onOpen }) {
   return (
-    <button
-      onClick={onOpen}
-      className="flex w-20 flex-col items-center gap-1 rounded-lg p-2 text-center transition-transform hover:-translate-y-0.5 active:scale-95"
-    >
-      <div
-        className="grid h-10 w-10 place-items-center rounded-xl shadow backdrop-blur"
-        style={{ background: "var(--surface)", color: "var(--accent)" }}
-      >
+    <button onClick={onOpen} className="flex w-20 flex-col items-center gap-1 rounded-lg p-2 text-center transition-transform hover:-translate-y-0.5 active:scale-95">
+      <div className="grid h-10 w-10 place-items-center rounded-xl shadow backdrop-blur" style={{ background: "var(--surface)", color: "var(--accent)" }}>
         {icon}
       </div>
-      <span className="text-[10px] font-medium drop-shadow-sm" style={{ color: "var(--text)" }}>
-        {label}
-      </span>
+      <span className="text-[10px] font-medium drop-shadow-sm" style={{ color: "var(--text)" }}>{label}</span>
     </button>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Root App                                                            */
+/* Root App                                                             */
 /* ------------------------------------------------------------------ */
 
 export default function ArtemisOS() {
   const [state, dispatch] = useReducer(osReducer, undefined, makeInitialState);
-  const [theme, setTheme] = useState("amber"); // terminal CRT theme
-  const [osTheme, setOsTheme] = useState("aurora"); // window-chrome theme
+  const [theme, setTheme] = useState("amber");
+  const [osTheme, setOsTheme] = useState("aurora");
   const desktopRef = useRef(null);
   const dragRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
@@ -2624,13 +2601,9 @@ export default function ArtemisOS() {
     dispatch({ type: "OPEN_WINDOW", kind, rect: getRect(), ...extra });
   }, []);
 
-  /* load persisted state once */
   useEffect(() => {
     let cancelled = false;
-    if (!backend) {
-      setLoaded(true);
-      return undefined;
-    }
+    if (!backend) { setLoaded(true); return undefined; }
     (async () => {
       try {
         const result = await backend.get(STORAGE_KEY);
@@ -2644,31 +2617,28 @@ export default function ArtemisOS() {
               windows: Array.isArray(data.windows) ? data.windows : [],
               activeBoard: data.activeBoard ?? null,
               calendarEvents: data.calendarEvents || {},
+              files: Array.isArray(data.files) ? data.files : [],
             },
           });
           if (data.theme) setTheme(data.theme);
           if (data.osTheme && OS_THEMES[data.osTheme]) setOsTheme(data.osTheme);
         }
       } catch (e) {
-        /* nothing saved yet, or the saved data was corrupt — start fresh */
+        /* nothing saved yet, or corrupt — start fresh */
       } finally {
         if (!cancelled) setLoaded(true);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* open the file manager by default once we know whether we hydrated */
   useEffect(() => {
     if (!loaded) return;
     if (state.windows.length === 0) openWindow("file-manager");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
 
-  /* debounced, silent autosave */
   useEffect(() => {
     if (!loaded || !backend) return undefined;
     const t = setTimeout(async () => {
@@ -2681,6 +2651,7 @@ export default function ArtemisOS() {
             windows: state.windows,
             activeBoard: state.activeBoard,
             calendarEvents: state.calendarEvents,
+            files: state.files,
             theme,
             osTheme,
           })
@@ -2690,7 +2661,7 @@ export default function ArtemisOS() {
       }
     }, 400);
     return () => clearTimeout(t);
-  }, [state.boards, state.projects, state.windows, state.activeBoard, state.calendarEvents, theme, osTheme, loaded, backend]);
+  }, [state.boards, state.projects, state.windows, state.activeBoard, state.calendarEvents, state.files, theme, osTheme, loaded, backend]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -2720,9 +2691,7 @@ export default function ArtemisOS() {
       const y = clamp(e.clientY - d.offsetY, 0, Math.max(0, rect.height - 40));
       dispatch({ type: "MOVE_WINDOW", id: d.id, x, y });
     };
-    const onUp = () => {
-      dragRef.current = null;
-    };
+    const onUp = () => { dragRef.current = null; };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
     return () => {
@@ -2738,7 +2707,7 @@ export default function ArtemisOS() {
   return (
     <div
       ref={desktopRef}
-      className="relative h-[700px] w-full select-none overflow-hidden rounded-2xl"
+      className="fixed inset-0 h-screen w-screen select-none overflow-hidden"
       style={{
         cursor: "none",
         background:
@@ -2747,6 +2716,7 @@ export default function ArtemisOS() {
     >
       <style>{`
         ${rootVarsCss}
+        html, body, #root { height: 100%; margin: 0; }
         @keyframes winIn { 0% { opacity:0; transform: scale(0.94) translateY(6px);} 100% { opacity:1; transform: scale(1) translateY(0);} }
         @keyframes terminalIn { 0% { opacity:0; transform: scale(0.96); clip-path: inset(0 0 100% 0);} 45% { opacity:1; clip-path: inset(0 0 0% 0);} 100% { opacity:1; transform: scale(1); clip-path: inset(0 0 0% 0);} }
         @keyframes popIn { 0% { opacity:0; transform: scale(0.9);} 100% { opacity:1; transform: scale(1);} }
@@ -2756,15 +2726,14 @@ export default function ArtemisOS() {
         @keyframes lineIn { 0% { opacity:0; transform: translateY(3px);} 100% { opacity:1; transform: translateY(0);} }
         .line-clamp-1 { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
         * { cursor: none !important; }
-        @media (prefers-reduced-motion: reduce) {
-          * { animation: none !important; transition: none !important; cursor: auto !important; }
-        }
+        @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; cursor: auto !important; } }
       `}</style>
 
       <div className="absolute left-6 top-6 flex flex-col gap-1">
         <DesktopIcon icon={<Kanban size={19} />} label="Boards" onOpen={() => openWindow("file-manager")} />
         <DesktopIcon icon={<TerminalIcon size={19} />} label="Terminal" onOpen={() => openWindow("terminal")} />
         <DesktopIcon icon={<CalendarIcon size={19} />} label="Calendar" onOpen={() => openWindow("calendar")} />
+        <DesktopIcon icon={<Paperclip size={19} />} label="Files" onOpen={() => openWindow("files")} />
         <DesktopIcon icon={<Network size={19} />} label="Graph" onOpen={() => openWindow("graph")} />
       </div>
 
@@ -2781,15 +2750,7 @@ export default function ArtemisOS() {
         if (w.kind === "terminal") {
           return (
             <WindowFrame key={w.id} {...commonProps} title="terminal — artemis" icon={<TerminalIcon size={13} />} dark>
-              <TerminalApp
-                boards={state.boards}
-                projects={state.projects}
-                windows={state.windows}
-                dispatch={dispatch}
-                openWindow={openWindow}
-                theme={theme}
-                setTheme={setTheme}
-              />
+              <TerminalApp boards={state.boards} projects={state.projects} windows={state.windows} dispatch={dispatch} openWindow={openWindow} theme={theme} setTheme={setTheme} />
             </WindowFrame>
           );
         }
@@ -2803,7 +2764,7 @@ export default function ArtemisOS() {
         if (w.kind === "board") {
           return (
             <WindowFrame key={w.id} {...commonProps} title={w.boardName} icon={<ListTree size={13} />}>
-              <BoardApp boardName={w.boardName} boards={state.boards} dispatch={dispatch} />
+              <BoardApp boardName={w.boardName} boards={state.boards} dispatch={dispatch} files={state.files} />
             </WindowFrame>
           );
         }
@@ -2817,7 +2778,14 @@ export default function ArtemisOS() {
         if (w.kind === "calendar") {
           return (
             <WindowFrame key={w.id} {...commonProps} title="Calendar" icon={<CalendarIcon size={13} />}>
-              <CalendarApp events={state.calendarEvents} dispatch={dispatch} />
+              <CalendarApp events={state.calendarEvents} projects={state.projects} dispatch={dispatch} />
+            </WindowFrame>
+          );
+        }
+        if (w.kind === "files") {
+          return (
+            <WindowFrame key={w.id} {...commonProps} title="Files" icon={<Paperclip size={13} />}>
+              <FilesApp files={state.files} dispatch={dispatch} />
             </WindowFrame>
           );
         }
