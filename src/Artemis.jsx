@@ -1419,7 +1419,7 @@ function BoardApp({ boardName, boards, dispatch, files }) {
         className="canvas-surface relative flex-1 overflow-auto"
         style={{
           cursor: tool === "draw" ? "crosshair" : "default",
-          backgroundImage: "radial-gradient(circle, var(--border) 1px, transparent 1px)",
+          backgroundImage: "radial-gradient(circle, rgba(128,128,128,0.45) 1px, transparent 1px)",
           backgroundSize: "22px 22px",
           backgroundColor: "var(--surface)",
         }}
@@ -2714,7 +2714,7 @@ export default function ArtemisOS() {
           "radial-gradient(1200px 600px at 15% -10%, var(--bg-a) 0%, transparent 60%), radial-gradient(1000px 700px at 100% 110%, var(--bg-b) 0%, transparent 55%), linear-gradient(160deg, var(--bg-a) 0%, var(--bg-b) 45%, var(--bg-c) 100%)",
       }}
     >
-      <style>{`
+            <style>{`
         ${rootVarsCss}
         html, body, #root { height: 100%; margin: 0; }
         @keyframes winIn { 0% { opacity:0; transform: scale(0.94) translateY(6px);} 100% { opacity:1; transform: scale(1) translateY(0);} }
@@ -2726,6 +2726,17 @@ export default function ArtemisOS() {
         @keyframes lineIn { 0% { opacity:0; transform: translateY(3px);} 100% { opacity:1; transform: translateY(0);} }
         .line-clamp-1 { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
         * { cursor: none !important; }
+
+        * {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        *::-webkit-scrollbar {
+          display: none;
+          width: 0;
+          height: 0;
+        }
+
         @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; cursor: auto !important; } }
       `}</style>
 
