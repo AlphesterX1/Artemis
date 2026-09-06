@@ -46,6 +46,12 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
+function hashRotation(id, range = 1.4) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return ((h % 200) / 100 - 1) * range;
+}
+
 const norm = (s) => (s || "").trim().toLowerCase();
 
 function findBoardKey(boards, name) {
@@ -221,113 +227,104 @@ function resolvePersistBackend() {
 /* ------------------------------------------------------------------ */
 
 const OS_THEMES = {
-  aurora: {
-    label: "Aurora",
-    mode: "light",
+  parchment: {
+    label: "Parchment", mode: "light",
     vars: {
-      "--bg-a": "#f4f1fc", "--bg-b": "#eae2fa", "--bg-c": "#ddd0f4",
-      "--surface": "rgba(255,255,255,0.78)", "--surface-solid": "#ffffff", "--surface-muted": "rgba(255,255,255,0.46)",
-      "--border": "rgba(88,66,178,0.14)", "--border-strong": "rgba(88,66,178,0.26)",
-      "--accent": "#6d5ae6", "--accent-soft": "rgba(109,90,230,0.12)", "--accent-contrast": "#ffffff",
-      "--text": "#231c3f", "--text-muted": "#726a96", "--text-faint": "#a9a1c8",
-      "--dock-bg": "rgba(255,255,255,0.66)", "--ring": "rgba(109,90,230,0.32)",
-      "--danger": "#e2536e", "--success": "#1ea672", "--scrim": "rgba(35,28,63,0.14)",
+      "--bg-a": "#f7f2e7", "--bg-b": "#efe6d3", "--bg-c": "#e6d9bd",
+      "--surface": "#fffdf7", "--surface-solid": "#fffefa", "--surface-muted": "#f4ecda",
+      "--border": "rgba(60,45,20,0.32)", "--border-strong": "rgba(50,35,10,0.55)",
+      "--accent": "#4a5fd9", "--accent-soft": "rgba(74,95,217,0.14)", "--accent-contrast": "#fffefa",
+      "--text": "#2b2114", "--text-muted": "#6f6248", "--text-faint": "#a79a78",
+      "--dock-bg": "#fffaf0", "--ring": "rgba(74,95,217,0.35)",
+      "--danger": "#c0483f", "--success": "#3c7d4f", "--scrim": "rgba(43,33,20,0.25)", "--ink": "#2b2114",
     },
   },
-  linen: {
-    label: "Linen",
-    mode: "light",
+  kraft: {
+    label: "Kraft", mode: "light",
     vars: {
-      "--bg-a": "#f8f4ea", "--bg-b": "#f0ead9", "--bg-c": "#e6dcc3",
-      "--surface": "rgba(255,255,255,0.7)", "--surface-solid": "#fffdf8", "--surface-muted": "rgba(255,255,255,0.4)",
-      "--border": "rgba(52,87,166,0.14)", "--border-strong": "rgba(52,87,166,0.26)",
-      "--accent": "#33569f", "--accent-soft": "rgba(51,86,159,0.1)", "--accent-contrast": "#ffffff",
-      "--text": "#312b1f", "--text-muted": "#847a63", "--text-faint": "#b3a68a",
-      "--dock-bg": "rgba(255,253,248,0.72)", "--ring": "rgba(51,86,159,0.3)",
-      "--danger": "#c1543f", "--success": "#3c7d4f", "--scrim": "rgba(49,43,31,0.14)",
+      "--bg-a": "#e8d9b8", "--bg-b": "#ddc89f", "--bg-c": "#cdb27f",
+      "--surface": "#f4e9d2", "--surface-solid": "#f8efdc", "--surface-muted": "#efe0bf",
+      "--border": "rgba(69,45,10,0.28)", "--border-strong": "rgba(69,45,10,0.5)",
+      "--accent": "#2f5f8a", "--accent-soft": "rgba(47,95,138,0.16)", "--accent-contrast": "#fbf3e1",
+      "--text": "#3a2c17", "--text-muted": "#7a6440", "--text-faint": "#a68f65",
+      "--dock-bg": "#f2e3c4", "--ring": "rgba(47,95,138,0.35)",
+      "--danger": "#a8402f", "--success": "#39724b", "--scrim": "rgba(43,30,10,0.28)", "--ink": "#3a2c17",
     },
   },
-  blossom: {
-    label: "Blossom",
-    mode: "light",
+  cotton: {
+    label: "Cotton", mode: "light",
     vars: {
-      "--bg-a": "#fdf1f5", "--bg-b": "#fbe4ec", "--bg-c": "#f6d0dd",
-      "--surface": "rgba(255,255,255,0.75)", "--surface-solid": "#fffbfc", "--surface-muted": "rgba(255,255,255,0.45)",
-      "--border": "rgba(199,66,120,0.14)", "--border-strong": "rgba(199,66,120,0.26)",
-      "--accent": "#d84c7f", "--accent-soft": "rgba(216,76,127,0.12)", "--accent-contrast": "#ffffff",
-      "--text": "#3a2130", "--text-muted": "#8c6c7a", "--text-faint": "#c39fac",
-      "--dock-bg": "rgba(255,251,252,0.7)", "--ring": "rgba(216,76,127,0.32)",
-      "--danger": "#e2536e", "--success": "#3c9d6d", "--scrim": "rgba(58,33,48,0.14)",
+      "--bg-a": "#ffffff", "--bg-b": "#f4f4f4", "--bg-c": "#e9e9e9",
+      "--surface": "#ffffff", "--surface-solid": "#ffffff", "--surface-muted": "#f4f4f4",
+      "--border": "rgba(20,20,20,0.16)", "--border-strong": "rgba(20,20,20,0.4)",
+      "--accent": "#c8393f", "--accent-soft": "rgba(200,57,63,0.12)", "--accent-contrast": "#ffffff",
+      "--text": "#1c1c1c", "--text-muted": "#6b6b6b", "--text-faint": "#a3a3a3",
+      "--dock-bg": "#ffffff", "--ring": "rgba(200,57,63,0.3)",
+      "--danger": "#c8393f", "--success": "#2e8b57", "--scrim": "rgba(0,0,0,0.18)", "--ink": "#1c1c1c",
     },
   },
-  mint: {
-    label: "Mint",
-    mode: "light",
+  sage: {
+    label: "Sage", mode: "light",
     vars: {
-      "--bg-a": "#f0faf4", "--bg-b": "#e0f4e8", "--bg-c": "#cbe9d7",
-      "--surface": "rgba(255,255,255,0.75)", "--surface-solid": "#fbfffc", "--surface-muted": "rgba(255,255,255,0.45)",
-      "--border": "rgba(30,130,90,0.14)", "--border-strong": "rgba(30,130,90,0.26)",
-      "--accent": "#1f9d6c", "--accent-soft": "rgba(31,157,108,0.12)", "--accent-contrast": "#ffffff",
-      "--text": "#1e332a", "--text-muted": "#6d8c7c", "--text-faint": "#a3c2b2",
-      "--dock-bg": "rgba(251,255,252,0.7)", "--ring": "rgba(31,157,108,0.32)",
-      "--danger": "#d1495b", "--success": "#1ea672", "--scrim": "rgba(30,51,42,0.14)",
+      "--bg-a": "#eef3e6", "--bg-b": "#e2ecd6", "--bg-c": "#d1e1c1",
+      "--surface": "#f7fbf1", "--surface-solid": "#fbfdf7", "--surface-muted": "#eaf1de",
+      "--border": "rgba(35,60,25,0.22)", "--border-strong": "rgba(35,60,25,0.45)",
+      "--accent": "#c96a3d", "--accent-soft": "rgba(201,106,61,0.15)", "--accent-contrast": "#fffdf8",
+      "--text": "#26301f", "--text-muted": "#647256", "--text-faint": "#9dab8d",
+      "--dock-bg": "#f3f8ec", "--ring": "rgba(201,106,61,0.35)",
+      "--danger": "#b1473c", "--success": "#3f8a52", "--scrim": "rgba(30,40,20,0.22)", "--ink": "#26301f",
     },
   },
-  nightfall: {
-    label: "Nightfall",
-    mode: "dark",
+  chalkboard: {
+    label: "Chalkboard", mode: "dark",
     vars: {
-      "--bg-a": "#171827", "--bg-b": "#12131d", "--bg-c": "#0d0e16",
-      "--surface": "rgba(255,255,255,0.055)", "--surface-solid": "#1b1c29", "--surface-muted": "rgba(255,255,255,0.035)",
-      "--border": "rgba(255,255,255,0.09)", "--border-strong": "rgba(255,255,255,0.16)",
-      "--accent": "#8b93ff", "--accent-soft": "rgba(139,147,255,0.16)", "--accent-contrast": "#12131d",
-      "--text": "#e8e8f5", "--text-muted": "#9a9ac0", "--text-faint": "#5f5f82",
-      "--dock-bg": "rgba(23,24,39,0.72)", "--ring": "rgba(139,147,255,0.4)",
-      "--danger": "#ff7a8a", "--success": "#5fd6a3", "--scrim": "rgba(0,0,0,0.4)",
+      "--bg-a": "#16221c", "--bg-b": "#101a15", "--bg-c": "#0b120e",
+      "--surface": "rgba(255,255,255,0.045)", "--surface-solid": "#1a2620", "--surface-muted": "rgba(255,255,255,0.03)",
+      "--border": "rgba(255,255,255,0.14)", "--border-strong": "rgba(255,255,255,0.26)",
+      "--accent": "#e7cf5c", "--accent-soft": "rgba(231,207,92,0.16)", "--accent-contrast": "#1a2620",
+      "--text": "#eef2ea", "--text-muted": "#a3b3a4", "--text-faint": "#5d6d5e",
+      "--dock-bg": "rgba(22,34,28,0.9)", "--ring": "rgba(231,207,92,0.4)",
+      "--danger": "#ff8a7a", "--success": "#7fd99a", "--scrim": "rgba(0,0,0,0.45)", "--ink": "#eef2ea",
     },
   },
-  onyx: {
-    label: "Onyx",
-    mode: "dark",
+  blueprint: {
+    label: "Blueprint", mode: "dark",
     vars: {
-      "--bg-a": "#131313", "--bg-b": "#0e0e0e", "--bg-c": "#0a0a0a",
-      "--surface": "rgba(255,255,255,0.045)", "--surface-solid": "#161616", "--surface-muted": "rgba(255,255,255,0.03)",
-      "--border": "rgba(255,255,255,0.08)", "--border-strong": "rgba(255,255,255,0.15)",
-      "--accent": "#e8a24a", "--accent-soft": "rgba(232,162,74,0.15)", "--accent-contrast": "#161616",
-      "--text": "#ececea", "--text-muted": "#96968f", "--text-faint": "#5c5c57",
-      "--dock-bg": "rgba(19,19,19,0.72)", "--ring": "rgba(232,162,74,0.4)",
-      "--danger": "#ff8b7a", "--success": "#6fd18f", "--scrim": "rgba(0,0,0,0.5)",
+      "--bg-a": "#0d2138", "--bg-b": "#0a1b2e", "--bg-c": "#071523",
+      "--surface": "rgba(255,255,255,0.05)", "--surface-solid": "#11253c", "--surface-muted": "rgba(255,255,255,0.03)",
+      "--border": "rgba(255,255,255,0.16)", "--border-strong": "rgba(255,255,255,0.28)",
+      "--accent": "#7fd4ff", "--accent-soft": "rgba(127,212,255,0.16)", "--accent-contrast": "#071523",
+      "--text": "#e7f3fb", "--text-muted": "#93b3c8", "--text-faint": "#4f7188",
+      "--dock-bg": "rgba(13,33,56,0.9)", "--ring": "rgba(127,212,255,0.4)",
+      "--danger": "#ff8a8a", "--success": "#7fe3b0", "--scrim": "rgba(0,0,0,0.45)", "--ink": "#e7f3fb",
     },
   },
-  abyss: {
-    label: "Abyss",
-    mode: "dark",
+  charcoal: {
+    label: "Charcoal", mode: "dark",
     vars: {
-      "--bg-a": "#0c1420", "--bg-b": "#0a1119", "--bg-c": "#070c12",
-      "--surface": "rgba(255,255,255,0.05)", "--surface-solid": "#111b28", "--surface-muted": "rgba(255,255,255,0.03)",
-      "--border": "rgba(255,255,255,0.09)", "--border-strong": "rgba(255,255,255,0.16)",
-      "--accent": "#4ec5ff", "--accent-soft": "rgba(78,197,255,0.16)", "--accent-contrast": "#071018",
-      "--text": "#e3edf5", "--text-muted": "#8fa4b8", "--text-faint": "#4f6478",
-      "--dock-bg": "rgba(12,20,32,0.72)", "--ring": "rgba(78,197,255,0.4)",
-      "--danger": "#ff7a8a", "--success": "#5fd6a3", "--scrim": "rgba(0,0,0,0.45)",
+      "--bg-a": "#1c1a18", "--bg-b": "#151312", "--bg-c": "#0f0d0c",
+      "--surface": "rgba(255,255,255,0.045)", "--surface-solid": "#211e1c", "--surface-muted": "rgba(255,255,255,0.03)",
+      "--border": "rgba(255,255,255,0.13)", "--border-strong": "rgba(255,255,255,0.24)",
+      "--accent": "#ff9757", "--accent-soft": "rgba(255,151,87,0.16)", "--accent-contrast": "#211e1c",
+      "--text": "#f1ece6", "--text-muted": "#b1a599", "--text-faint": "#655c53",
+      "--dock-bg": "rgba(28,26,24,0.9)", "--ring": "rgba(255,151,87,0.4)",
+      "--danger": "#ff7a7a", "--success": "#7fd99a", "--scrim": "rgba(0,0,0,0.5)", "--ink": "#f1ece6",
     },
   },
-  ember: {
-    label: "Ember",
-    mode: "dark",
+  inkwell: {
+    label: "Inkwell", mode: "dark",
     vars: {
-      "--bg-a": "#1c1210", "--bg-b": "#170e0c", "--bg-c": "#120a08",
-      "--surface": "rgba(255,255,255,0.05)", "--surface-solid": "#221512", "--surface-muted": "rgba(255,255,255,0.03)",
-      "--border": "rgba(255,255,255,0.09)", "--border-strong": "rgba(255,255,255,0.16)",
-      "--accent": "#ff7847", "--accent-soft": "rgba(255,120,71,0.16)", "--accent-contrast": "#221512",
-      "--text": "#f3e6df", "--text-muted": "#b39187", "--text-faint": "#6f544c",
-      "--dock-bg": "rgba(28,18,16,0.72)", "--ring": "rgba(255,120,71,0.4)",
-      "--danger": "#ff6a6a", "--success": "#6fd18f", "--scrim": "rgba(0,0,0,0.5)",
+      "--bg-a": "#181229", "--bg-b": "#120d1f", "--bg-c": "#0c0817",
+      "--surface": "rgba(255,255,255,0.05)", "--surface-solid": "#1d1730", "--surface-muted": "rgba(255,255,255,0.03)",
+      "--border": "rgba(255,255,255,0.14)", "--border-strong": "rgba(255,255,255,0.26)",
+      "--accent": "#ff7ad1", "--accent-soft": "rgba(255,122,209,0.16)", "--accent-contrast": "#1d1730",
+      "--text": "#efe9fb", "--text-muted": "#ab9dc4", "--text-faint": "#5f5480",
+      "--dock-bg": "rgba(24,18,41,0.9)", "--ring": "rgba(255,122,209,0.4)",
+      "--danger": "#ff8a8a", "--success": "#7fd9b0", "--scrim": "rgba(0,0,0,0.5)", "--ink": "#efe9fb",
     },
   },
 };
-const OS_THEME_ORDER = ["aurora", "linen", "blossom", "mint", "nightfall", "onyx", "abyss", "ember"];
-
+const OS_THEME_ORDER = ["parchment", "kraft", "cotton", "sage", "chalkboard", "blueprint", "charcoal", "inkwell"];
 /* ------------------------------------------------------------------ */
 /* Initial state                                                       */
 /* ------------------------------------------------------------------ */
@@ -825,7 +822,7 @@ function CustomCursor({ containerRef }) {
       const rect = el.getBoundingClientRect();
       pos.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
       if (dotRef.current) {
-        dotRef.current.style.transform = `translate(${pos.current.x}px, ${pos.current.y}px) translate(-50%, -50%)`;
+        dotRef.current.style.transform = `translate(${pos.current.x}px, ${pos.current.y}px) translate(-30%, -85%) rotate(-40deg)`;
       }
       setVisible(true);
       const target = e.target.closest("button, a, [data-cursor-hover]");
@@ -845,8 +842,8 @@ function CustomCursor({ containerRef }) {
   useEffect(() => {
     let raf;
     const animate = () => {
-      ring.current.x += (pos.current.x - ring.current.x) * 0.22;
-      ring.current.y += (pos.current.y - ring.current.y) * 0.22;
+      ring.current.x += (pos.current.x - ring.current.x) * 0.24;
+      ring.current.y += (pos.current.y - ring.current.y) * 0.24;
       if (ringRef.current) {
         ringRef.current.style.transform = `translate(${ring.current.x}px, ${ring.current.y}px) translate(-50%, -50%)`;
       }
@@ -858,20 +855,19 @@ function CustomCursor({ containerRef }) {
 
   const ringStyle =
     variant === "pointer"
-      ? { width: 34, height: 34, border: "1.5px solid var(--accent)", background: "var(--accent-soft)", borderRadius: "9999px" }
+      ? { width: 30, height: 30, border: "2px dashed var(--accent)", background: "var(--accent-soft)", borderRadius: "40% 60% 55% 45% / 50% 45% 55% 50%" }
       : variant === "drag"
-      ? { width: 38, height: 38, border: "1.5px dashed var(--accent)", background: "var(--accent-soft)", borderRadius: "9999px" }
+      ? { width: 36, height: 36, border: "2px dashed var(--accent)", background: "transparent", borderRadius: "50% 45% 55% 50% / 45% 55% 45% 55%" }
       : variant === "text"
-      ? { width: 2, height: 18, borderRadius: 2, background: "var(--accent)" }
-      : { width: 22, height: 22, border: "1px solid var(--border-strong)", background: "transparent", borderRadius: "9999px" };
+      ? { width: 2, height: 18, borderRadius: 2, background: "var(--accent)", border: "none" }
+      : { width: 22, height: 22, border: "1.5px dashed var(--border-strong)", background: "transparent", borderRadius: "48% 52% 45% 55% / 55% 45% 55% 45%" };
 
   return (
-    <div
-      className="pointer-events-none absolute inset-0 z-[10000]"
-      style={{ opacity: visible ? 1 : 0, transition: "opacity 150ms ease" }}
-    >
+    <div className="pointer-events-none absolute inset-0 z-[10000]" style={{ opacity: visible ? 1 : 0, transition: "opacity 150ms ease" }}>
       <div ref={ringRef} className="pointer-events-none absolute left-0 top-0 transition-[width,height,background-color,border-color] duration-150" style={ringStyle} />
-      <div ref={dotRef} className="pointer-events-none absolute left-0 top-0 h-1 w-1 rounded-full" style={{ background: "var(--accent)" }} />
+      <div ref={dotRef} className="pointer-events-none absolute left-0 top-0" style={{ color: "var(--ink)" }}>
+        <Pencil size={16} strokeWidth={2.25} fill="var(--surface-solid)" />
+      </div>
     </div>
   );
 }
@@ -883,19 +879,15 @@ function CustomCursor({ containerRef }) {
 function Modal({ title, children, onClose }) {
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm animate-[fadeIn_120ms_ease-out]"
+      className="fixed inset-0 z-[9999] flex items-center justify-center animate-[fadeIn_120ms_ease-out]"
       style={{ background: "var(--scrim)" }}
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-[340px] scale-100 animate-[popIn_160ms_ease-out] rounded-xl border shadow-2xl backdrop-blur-xl p-5"
-        style={{ background: "var(--surface-solid)", borderColor: "var(--border)" }}
+        className="w-[340px] scale-100 animate-[popIn_160ms_ease-out] p-5"
+        style={{ background: "var(--surface-solid)", border: "2px solid var(--border-strong)", borderRadius: "16px 20px 16px 22px", boxShadow: "6px 8px 0 rgba(0,0,0,0.08), 0 20px 40px rgba(0,0,0,0.16)" }}
       >
-        <div className="mb-3 text-[13px] font-semibold" style={{ color: "var(--text)" }}>
-          {title}
-        </div>
+        <div className="mb-3 text-[14px] font-semibold" style={{ color: "var(--text)" }}>{title}</div>
         {children}
       </div>
     </div>
@@ -968,51 +960,55 @@ function ConfirmModal({ title, message, danger, onConfirm, onClose }) {
 
 function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onToggleMax, onFocus, onDragStart, children }) {
   if (win.minimized) return null;
+  const tilt = dark ? 0 : hashRotation(win.id, 1.1);
   return (
     <div
-      className={`absolute flex flex-col overflow-hidden rounded-lg border shadow-xl transition-shadow duration-200 will-change-transform ${
+      className={`absolute flex flex-col overflow-hidden transition-[box-shadow,transform] duration-200 will-change-transform ${
         dark ? "animate-[terminalIn_280ms_ease-out]" : "animate-[winIn_220ms_cubic-bezier(0.16,1,0.3,1)]"
       }`}
       style={{
-        left: win.x,
-        top: win.y,
-        width: win.width,
-        height: win.height,
-        zIndex: win.z,
-        background: dark ? "#0b0906" : "var(--surface)",
-        borderColor: dark ? "rgba(120,80,20,0.35)" : isTop ? "var(--border-strong)" : "var(--border)",
-        backdropFilter: dark ? "none" : "blur(18px)",
+        left: win.x, top: win.y, width: win.width, height: win.height, zIndex: win.z,
+        background: dark ? "#0b0906" : "var(--surface-solid)",
+        border: `2px solid ${dark ? "rgba(120,80,20,0.4)" : isTop ? "var(--border-strong)" : "var(--border)"}`,
+        borderRadius: dark ? "8px" : "13px 17px 14px 18px",
+        boxShadow: isTop
+          ? "6px 10px 0px -3px rgba(0,0,0,0.10), 0 18px 34px rgba(0,0,0,0.16)"
+          : "3px 5px 0px -3px rgba(0,0,0,0.08), 0 8px 18px rgba(0,0,0,0.10)",
+        transform: `rotate(${isTop ? 0 : tilt}deg)`,
       }}
       onMouseDown={onFocus}
     >
       <div
-        className="group/traffic flex select-none items-center gap-2 px-3 py-2"
+        className="flex select-none items-center gap-2 px-3 py-2"
         style={{
-          background: dark ? "linear-gradient(180deg, rgba(60,38,0,0.55), rgba(11,9,6,0))" : "transparent",
-          borderBottom: `1px solid ${dark ? "rgba(120,80,20,0.3)" : "var(--border)"}`,
+          background: dark ? "linear-gradient(180deg, rgba(60,38,0,0.55), rgba(11,9,6,0))" : "var(--surface-muted)",
+          borderBottom: `2px dashed ${dark ? "rgba(120,80,20,0.3)" : "var(--border)"}`,
           color: dark ? "#c98f2e" : "var(--text)",
           cursor: "inherit",
         }}
         data-cursor-drag
-        onMouseDown={(e) => {
-          onFocus();
-          onDragStart(e);
-        }}
+        onMouseDown={(e) => { onFocus(); onDragStart(e); }}
         onDoubleClick={onToggleMax}
       >
-        <div className="flex items-center gap-1.5 mr-1">
-          <button onMouseDown={(e) => e.stopPropagation()} onClick={onClose} className="grid h-2.5 w-2.5 place-items-center rounded-full transition-transform hover:scale-125 active:scale-90" style={{ background: "#ec6a5e" }} title="Close">
-            <X size={7} className="opacity-0 group-hover/traffic:opacity-70" style={{ color: "#5b130b" }} />
-          </button>
-          <button onMouseDown={(e) => e.stopPropagation()} onClick={onMinimize} className="grid h-2.5 w-2.5 place-items-center rounded-full transition-transform hover:scale-125 active:scale-90" style={{ background: "#f4bd4f" }} title="Minimize">
-            <Minus size={7} className="opacity-0 group-hover/traffic:opacity-70" style={{ color: "#6b4a05" }} />
-          </button>
-          <button onMouseDown={(e) => e.stopPropagation()} onClick={onToggleMax} className="grid h-2.5 w-2.5 place-items-center rounded-full transition-transform hover:scale-125 active:scale-90" style={{ background: "#61c454" }} title="Maximize">
-            <Maximize2 size={6} className="opacity-0 group-hover/traffic:opacity-70" style={{ color: "#0f4a0a" }} />
-          </button>
+        <div className="mr-1 flex items-center gap-1">
+          {[
+            { fn: onClose, r: "3px 6px 4px 7px", Icon: X, s: 9 },
+            { fn: onMinimize, r: "6px 3px 7px 4px", Icon: Minus, s: 9 },
+            { fn: onToggleMax, r: "4px 7px 3px 6px", Icon: Maximize2, s: 8 },
+          ].map(({ fn, r, Icon, s }, i) => (
+            <button
+              key={i}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={fn}
+              className="grid h-4 w-4 place-items-center transition-transform hover:scale-110 active:scale-90"
+              style={{ border: `1.5px solid ${dark ? "#c98f2e" : "var(--ink)"}`, borderRadius: r, color: dark ? "#c98f2e" : "var(--ink)" }}
+            >
+              <Icon size={s} strokeWidth={2.5} />
+            </button>
+          ))}
         </div>
         <span style={{ color: dark ? "#c98f2e" : "var(--text-faint)" }}>{icon}</span>
-        <span className="text-[11px] font-medium tracking-wide" style={{ color: dark ? "#e7b45b" : "var(--text)" }}>
+        <span className="text-[12px] font-medium tracking-wide" style={{ color: dark ? "#e7b45b" : "var(--text)" }}>
           {title}
         </span>
       </div>
@@ -1020,7 +1016,6 @@ function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onTog
     </div>
   );
 }
-
 /* ------------------------------------------------------------------ */
 /* File Manager (boards)                                               */
 /* ------------------------------------------------------------------ */
@@ -1140,20 +1135,20 @@ function TaskCardOnCanvas({ task, board, allTasks, dispatch, onDragStart }) {
 
   return (
     <div
-      className="absolute w-56 animate-[popIn_160ms_ease-out] rounded-xl border shadow-lg"
-      style={{ left: task.x || 0, top: task.y || 0, background: "var(--surface-solid)", borderColor: "var(--border)" }}
+      className="absolute w-56 animate-[popIn_160ms_ease-out] border"
+      style={{ left: task.x || 0, top: task.y || 0, background: "var(--surface-solid)", borderColor: "var(--border)", borderRadius: "8px 14px 9px 15px", boxShadow: "3px 5px 0 rgba(0,0,0,0.08)" }}
     >
       <div
-        className="flex cursor-grab items-center gap-2 rounded-t-xl border-b px-3 py-2"
-        style={{ borderColor: "var(--border)", background: "var(--accent-soft)" }}
+        className="flex cursor-grab items-center gap-2 border-b px-3 py-2"
+        style={{ borderColor: "var(--border)", background: "var(--accent-soft)", borderRadius: "6px 12px 0 0" }}
         data-cursor-drag
         onMouseDown={(e) => onDragStart("task", task.id, task.x || 0, task.y || 0, e)}
       >
         <button
           onMouseDown={(e) => e.stopPropagation()}
           onClick={() => dispatch({ type: "TOGGLE_TASK", board, taskId: task.id, done: !task.done })}
-          className="grid h-4 w-4 shrink-0 place-items-center rounded-[4px] border transition-transform active:scale-90"
-          style={{ borderColor: task.done ? "var(--accent)" : "var(--border-strong)", background: task.done ? "var(--accent)" : "transparent", color: "var(--accent-contrast)" }}
+          className="grid h-4 w-4 shrink-0 place-items-center border transition-transform active:scale-90"
+          style={{ borderColor: task.done ? "var(--accent)" : "var(--border-strong)", background: task.done ? "var(--accent)" : "transparent", color: "var(--accent-contrast)", borderRadius: "4px 7px 4px 7px" }}
         >
           {task.done && <Check size={11} strokeWidth={3} />}
         </button>
@@ -1213,7 +1208,10 @@ function TaskCardOnCanvas({ task, board, allTasks, dispatch, onDragStart }) {
 function NoteCardOnCanvas({ note, board, dispatch, onDragStart }) {
   const [text, setText] = useState(note.text);
   return (
-    <div className="absolute w-48 animate-[popIn_160ms_ease-out] rounded-xl border p-2 shadow-lg" style={{ left: note.x, top: note.y, background: note.color || "#fff6c9", borderColor: "rgba(0,0,0,0.08)" }}>
+    <div
+      className="absolute animate-[popIn_160ms_ease-out] p-2"
+      style={{ left: note.x, top: note.y, width: 192, background: note.color || "#fff6c9", border: "1.5px solid rgba(0,0,0,0.15)", borderRadius: "3px 10px 4px 9px", boxShadow: "3px 5px 0 rgba(0,0,0,0.08)", transform: `rotate(${hashRotation(note.id, 2.4)}deg)` }}
+    >
       <div className="mb-1 flex cursor-grab items-center justify-between" data-cursor-drag onMouseDown={(e) => onDragStart("note", note.id, note.x, note.y, e)}>
         <GripVertical size={12} style={{ color: "rgba(0,0,0,0.35)" }} />
         <button onMouseDown={(e) => e.stopPropagation()} onClick={() => dispatch({ type: "DELETE_NOTE", board, noteId: note.id })} style={{ color: "rgba(0,0,0,0.4)" }}>
@@ -1236,7 +1234,10 @@ function NoteCardOnCanvas({ note, board, dispatch, onDragStart }) {
 function FileCardOnCanvas({ note, board, dispatch, onDragStart, files }) {
   const file = files.find((f) => f.id === note.fileId);
   return (
-    <div className="absolute w-40 animate-[popIn_160ms_ease-out] rounded-xl border p-2 text-center shadow-lg" style={{ left: note.x, top: note.y, background: "var(--surface-solid)", borderColor: "var(--border)" }}>
+    <div
+      className="absolute w-40 animate-[popIn_160ms_ease-out] border p-2 text-center"
+      style={{ left: note.x, top: note.y, background: "var(--surface-solid)", borderColor: "var(--border)", borderRadius: "8px 14px 9px 15px", boxShadow: "3px 5px 0 rgba(0,0,0,0.08)" }}
+    >
       <div className="mb-1 flex cursor-grab items-center justify-between" data-cursor-drag onMouseDown={(e) => onDragStart("note", note.id, note.x, note.y, e)}>
         <GripVertical size={12} style={{ color: "var(--text-faint)" }} />
         <button onMouseDown={(e) => e.stopPropagation()} onClick={() => dispatch({ type: "DELETE_NOTE", board, noteId: note.id })} style={{ color: "var(--text-faint)" }}>
@@ -1257,30 +1258,50 @@ function FileCardOnCanvas({ note, board, dispatch, onDragStart, files }) {
   );
 }
 
+
 function BoardApp({ boardName, boards, dispatch, files }) {
   const board = boards[boardName];
   const canvasRef = useRef(null);
   const dragRef = useRef(null);
+  const panRef = useRef(null);
   const [tool, setTool] = useState("select");
   const [drawColor, setDrawColor] = useState(DRAW_COLORS[0]);
   const [currentPath, setCurrentPath] = useState(null);
   const [taskDraft, setTaskDraft] = useState("");
+  const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
+  const [isPanning, setIsPanning] = useState(false);
+  const viewRef = useRef(view);
   const fileInputRef = useRef(null);
+
+  useEffect(() => { viewRef.current = view; }, [view]);
+
+  const screenToCanvas = useCallback((clientX, clientY) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const v = viewRef.current;
+    return {
+      x: (clientX - rect.left - v.x) / v.scale,
+      y: (clientY - rect.top - v.y) / v.scale,
+    };
+  }, []);
 
   useEffect(() => {
     function onMove(e) {
+      if (panRef.current) {
+        const p = panRef.current;
+        setView((v) => ({ ...v, x: p.startViewX + (e.clientX - p.startX), y: p.startViewY + (e.clientY - p.startY) }));
+        return;
+      }
       const d = dragRef.current;
       if (!d || !canvasRef.current) return;
-      const rect = canvasRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left + canvasRef.current.scrollLeft - d.offsetX;
-      const y = e.clientY - rect.top + canvasRef.current.scrollTop - d.offsetY;
-      const cx = clamp(x, 0, CANVAS_W - 60);
-      const cy = clamp(y, 0, CANVAS_H - 40);
+      const pt = screenToCanvas(e.clientX, e.clientY);
+      const cx = clamp(pt.x - d.offsetX, 0, CANVAS_W - 60);
+      const cy = clamp(pt.y - d.offsetY, 0, CANVAS_H - 40);
       if (d.kind === "task") dispatch({ type: "MOVE_TASK_POS", board: boardName, taskId: d.id, x: cx, y: cy });
       else dispatch({ type: "MOVE_NOTE_POS", board: boardName, noteId: d.id, x: cx, y: cy });
     }
     function onUp() {
       dragRef.current = null;
+      if (panRef.current) { panRef.current = null; setIsPanning(false); }
     }
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -1288,7 +1309,7 @@ function BoardApp({ boardName, boards, dispatch, files }) {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [boardName, dispatch]);
+  }, [boardName, dispatch, screenToCanvas]);
 
   if (!board) {
     return (
@@ -1306,27 +1327,21 @@ function BoardApp({ boardName, boards, dispatch, files }) {
   function startDrag(kind, id, x, y, e) {
     if (tool === "draw") return;
     e.stopPropagation();
-    const rect = canvasRef.current.getBoundingClientRect();
-    const pointerX = e.clientX - rect.left + canvasRef.current.scrollLeft;
-    const pointerY = e.clientY - rect.top + canvasRef.current.scrollTop;
-    dragRef.current = { kind, id, offsetX: pointerX - x, offsetY: pointerY - y };
-  }
-
-  function canvasPoint(e) {
-    const rect = canvasRef.current.getBoundingClientRect();
-    return {
-      x: e.clientX - rect.left + canvasRef.current.scrollLeft,
-      y: e.clientY - rect.top + canvasRef.current.scrollTop,
-    };
+    const pt = screenToCanvas(e.clientX, e.clientY);
+    dragRef.current = { kind, id, offsetX: pt.x - x, offsetY: pt.y - y };
   }
 
   function handleCanvasMouseDown(e) {
-    if (tool !== "draw") return;
-    setCurrentPath({ id: uid("d"), color: drawColor, width: 3, points: [canvasPoint(e)] });
+    if (tool === "draw") {
+      setCurrentPath({ id: uid("d"), color: drawColor, width: 3, points: [screenToCanvas(e.clientX, e.clientY)] });
+      return;
+    }
+    panRef.current = { startX: e.clientX, startY: e.clientY, startViewX: view.x, startViewY: view.y };
+    setIsPanning(true);
   }
   function handleCanvasMouseMove(e) {
     if (!currentPath) return;
-    const p = canvasPoint(e);
+    const p = screenToCanvas(e.clientX, e.clientY);
     setCurrentPath((cp) => (cp ? { ...cp, points: [...cp.points, p] } : cp));
   }
   function handleCanvasMouseUp() {
@@ -1334,6 +1349,21 @@ function BoardApp({ boardName, boards, dispatch, files }) {
       dispatch({ type: "ADD_DRAWING", board: boardName, path: currentPath });
     }
     setCurrentPath(null);
+  }
+
+  function zoomBy(delta, anchor) {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const sx = anchor ? anchor.x - rect.left : rect.width / 2;
+    const sy = anchor ? anchor.y - rect.top : rect.height / 2;
+    setView((v) => {
+      const newScale = clamp(Number((v.scale + delta).toFixed(2)), 0.35, 2.5);
+      const factor = newScale / v.scale;
+      return { x: sx - (sx - v.x) * factor, y: sy - (sy - v.y) * factor, scale: newScale };
+    });
+  }
+  function handleWheel(e) {
+    e.preventDefault();
+    zoomBy(e.deltaY > 0 ? -0.1 : 0.1, { x: e.clientX, y: e.clientY });
   }
 
   function addTaskAtRandom(name) {
@@ -1371,15 +1401,15 @@ function BoardApp({ boardName, boards, dispatch, files }) {
 
   return (
     <div className="flex h-full flex-col" style={{ background: "var(--surface-muted)" }}>
-      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2" style={{ borderColor: "var(--border)" }}>
-        <span className="text-[12px] font-semibold" style={{ color: "var(--text)" }}>{boardName}</span>
+      <div className="flex flex-wrap items-center gap-2 border-b-2 px-3 py-2" style={{ borderColor: "var(--border)", borderBottomStyle: "dashed" }}>
+        <span className="text-[13px] font-semibold" style={{ color: "var(--text)" }}>{boardName}</span>
         <span className="text-[10px]" style={{ color: "var(--text-faint)" }}>{stats.done}/{stats.total} done</span>
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
           <form
             className="flex items-center gap-1"
             onSubmit={(e) => { e.preventDefault(); if (taskDraft.trim()) { addTaskAtRandom(taskDraft); setTaskDraft(""); } }}
           >
-            <input value={taskDraft} onChange={(e) => setTaskDraft(e.target.value)} placeholder="New task…" className="w-32 rounded-lg border px-2 py-1 text-[11px] outline-none" style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--text)" }} />
+            <input value={taskDraft} onChange={(e) => setTaskDraft(e.target.value)} placeholder="New task…" className="w-32 rounded-lg border-2 px-2 py-1 text-[11px] outline-none" style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--text)" }} />
             <button type="submit" className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}>
               <Plus size={13} />
             </button>
@@ -1411,24 +1441,44 @@ function BoardApp({ boardName, boards, dispatch, files }) {
               <Trash2 size={13} />
             </button>
           )}
+          <div className="mx-1 h-5 w-px" style={{ borderLeft: "2px dashed var(--border)" }} />
+          <button onClick={() => zoomBy(-0.1)} className="grid h-7 w-7 place-items-center rounded-lg" style={{ color: "var(--text-muted)" }} title="Zoom out">
+            <Minus size={13} />
+          </button>
+          <button onClick={() => setView({ x: 0, y: 0, scale: 1 })} className="rounded-lg px-1.5 text-[10px] font-medium" style={{ color: "var(--text-muted)" }} title="Reset view">
+            {Math.round(view.scale * 100)}%
+          </button>
+          <button onClick={() => zoomBy(0.1)} className="grid h-7 w-7 place-items-center rounded-lg" style={{ color: "var(--text-muted)" }} title="Zoom in">
+            <Plus size={13} />
+          </button>
         </div>
       </div>
 
       <div
         ref={canvasRef}
-        className="canvas-surface relative flex-1 overflow-auto"
-        style={{
-          cursor: tool === "draw" ? "crosshair" : "default",
-          backgroundImage: "radial-gradient(circle, rgba(128,128,128,0.45) 1px, transparent 1px)",
-          backgroundSize: "22px 22px",
-          backgroundColor: "var(--surface)",
-        }}
+        data-cursor-drag={tool === "select" ? true : undefined}
+        className="canvas-surface relative flex-1 overflow-hidden"
+        style={{ cursor: tool === "draw" ? "crosshair" : isPanning ? "grabbing" : "grab", background: "var(--surface-muted)" }}
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={handleCanvasMouseUp}
         onMouseLeave={handleCanvasMouseUp}
+        onWheel={handleWheel}
       >
-        <div className="relative" style={{ width: CANVAS_W, height: CANVAS_H }}>
+        <div
+          className="relative"
+          style={{
+            width: CANVAS_W,
+            height: CANVAS_H,
+            transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
+            transformOrigin: "0 0",
+            background: "var(--surface-solid)",
+            border: "2px solid var(--border-strong)",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.18)",
+            backgroundImage: "radial-gradient(circle, var(--border) 1px, transparent 1px)",
+            backgroundSize: "26px 26px",
+          }}
+        >
           <svg className="pointer-events-none absolute inset-0" width={CANVAS_W} height={CANVAS_H}>
             {drawings.map((d) => (
               <polyline key={d.id} points={d.points.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={d.color} strokeWidth={d.width} strokeLinecap="round" strokeLinejoin="round" />
@@ -1440,7 +1490,7 @@ function BoardApp({ boardName, boards, dispatch, files }) {
 
           {rootTasks.length === 0 && notes.length === 0 && (
             <div className="absolute left-10 top-10 text-xs" style={{ color: "var(--text-faint)" }}>
-              Empty canvas — add a task, a sticky note, attach a file, or start drawing.
+              Empty page — add a task, a sticky note, attach a file, or start sketching. Drag the page to pan, scroll to zoom.
             </div>
           )}
 
@@ -2522,13 +2572,16 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-3 z-[9000] flex justify-center">
-      <div className="pointer-events-auto flex animate-[slideUp_220ms_cubic-bezier(0.16,1,0.3,1)] items-center gap-1 rounded-2xl border px-2 py-1.5 shadow-xl backdrop-blur-xl" style={{ background: "var(--dock-bg)", borderColor: "var(--border)" }}>
+      <div
+        className="pointer-events-auto flex animate-[slideUp_220ms_cubic-bezier(0.16,1,0.3,1)] items-center gap-1 px-2 py-1.5"
+        style={{ background: "var(--dock-bg)", border: "2px solid var(--border-strong)", borderRadius: "18px 22px 18px 24px", boxShadow: "4px 8px 0 rgba(0,0,0,0.08), 0 14px 30px rgba(0,0,0,0.12)" }}
+      >
         <div className="relative">
-          <button onClick={() => setStartOpen((s) => !s)} className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95" style={{ background: "var(--accent)", color: "var(--accent-contrast)" }} title="Artemis">
+          <button onClick={() => setStartOpen((s) => !s)} className="grid h-9 w-9 place-items-center transition-transform hover:scale-110 active:scale-95" style={{ background: "var(--accent)", color: "var(--accent-contrast)", borderRadius: "10px 14px 11px 15px" }} title="Artemis">
             <Sparkles size={16} />
           </button>
           {startOpen && (
-            <div className="absolute bottom-12 left-0 w-44 origin-bottom-left animate-[popIn_130ms_ease-out] overflow-hidden rounded-xl border shadow-2xl" style={{ background: "var(--surface-solid)", borderColor: "var(--border)" }} onMouseLeave={() => setStartOpen(false)}>
+            <div className="absolute bottom-12 left-0 w-44 origin-bottom-left animate-[popIn_130ms_ease-out] overflow-hidden" style={{ background: "var(--surface-solid)", border: "2px solid var(--border-strong)", borderRadius: "12px 16px 12px 16px" }} onMouseLeave={() => setStartOpen(false)}>
               <button onClick={() => { openWindow("terminal"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><TerminalIcon size={13} /> Open Terminal</button>
               <button onClick={() => { openWindow("file-manager"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><Kanban size={13} /> Boards</button>
               <button onClick={() => { openWindow("calendar"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><CalendarIcon size={13} /> Calendar</button>
@@ -2538,24 +2591,29 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
           )}
         </div>
 
-        <button onClick={() => openWindow("file-manager")} className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)" }} title="Boards"><Kanban size={17} /></button>
-        <button onClick={() => openWindow("terminal")} className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)" }} title="Terminal (Shift+T)"><TerminalIcon size={17} /></button>
-        <button onClick={() => openWindow("calendar")} className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)" }} title="Calendar"><CalendarIcon size={17} /></button>
-        <button onClick={() => openWindow("files")} className="grid h-9 w-9 place-items-center rounded-xl transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)" }} title="Files"><Paperclip size={17} /></button>
+        <button onClick={() => openWindow("file-manager")} className="grid h-9 w-9 place-items-center transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)", borderRadius: "10px 14px 11px 15px" }} title="Boards"><Kanban size={17} /></button>
+        <button onClick={() => openWindow("terminal")} className="grid h-9 w-9 place-items-center transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)", borderRadius: "10px 14px 11px 15px" }} title="Terminal (Shift+T)"><TerminalIcon size={17} /></button>
+        <button onClick={() => openWindow("calendar")} className="grid h-9 w-9 place-items-center transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)", borderRadius: "10px 14px 11px 15px" }} title="Calendar"><CalendarIcon size={17} /></button>
+        <button onClick={() => openWindow("files")} className="grid h-9 w-9 place-items-center transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)", borderRadius: "10px 14px 11px 15px" }} title="Files"><Paperclip size={17} /></button>
 
-        {windows.length > 0 && <div className="mx-1 h-6 w-px" style={{ background: "var(--border)" }} />}
+        {windows.length > 0 && <div style={{ width: 0, height: 24, borderLeft: "2px dashed var(--border)", margin: "0 4px" }} />}
 
         {windows.map((w) => {
           const active = !w.minimized && w.z === topZ;
           return (
-            <button key={w.id} onClick={() => (w.minimized ? restoreWindow(w.id) : active ? minimizeWindow(w.id) : focusWindow(w.id))} className="flex max-w-[120px] animate-[popIn_160ms_ease-out] items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-medium transition-transform hover:scale-105 active:scale-95" style={{ background: active ? "var(--accent)" : "var(--accent-soft)", color: active ? "var(--accent-contrast)" : "var(--text-muted)" }}>
+            <button
+              key={w.id}
+              onClick={() => (w.minimized ? restoreWindow(w.id) : active ? minimizeWindow(w.id) : focusWindow(w.id))}
+              className="flex max-w-[120px] animate-[popIn_160ms_ease-out] items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium transition-transform hover:scale-105 active:scale-95"
+              style={{ background: active ? "var(--accent)" : "var(--accent-soft)", color: active ? "var(--accent-contrast)" : "var(--text-muted)", borderRadius: "9px 13px 10px 14px" }}
+            >
               {iconFor(w.kind)}
               <span className="truncate">{label(w)}</span>
             </button>
           );
         })}
 
-        <div className="mx-1 h-6 w-px" style={{ background: "var(--border)" }} />
+        <div style={{ width: 0, height: 24, borderLeft: "2px dashed var(--border)", margin: "0 4px" }} />
         <div className="flex items-center gap-1 px-1">
           <ThemeSwitcher osTheme={osTheme} setOsTheme={setOsTheme} />
           <div className="px-1"><Clock24 /></div>
@@ -2565,17 +2623,13 @@ function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow,
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Desktop icons                                                        */
-/* ------------------------------------------------------------------ */
-
 function DesktopIcon({ icon, label, onOpen }) {
   return (
-    <button onClick={onOpen} className="flex w-20 flex-col items-center gap-1 rounded-lg p-2 text-center transition-transform hover:-translate-y-0.5 active:scale-95">
-      <div className="grid h-10 w-10 place-items-center rounded-xl shadow backdrop-blur" style={{ background: "var(--surface)", color: "var(--accent)" }}>
+    <button onClick={onOpen} className="flex w-20 flex-col items-center gap-1 p-2 text-center transition-transform hover:-translate-y-0.5 hover:rotate-1 active:scale-95">
+      <div className="grid h-10 w-10 place-items-center shadow" style={{ background: "var(--surface-solid)", border: "2px solid var(--border)", color: "var(--accent)", borderRadius: "10px 14px 11px 15px" }}>
         {icon}
       </div>
-      <span className="text-[10px] font-medium drop-shadow-sm" style={{ color: "var(--text)" }}>{label}</span>
+      <span className="text-[10px] font-medium" style={{ color: "var(--text)" }}>{label}</span>
     </button>
   );
 }
@@ -2587,7 +2641,7 @@ function DesktopIcon({ icon, label, onOpen }) {
 export default function ArtemisOS() {
   const [state, dispatch] = useReducer(osReducer, undefined, makeInitialState);
   const [theme, setTheme] = useState("amber");
-  const [osTheme, setOsTheme] = useState("aurora");
+  const [osTheme, setOsTheme] = useState("parchment");
   const desktopRef = useRef(null);
   const dragRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
@@ -2711,12 +2765,14 @@ export default function ArtemisOS() {
       style={{
         cursor: "none",
         background:
-          "radial-gradient(1200px 600px at 15% -10%, var(--bg-a) 0%, transparent 60%), radial-gradient(1000px 700px at 100% 110%, var(--bg-b) 0%, transparent 55%), linear-gradient(160deg, var(--bg-a) 0%, var(--bg-b) 45%, var(--bg-c) 100%)",
+          "radial-gradient(1400px 800px at 20% -10%, var(--bg-a) 0%, transparent 65%), linear-gradient(160deg, var(--bg-a) 0%, var(--bg-b) 55%, var(--bg-c) 100%)",
       }}
     >
-            <style>{`
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
         ${rootVarsCss}
         html, body, #root { height: 100%; margin: 0; }
+        body, button, input, textarea, select { font-family: 'Patrick Hand', 'Segoe UI', sans-serif; }
         @keyframes winIn { 0% { opacity:0; transform: scale(0.94) translateY(6px);} 100% { opacity:1; transform: scale(1) translateY(0);} }
         @keyframes terminalIn { 0% { opacity:0; transform: scale(0.96); clip-path: inset(0 0 100% 0);} 45% { opacity:1; clip-path: inset(0 0 0% 0);} 100% { opacity:1; transform: scale(1); clip-path: inset(0 0 0% 0);} }
         @keyframes popIn { 0% { opacity:0; transform: scale(0.9);} 100% { opacity:1; transform: scale(1);} }
@@ -2739,6 +2795,15 @@ export default function ArtemisOS() {
 
         @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; cursor: auto !important; } }
       `}</style>
+
+      <div
+        className="pointer-events-none absolute inset-0 z-[1] mix-blend-multiply"
+        style={{
+          opacity: OS_THEMES[osTheme].mode === "dark" ? 0.18 : 0.35,
+          backgroundImage:
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/></svg>\")",
+        }}
+      />
 
       <div className="absolute left-6 top-6 flex flex-col gap-1">
         <DesktopIcon icon={<Kanban size={19} />} label="Boards" onOpen={() => openWindow("file-manager")} />
