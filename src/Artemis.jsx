@@ -30,6 +30,8 @@ import {
   Moon,
   Paperclip,
   StickyNote,
+  Eraser,
+  MousePointer2,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -641,6 +643,21 @@ function osReducer(state, action) {
       if (!b) return state;
       return { ...state, boards: { ...state.boards, [board]: { ...b, drawings: [] } } };
     }
+    case "CLEAR_DRAWINGS": {
+      const { board } = action;
+      const b = state.boards[board];
+      if (!b) return state;
+      return { ...state, boards: { ...state.boards, [board]: { ...b, drawings: [] } } };
+    }
+    case "DELETE_DRAWING": {
+      const { board, id } = action;
+      const b = state.boards[board];
+      if (!b) return state;
+      return {
+        ...state,
+        boards: { ...state.boards, [board]: { ...b, drawings: (b.drawings || []).filter((d) => d.id !== id) } },
+      };
+    }
     case "ADD_FILE":
       return { ...state, files: [...(state.files || []), action.file] };
     case "DELETE_FILE":
@@ -822,7 +839,7 @@ function CustomCursor({ containerRef }) {
       const rect = el.getBoundingClientRect();
       pos.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
       if (dotRef.current) {
-        dotRef.current.style.transform = `translate(${pos.current.x}px, ${pos.current.y}px) translate(-30%, -85%) rotate(-40deg)`;
+        dotRef.current.style.transform = `translate(${pos.current.x}px, ${pos.current.y}px)`;
       }
       setVisible(true);
       const target = e.target.closest("button, a, [data-cursor-hover]");
@@ -842,8 +859,8 @@ function CustomCursor({ containerRef }) {
   useEffect(() => {
     let raf;
     const animate = () => {
-      ring.current.x += (pos.current.x - ring.current.x) * 0.24;
-      ring.current.y += (pos.current.y - ring.current.y) * 0.24;
+      ring.current.x += (pos.current.x - ring.current.x) * 0.28;
+      ring.current.y += (pos.current.y - ring.current.y) * 0.28;
       if (ringRef.current) {
         ringRef.current.style.transform = `translate(${ring.current.x}px, ${ring.current.y}px) translate(-50%, -50%)`;
       }
@@ -855,23 +872,22 @@ function CustomCursor({ containerRef }) {
 
   const ringStyle =
     variant === "pointer"
-      ? { width: 30, height: 30, border: "2px dashed var(--accent)", background: "var(--accent-soft)", borderRadius: "40% 60% 55% 45% / 50% 45% 55% 50%" }
+      ? { width: 30, height: 30, border: "2px dashed var(--accent)", background: "var(--accent-soft)", borderRadius: "9999px" }
       : variant === "drag"
-      ? { width: 36, height: 36, border: "2px dashed var(--accent)", background: "transparent", borderRadius: "50% 45% 55% 50% / 45% 55% 45% 55%" }
+      ? { width: 34, height: 34, border: "2px dashed var(--accent)", background: "transparent", borderRadius: "9999px" }
       : variant === "text"
       ? { width: 2, height: 18, borderRadius: 2, background: "var(--accent)", border: "none" }
-      : { width: 22, height: 22, border: "1.5px dashed var(--border-strong)", background: "transparent", borderRadius: "48% 52% 45% 55% / 55% 45% 55% 45%" };
+      : { width: 0, height: 0, border: "none", background: "transparent" };
 
   return (
     <div className="pointer-events-none absolute inset-0 z-[10000]" style={{ opacity: visible ? 1 : 0, transition: "opacity 150ms ease" }}>
       <div ref={ringRef} className="pointer-events-none absolute left-0 top-0 transition-[width,height,background-color,border-color] duration-150" style={ringStyle} />
-      <div ref={dotRef} className="pointer-events-none absolute left-0 top-0" style={{ color: "var(--ink)" }}>
-        <Pencil size={16} strokeWidth={2.25} fill="var(--surface-solid)" />
+      <div ref={dotRef} className="pointer-events-none absolute left-0 top-0" style={{ filter: "drop-shadow(1px 2px 0 rgba(0,0,0,0.2))" }}>
+        <MousePointer2 size={20} strokeWidth={2} fill="var(--surface-solid)" stroke="var(--ink)" />
       </div>
     </div>
   );
 }
-
 /* ------------------------------------------------------------------ */
 /* Modals                                                               */
 /* ------------------------------------------------------------------ */
@@ -1258,12 +1274,24 @@ function FileCardOnCanvas({ note, board, dispatch, onDragStart, files }) {
   );
 }
 
+function distToSegment(p, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lengthSq = dx * dx + dy * dy;
+  if (lengthSq === 0) return Math.hypot(p.x - a.x, p.y - a.y);
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSq;
+  t = clamp(t, 0, 1);
+  const projX = a.x + t * dx;
+  const projY = a.y + t * dy;
+  return Math.hypot(p.x - projX, p.y - projY);
+}
 
 function BoardApp({ boardName, boards, dispatch, files }) {
   const board = boards[boardName];
   const canvasRef = useRef(null);
   const dragRef = useRef(null);
   const panRef = useRef(null);
+  const erasingRef = useRef(false);
   const [tool, setTool] = useState("select");
   const [drawColor, setDrawColor] = useState(DRAW_COLORS[0]);
   const [currentPath, setCurrentPath] = useState(null);
@@ -1301,6 +1329,7 @@ function BoardApp({ boardName, boards, dispatch, files }) {
     }
     function onUp() {
       dragRef.current = null;
+      erasingRef.current = false;
       if (panRef.current) { panRef.current = null; setIsPanning(false); }
     }
     window.addEventListener("mousemove", onMove);
@@ -1325,30 +1354,59 @@ function BoardApp({ boardName, boards, dispatch, files }) {
   const stats = countStats(board);
 
   function startDrag(kind, id, x, y, e) {
-    if (tool === "draw") return;
+    if (tool === "draw" || tool === "erase") return;
     e.stopPropagation();
     const pt = screenToCanvas(e.clientX, e.clientY);
     dragRef.current = { kind, id, offsetX: pt.x - x, offsetY: pt.y - y };
   }
 
+  function eraseAt(point) {
+    const threshold = 14 / view.scale;
+    for (const d of drawings) {
+      for (let i = 0; i < d.points.length - 1; i++) {
+        if (distToSegment(point, d.points[i], d.points[i + 1]) < threshold) {
+          dispatch({ type: "DELETE_DRAWING", board: boardName, id: d.id });
+          break;
+        }
+      }
+    }
+  }
+
   function handleCanvasMouseDown(e) {
+    if (e.button === 2) {
+      e.preventDefault();
+      panRef.current = { startX: e.clientX, startY: e.clientY, startViewX: view.x, startViewY: view.y };
+      setIsPanning(true);
+      return;
+    }
     if (tool === "draw") {
       setCurrentPath({ id: uid("d"), color: drawColor, width: 3, points: [screenToCanvas(e.clientX, e.clientY)] });
+      return;
+    }
+    if (tool === "erase") {
+      erasingRef.current = true;
+      eraseAt(screenToCanvas(e.clientX, e.clientY));
       return;
     }
     panRef.current = { startX: e.clientX, startY: e.clientY, startViewX: view.x, startViewY: view.y };
     setIsPanning(true);
   }
   function handleCanvasMouseMove(e) {
-    if (!currentPath) return;
-    const p = screenToCanvas(e.clientX, e.clientY);
-    setCurrentPath((cp) => (cp ? { ...cp, points: [...cp.points, p] } : cp));
+    if (currentPath) {
+      const p = screenToCanvas(e.clientX, e.clientY);
+      setCurrentPath((cp) => (cp ? { ...cp, points: [...cp.points, p] } : cp));
+      return;
+    }
+    if (erasingRef.current) {
+      eraseAt(screenToCanvas(e.clientX, e.clientY));
+    }
   }
   function handleCanvasMouseUp() {
     if (currentPath && currentPath.points.length > 1) {
       dispatch({ type: "ADD_DRAWING", board: boardName, path: currentPath });
     }
     setCurrentPath(null);
+    erasingRef.current = false;
   }
 
   function zoomBy(delta, anchor) {
@@ -1429,6 +1487,14 @@ function BoardApp({ boardName, boards, dispatch, files }) {
           >
             <Palette size={13} />
           </button>
+          <button
+            onClick={() => setTool((t) => (t === "erase" ? "select" : "erase"))}
+            title="Erase"
+            className="grid h-7 w-7 place-items-center rounded-lg"
+            style={{ background: tool === "erase" ? "var(--accent)" : "var(--accent-soft)", color: tool === "erase" ? "var(--accent-contrast)" : "var(--accent)" }}
+          >
+            <Eraser size={13} />
+          </button>
           {tool === "draw" && (
             <div className="flex items-center gap-1">
               {DRAW_COLORS.map((c) => (
@@ -1458,12 +1524,13 @@ function BoardApp({ boardName, boards, dispatch, files }) {
         ref={canvasRef}
         data-cursor-drag={tool === "select" ? true : undefined}
         className="canvas-surface relative flex-1 overflow-hidden"
-        style={{ cursor: tool === "draw" ? "crosshair" : isPanning ? "grabbing" : "grab", background: "var(--surface-muted)" }}
+        style={{ background: "var(--surface-muted)" }}
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={handleCanvasMouseUp}
         onMouseLeave={handleCanvasMouseUp}
         onWheel={handleWheel}
+        onContextMenu={(e) => e.preventDefault()}
       >
         <div
           className="relative"
@@ -1490,7 +1557,7 @@ function BoardApp({ boardName, boards, dispatch, files }) {
 
           {rootTasks.length === 0 && notes.length === 0 && (
             <div className="absolute left-10 top-10 text-xs" style={{ color: "var(--text-faint)" }}>
-              Empty page — add a task, a sticky note, attach a file, or start sketching. Drag the page to pan, scroll to zoom.
+              Empty page — add a task, a sticky note, attach a file, or start sketching. Drag (or right-click drag) to pan, scroll to zoom.
             </div>
           )}
 
