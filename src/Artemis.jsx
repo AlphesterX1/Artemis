@@ -1,6 +1,17 @@
 import React, { useEffect, useRef } from "react";
 
-
+/*
+ * ARTEMIS OS — SINGLE FILE
+ *
+ * The original application had 7 separate classic
+ * script blocks. They are deliberately preserved and executed separately
+ * in their original order.
+ *
+ * FIXES:
+ * - Calendar dates are local dates, not UTC.
+ * - Calendar event cells cannot resize the 7-column grid.
+ * - Board updates do not rebuild the dock unless the window title changes.
+ */
 
 const ARTEMIS_CSS = String.raw`:root{
   --hand:'Patrick Hand','Segoe Print',sans-serif;
@@ -295,10 +306,6 @@ h4.sec:first-child{margin-top:0}
   *{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}
 }`;
 
-// ============================================================
-// Artemis DOM
-// ============================================================
-
 const ARTEMIS_BODY = String.raw`<div id="grain"></div>
 <div id="desk"><div id="icons"></div></div>
 <div id="dock"></div>
@@ -306,11 +313,8 @@ const ARTEMIS_BODY = String.raw`<div id="grain"></div>
 <svg id="cur" viewBox="0 0 22 26" fill="none"><path d="M3 2 L3 21 L8 16.5 L11.5 24 L14.5 22.5 L11 15.5 L18 15 Z" fill="var(--panel)" stroke="var(--ink)" stroke-width="2.2" stroke-linejoin="round"/></svg>
 <div id="ring"></div>`;
 
-// ============================================================
-// Artemis application JavaScript
-// ============================================================
-
-const ARTEMIS_SCRIPT = String.raw`/* ============================ core ============================ */
+const ARTEMIS_SCRIPTS = [
+  String.raw`/* ============================ core ============================ */
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=p=>(p||'i')+Math.random().toString(36).slice(2,9);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -484,12 +488,12 @@ function openWin(opt){
   $('#desk').appendChild(el);
   const win={id,el,body:$('.wbody',el),opt,min:false,max:false,
     setTitle(t){
-    const title=$('.wtitle',el);
-    const changed=title.textContent!==String(t??'');
-    title.textContent=t;
-    opt.title=t;
-    if(changed)renderChips();
-  }};
+  const title=$('.wtitle',el);
+  const changed=title.textContent!==String(t??'');
+  title.textContent=t;
+  opt.title=t;
+  if(changed)renderChips();
+}};
   WINS.set(id,win);
   drag($('.wbar',el),(dx,dy)=>{if(win.max)return;
     el.style.left=clamp(win._l+dx,-w+90,innerWidth-70)+'px';el.style.top=clamp(win._t+dy,0,innerHeight-60)+'px';},
@@ -601,9 +605,9 @@ function renderChips(){
 }
 function themeMenu(x,y){
   menu(x,y,THEMES.map(([id,nm])=>[(S.theme===id?'● ':'○ ')+nm,()=>{S.theme=id;document.documentElement.dataset.theme=id;save();}]),'Themes');
-}
+}`,
 
-/* ============================ data API ============================ */
+  String.raw`/* ============================ data API ============================ */
 const A={
   board:id=>S.boards[id],
   allBoards:()=>Object.values(S.boards),
@@ -690,9 +694,9 @@ const Layout={
   pack(items,o={}){let x=o.x??50,y=o.y??50,rowH=0;const maxW=o.w||960;
     items.forEach(it=>{const[w,h]=sizeOf(it.k);if(x+w>maxW+(o.x??50)){x=o.x??50;y+=rowH+22;rowH=0}
       it.o.x=x;it.o.y=y;x+=w+22;rowH=Math.max(rowH,h)});},
-};
+};`,
 
-/* ============================ board app ============================ */
+  String.raw`/* ============================ board app ============================ */
 function openBoard(id){
   const b=A.board(id);if(!b){toast('That board is gone.');return}
   const win=openWin({id:'board:'+id,title:b.name,icon:appIcon('boards'),w:900,h:600,
@@ -995,9 +999,9 @@ function taskDetails(t,boardId){
       t.deadline=$('#_dl',b).value;t.tags=$('#_g',b).value.split(',').map(s=>s.trim()).filter(Boolean);
       if(t.status==='done')A.setDone(t.id,true);
       changed('board.changed',{boardId});},1]]);
-}
+}`,
 
-/* ============================ node registry ============================ */
+  String.raw`/* ============================ node registry ============================ */
 const NODES={};
 const CATS=['Events','Board','Task','Query','Sort','Layout','Logic','Data','Notes','Files','Projects','Calendar','Ask','Visual','Script'];
 function def(o){o.ins||=[];o.outs||=[];o.params||=[];NODES[o.t]=o;return o}
@@ -1448,9 +1452,9 @@ def({t:'sc.run',cat:'Script',title:'Run Another Script',ins:[X('in'),P('v','inpu
   params:[{id:'n',l:'Script name',k:'text'}],
   run:async(C,I,p)=>{const s=Object.values(S.scripts).find(x=>x.name===p.n);
     if(!s||C.dry)return{next:'out',out:{v:null}};
-    const r=await runScript(s,{},{Tasks:I.v});return{next:'out',out:{v:r&&r.outputs}}}});
+    const r=await runScript(s,{},{Tasks:I.v});return{next:'out',out:{v:r&&r.outputs}}}});`,
 
-/* ============================ interpreter ============================ */
+  String.raw`/* ============================ interpreter ============================ */
 class Ctx{
   constructor(script,opt,inputs){
     this.s=script;this.opt=opt||{};this.payload=this.opt.payload||{};
@@ -1675,9 +1679,9 @@ function templateMenu(boardId){
 /* live editor hooks */
 const LIVE={};
 function liveFire(sid,nid){const f=LIVE[sid];f&&f.fire&&f.fire(nid)}
-function liveLog(sid,m,e){const f=LIVE[sid];f&&f.log&&f.log(m,e)}
+function liveLog(sid,m,e){const f=LIVE[sid];f&&f.log&&f.log(m,e)}`,
 
-/* ============================ script editor ============================ */
+  String.raw`/* ============================ script editor ============================ */
 function openScriptEditor(id){
   const s=S.scripts[id];if(!s)return toast('That script is gone.');
   openWin({id:'script:'+id,title:s.name,icon:appIcon('scripts'),w:1040,h:660,render:(b,w)=>buildEditor(b,w,id),
@@ -1958,9 +1962,9 @@ function varsDialog(sc){
   modal('Variables',\`<div id="_vl"></div><button class="btn sm" id="_add" style="margin-top:8px">+ Add variable</button>
     <p class="dim" style="margin-top:8px">Read them with “Get Variable”, write them with “Set Variable”.</p>\`,
     [['Done',null,1]],b=>{draw(b);$('#_add',b).onclick=()=>{sc.vars.push({name:'value'+(sc.vars.length+1),value:''});save();draw(b)}});
-}
+}`,
 
-/* ============================ scripts manager ============================ */
+  String.raw`/* ============================ scripts manager ============================ */
 function openScripts(){
   openWin({id:'scripts',title:'Scripts',icon:appIcon('scripts'),w:700,h:520,render:drawScripts,refresh:w=>drawScripts(w.body,w)});
 }
@@ -2248,18 +2252,13 @@ Bus.on('board.opened',()=>{});
 })();
 addEventListener('keydown',e=>{
   if(e.key==='Escape'){closeMenu();const sc=$('#scrim');if(sc)sc.remove()}
-});`;
+});`
+];
 
-// ============================================================
-// React mount
-// ============================================================
-
-function runArtemisScript(source) {
+function runClassicScript(source) {
   const script = document.createElement("script");
-
   script.type = "text/javascript";
   script.text = source;
-
   document.body.appendChild(script);
   script.remove();
 }
@@ -2268,15 +2267,13 @@ export default function Artemis() {
   const mounted = useRef(false);
 
   useEffect(() => {
-    if (mounted.current) {
-      return;
-    }
-
+    if (mounted.current) return;
     mounted.current = true;
 
     const root = document.getElementById("root");
 
     if (!root) {
+      console.error("Artemis: #root not found.");
       return;
     }
 
@@ -2286,17 +2283,13 @@ export default function Artemis() {
       style = document.createElement("style");
       style.id = "artemis-styles";
       style.textContent = ARTEMIS_CSS;
-
       document.head.appendChild(style);
     }
 
     root.innerHTML = ARTEMIS_BODY;
 
-    runArtemisScript(ARTEMIS_SCRIPT);
-
-    return () => {
-      // Artemis owns its internal DOM and persistent state.
-    };
+    // Execute the original scripts one-by-one, exactly like the source HTML.
+    ARTEMIS_SCRIPTS.forEach(runClassicScript);
   }, []);
 
   return null;
