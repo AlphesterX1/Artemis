@@ -1,7 +1,9 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import Artemis from './Artemis.jsx';
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import Artemis from './Artemis.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <Artemis />
-);
+  <React.StrictMode>
+    <Artemis />
+  </React.StrictMode>,
+)
