@@ -1,3778 +1,4296 @@
-import React, {
-  useState,
-  useReducer,
-  useRef,
-  useEffect,
-  useCallback,
-  useMemo,
-} from "react";
-import {
-  Terminal as TerminalIcon,
-  Folder,
-  FolderOpen,
-  Kanban,
-  X,
-  Minus,
-  Maximize2,
-  Check,
-  Trash2,
-  Pencil,
-  Plus,
-  Network,
-  Rocket,
-  Clock,
-  GripVertical,
-  Sparkles,
-  ListTree,
-  Calendar as CalendarIcon,
-  Palette,
-  Sun,
-  Moon,
-  Paperclip,
-  StickyNote,
-  Eraser,
-  MousePointer2,
-  Search,
-  CheckCheck,
-  Tag,
-  ArrowUp,
-  MoveRight,
-  BarChart3,
-  RotateCcw,
-  Layers,
-  FolderUp,
-  ExternalLink,
-  MoreVertical,
-} from "lucide-react";
+import React, { useEffect, useRef } from "react";
 
-/* ------------------------------------------------------------------ */
-/* Utilities                                                           */
-/* ------------------------------------------------------------------ */
+/*
+ * ============================================================
+ * ARTEMIS OS
+ * Single-file React implementation
+ * ============================================================
+ *
+ * The original Artemis OS markup, styling, and application logic
+ * are kept together in this one JSX file so the existing behavior
+ * and visual design are preserved.
+ */
 
-let __uidCounter = 0;
-function uid(prefix) {
-  __uidCounter += 1;
-  return `${prefix}_${__uidCounter}_${Math.random().toString(36).slice(2, 7)}`;
+// ============================================================
+// Original Artemis CSS
+// ============================================================
+
+const ARTEMIS_CSS = String.raw`:root{
+  --hand:'Patrick Hand','Segoe Print',sans-serif;
+  --scrawl:'Patrick Hand','Segoe Print',sans-serif;
+  --flourish:'Caveat','Patrick Hand',cursive;
+
+  --rw: 15px 20px 16px 21px;
+  --rwm: 10px 13px 11px 14px;
+  --rc: 9px 15px 10px 16px;
+  --rn: 3px 12px 4px 11px;
+  --rb: 8px 12px 9px 13px;
+  --rd: 10px 14px 11px 15px;
+  --rm: 10px 14px 11px 15px;
+  --rmo: 15px 19px 16px 20px;
+  --rt: 7px 10px 7px 10px;
+
+  --paper:#f6efdc; --paper2:#ecdfc0; --panel:#fffcf3;
+  --ink:#33281a; --soft:#7c6b4f; --line:#cbb98f;
+  --accent:#4a5fd9; --accent2:#4f8f5b; --danger:#c1483d;
+  --shadow:rgba(42,32,19,.24); --edge:#2a2013;
+  --grain:.05; --sel:rgba(74,95,217,.14);
+}
+:root[data-theme="kraft"]{
+  --edge:#251707; --paper:#cda874; --paper2:#b8905a; --panel:#e9d09f;
+  --ink:#32210f; --soft:#6d4f2b; --line:#9a7a4d;
+  --accent:#2f6690; --accent2:#4c7a45; --danger:#a8402f;
+  --shadow:rgba(37,23,7,.32); --sel:rgba(47,102,144,.18);
+}
+:root[data-theme="cotton"]{
+  --edge:#262319; --paper:#f8f5ed; --paper2:#eae4d3; --panel:#fffdf8;
+  --ink:#2c2a23; --soft:#7a7666; --line:#cdc6b2;
+  --accent:#c8434a; --accent2:#2f8f63; --danger:#c8434a;
+  --shadow:rgba(38,35,25,.18); --grain:.035; --sel:rgba(200,67,74,.13);
+}
+:root[data-theme="sage"]{
+  --edge:#1d2818; --paper:#e5eddb; --paper2:#cfe0c3; --panel:#f6faf0;
+  --ink:#263323; --soft:#5e6c54; --line:#a1b791;
+  --accent:#cc7248; --accent2:#457a4c; --danger:#b1483c;
+  --shadow:rgba(29,40,24,.24); --sel:rgba(204,114,72,.16);
+}
+:root[data-theme="chalkboard"]{
+  --edge:#0a0f0b; --paper:#233227; --paper2:#19241a; --panel:#2d3e32;
+  --ink:#eef1e6; --soft:#a6b5a0; --line:#4c5e4e;
+  --accent:#e8c860; --accent2:#7fbf8c; --danger:#ff8f7f;
+  --shadow:rgba(0,0,0,.46); --grain:.065; --sel:rgba(232,200,96,.16);
+}
+:root[data-theme="blueprint"]{
+  --edge:#050c15; --paper:#112544; --paper2:#0b1a2e; --panel:#183255;
+  --ink:#e3edfb; --soft:#8fa9c9; --line:#35577f;
+  --accent:#74cdfa; --accent2:#f2c17f; --danger:#ff8a8a;
+  --shadow:rgba(0,0,0,.5); --sel:rgba(116,205,250,.16);
+}
+:root[data-theme="charcoal"]{
+  --edge:#0e0c0d; --paper:#282528; --paper2:#1c1a1c; --panel:#332e31;
+  --ink:#eee8de; --soft:#a89f92; --line:#524a4c;
+  --accent:#ff9a5c; --accent2:#7bb0d6; --danger:#ff7a68;
+  --shadow:rgba(0,0,0,.5); --sel:rgba(255,154,92,.16);
+}
+:root[data-theme="inkwell"]{
+  --edge:#0a0916; --paper:#1c1932; --paper2:#131226; --panel:#242038;
+  --ink:#ece8fb; --soft:#9d97bf; --line:#46426b;
+  --accent:#ff86d0; --accent2:#78d3b6; --danger:#ff8a8a;
+  --shadow:rgba(0,0,0,.5); --sel:rgba(255,134,208,.18);
 }
 
-function clamp(n, min, max) {
-  return Math.max(min, Math.min(max, n));
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden}
+body{
+  font-family:var(--hand);font-size:16.5px;color:var(--ink);letter-spacing:.1px;
+  background:var(--paper);cursor:none;-webkit-font-smoothing:antialiased;
+}
+#grain{position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:var(--grain);
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+  mix-blend-mode:multiply}
+:root[data-theme^="c"] #grain,:root[data-theme="blueprint"] #grain,:root[data-theme="inkwell"] #grain{mix-blend-mode:overlay}
+button,input,textarea,select{font-family:inherit;font-size:inherit;color:inherit;cursor:none}
+button{background:none;border:none;padding:0}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
+::-webkit-scrollbar-track{background:transparent}
+::selection{background:var(--sel)}
+
+/* ---------- cursor ---------- */
+#cur{position:fixed;z-index:10000;pointer-events:none;left:0;top:0;width:15px;height:18px;transform:translate(-1px,-1px);
+  filter:drop-shadow(1px 1.5px 0 rgba(0,0,0,.18));transition:width .12s,height .12s}
+#ring{position:fixed;z-index:9999;pointer-events:none;left:0;top:0;width:22px;height:22px;margin:-11px 0 0 -11px;
+  border:2px dashed var(--accent);border-radius:50%;background:transparent;opacity:.5;
+  transition:width .16s,height .16s,margin .16s,border-radius .16s,opacity .2s,background .16s}
+body.c-click #ring{width:34px;height:34px;margin:-17px 0 0 -17px;opacity:.9;background:var(--sel)}
+body.c-drag #ring{border-radius:var(--rc);width:30px;height:30px;margin:-15px 0 0 -15px}
+body.c-text #ring{width:2px;height:18px;margin:-9px 0 0 -1px;border-radius:2px;border:none;background:var(--accent);opacity:.8}
+
+/* ---------- desktop ---------- */
+#desk{position:fixed;inset:0 0 84px 0;overflow:hidden}
+#icons{position:absolute;inset:18px auto auto 18px;display:flex;flex-direction:column;flex-wrap:wrap;gap:3px;max-height:calc(100vh - 150px)}
+.dicon{width:90px;padding:9px 6px;text-align:center;border-radius:var(--rc);border:1.5px solid transparent;opacity:.85;transition:opacity .12s,background .12s,transform .12s}
+.dicon:hover{background:var(--panel);border-color:var(--line);opacity:1;box-shadow:2px 3px 0 var(--shadow);transform:translateY(-2px) rotate(-2deg)}
+.dicon .gl{font-size:25px;line-height:1.1;display:flex;justify-content:center}
+.dicon .gl svg,.tile .gl svg{display:block}
+.dicon .lb{font-size:14.5px;margin-top:3px;line-height:1.15;color:var(--ink)}
+
+/* ---------- windows ---------- */
+.win{position:absolute;display:flex;flex-direction:column;min-width:280px;min-height:180px;
+  background:var(--panel);border:2px solid var(--edge);border-radius:var(--rw);
+  box-shadow:3px 5px 0 var(--shadow),0 14px 30px -10px rgba(0,0,0,.18);
+  overflow:hidden;opacity:.96;transition:opacity .15s,box-shadow .15s,border-radius .15s;
+  animation:winOpen .26s cubic-bezier(.22,1.4,.5,1) both}
+.win.on{opacity:1;box-shadow:5px 8px 0 var(--shadow),0 20px 40px -8px rgba(0,0,0,.22)}
+.win.max{border-radius:var(--rwm)}
+.wbar{display:flex;align-items:center;gap:9px;padding:7px 11px;background:var(--paper2);
+  border-bottom:2px dashed var(--line);flex:0 0 auto}
+.wtitle{font-family:var(--flourish);font-weight:600;font-size:23px;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--ink)}
+.wbtn{width:18px;height:18px;border:1.6px solid var(--edge);border-radius:6px 9px 6px 9px;background:var(--panel);
+  font-size:11px;line-height:0;display:grid;place-items:center;transition:transform .1s,background .1s,color .1s}
+.wbtn:hover{background:var(--accent);border-color:var(--accent);color:var(--panel);transform:scale(1.08)}
+.wbody{flex:1;overflow:auto;position:relative}
+.wgrip{position:absolute;right:2px;bottom:2px;width:16px;height:16px;opacity:.6;background:
+  linear-gradient(135deg,transparent 45%,var(--line) 45%,var(--line) 55%,transparent 55%,transparent 70%,var(--line) 70%,var(--line) 80%,transparent 80%)}
+
+/* ---------- dock ---------- */
+#dock{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:900;display:flex;align-items:center;gap:5px;
+  max-width:calc(100vw - 24px);padding:7px 12px;background:var(--panel);border:2px solid var(--edge);
+  border-radius:var(--rw);box-shadow:3px 5px 0 var(--shadow),0 12px 26px -8px rgba(0,0,0,.2);
+  animation:dockIn .32s cubic-bezier(.22,1.4,.5,1) both}
+#dock .sep{width:2px;align-self:stretch;margin:3px 1px;background:var(--line);opacity:.45;border-radius:2px}
+.dk{font-size:20px;padding:6px 8px;border-radius:var(--rd);line-height:1;display:flex;align-items:center;
+  transition:background .12s,transform .12s;position:relative}
+.dk:hover{background:var(--paper2);transform:translateY(-2px) rotate(-3deg)}
+.dk .lb{font-size:9.5px;position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);white-space:nowrap;
+  color:var(--soft);opacity:0;transition:opacity .12s;pointer-events:none}
+.dk:hover .lb{opacity:1}
+#startb{background:var(--accent);border-radius:var(--rd);padding:7px 10px}
+#startb:hover{filter:brightness(1.08);background:var(--accent);transform:translateY(-2px) rotate(-4deg)}
+#startb svg path,#startb svg line{stroke:var(--panel)}
+#chips{display:flex;gap:6px;overflow-x:auto;max-width:42vw;scrollbar-width:none;padding:2px 1px}
+#chips::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;flex:0 0 auto;padding:4px 12px;border:1.6px solid var(--line);border-radius:var(--rt);font-size:14px;
+  transition:background .12s,border-color .12s,transform .12s;animation:chipIn .18s ease-out both}
+.chip:hover{transform:translateY(-1px)}
+.chip.on{border-color:var(--accent);background:var(--sel);color:var(--ink)}
+#clock{font-family:var(--flourish);font-weight:600;font-size:19px;min-width:66px;text-align:right;color:var(--ink)}
+
+/* ---------- menus / modals ---------- */
+.menu{position:fixed;z-index:9500;min-width:194px;padding:6px;background:var(--panel);
+  border:2px solid var(--edge);border-radius:var(--rm);box-shadow:3px 5px 0 var(--shadow),0 14px 26px -8px rgba(0,0,0,.22);
+  animation:menuIn .15s cubic-bezier(.22,1.4,.5,1) both}
+.menu .mi{display:block;width:100%;text-align:left;padding:6px 10px;border-radius:7px;white-space:nowrap;transition:background .1s}
+.menu .mi:hover{background:var(--sel)}
+.menu .mh{padding:4px 10px;font-family:var(--flourish);font-weight:600;font-size:19px;color:var(--soft);border-bottom:2px dashed var(--line);margin-bottom:4px}
+.menu hr{border:none;border-top:2px dashed var(--line);margin:5px 2px}
+#scrim{position:fixed;inset:0;z-index:9600;background:rgba(20,15,8,.32);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(1.5px)}
+.modal{width:min(560px,92vw);max-height:86vh;overflow:auto;padding:20px 22px;background:var(--panel);
+  border:2px solid var(--edge);border-radius:var(--rmo);box-shadow:5px 8px 0 var(--shadow),0 24px 50px -12px rgba(0,0,0,.3);
+  animation:modalIn .2s cubic-bezier(.22,1.4,.5,1) both}
+.modal h3{font-family:var(--flourish);font-weight:700;font-size:27px;margin:0 0 12px;color:var(--ink)}
+.fld{display:block;margin:11px 0 4px;color:var(--soft);font-size:15px}
+input[type=text],input[type=number],input[type=date],input[type=time],textarea,select{
+  width:100%;padding:7px 10px;background:var(--paper);border:1.8px solid var(--line);border-radius:var(--rb);outline:none;transition:border-color .1s}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{padding:5px 14px;border:1.8px solid var(--edge);border-radius:var(--rb);background:var(--paper2);
+  box-shadow:2px 3px 0 var(--shadow);transition:transform .1s,background .1s,color .1s}
+.btn:hover{background:var(--accent);border-color:var(--accent);color:var(--panel);transform:translateY(-1px) rotate(-.6deg)}
+.btn:active{transform:scale(.95) rotate(0)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+.btn.sm{padding:3px 11px;font-size:14.5px;box-shadow:2px 2px 0 var(--shadow)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+#toasts{position:fixed;right:16px;bottom:100px;z-index:9700;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.toast{max-width:320px;padding:9px 15px;background:var(--panel);border:2px solid var(--edge);
+  border-radius:var(--rc);box-shadow:3px 5px 0 var(--shadow);animation:toastIn .22s cubic-bezier(.22,1.4,.5,1) both}
+
+/* ---------- board ---------- */
+.bwrap{position:absolute;inset:0;display:flex;flex-direction:column}
+.btool{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 11px;border-bottom:2px dashed var(--line);background:var(--paper2)}
+.bcanvasholder{flex:1;position:relative;overflow:hidden;background:var(--paper)}
+.bcanvas{position:absolute;left:0;top:0;transform-origin:0 0}
+.bgrid{position:absolute;inset:0;pointer-events:none;opacity:.5}
+.card{position:absolute;width:212px;padding:0 0 9px;background:var(--panel);border:2px solid var(--edge);
+  border-radius:var(--rc);box-shadow:2px 4px 0 var(--shadow);overflow:hidden;animation:popIn .2s cubic-bezier(.22,1.4,.5,1) both}
+.card.done{opacity:.6}
+.card.hi{outline:3px dashed var(--accent);outline-offset:4px}
+.card .ttl{display:flex;gap:8px;align-items:flex-start;background:var(--sel);border-bottom:2px dashed var(--line);padding:8px 11px}
+.card .ttl .tx{flex:1;word-break:break-word;line-height:1.25}
+.card.done .tx{text-decoration:line-through}
+.card .meta,.card>.dim,.card .subs{padding-left:11px;padding-right:11px}
+.card .meta{padding-top:6px}
+.chk{flex:0 0 auto;width:18px;height:18px;border:2px solid var(--edge);border-radius:5px 8px 5px 8px;
+  display:grid;place-items:center;font-size:13px;line-height:0;background:var(--panel);transition:background .1s}
+.meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;font-size:13.5px;color:var(--soft)}
+.pill{padding:0 7px;border:1.6px solid var(--line);border-radius:var(--rt)}
+.pill.p-high{border-color:var(--accent);color:var(--accent)}
+.pill.p-low{opacity:.7}
+.pill.over{background:var(--danger);color:var(--panel);border-color:var(--danger)}
+.subs{margin:6px 0 0;padding:0;list-style:none;border-top:2px dashed var(--line);padding-top:5px}
+.subs li{display:flex;gap:6px;align-items:flex-start;font-size:14.5px;line-height:1.25;margin-top:3px}
+.subs li.d .stx{text-decoration:line-through;opacity:.6}
+.note{position:absolute;width:180px;min-height:96px;padding:9px 11px;border:1.8px solid rgba(0,0,0,.18);
+  border-radius:var(--rn);box-shadow:2px 4px 0 rgba(0,0,0,.12);font-family:var(--flourish);font-weight:600;font-size:19px;line-height:1.2}
+.note .nx{outline:none;min-height:60px;white-space:pre-wrap;word-break:break-word;color:#3a3320}
+.fcard{position:absolute;width:150px;padding:9px;text-align:center;background:var(--panel);
+  border:2px solid var(--edge);border-radius:var(--rc);box-shadow:2px 4px 0 var(--shadow);animation:popIn .2s cubic-bezier(.22,1.4,.5,1) both}
+.fcard img{width:100%;height:84px;object-fit:cover;border:1.6px solid var(--line);border-radius:6px;display:block}
+.fbadge{height:84px;display:grid;place-items:center;font-family:var(--flourish);font-weight:600;font-size:24px;
+  border:2px dashed var(--line);border-radius:8px;color:var(--soft)}
+.fname{font-size:13.5px;margin-top:6px;word-break:break-all;line-height:1.15}
+.bcard{position:absolute;width:172px;padding:10px;background:var(--paper2);border:2px solid var(--edge);
+  border-radius:var(--rc);box-shadow:2px 4px 0 var(--shadow);animation:popIn .2s cubic-bezier(.22,1.4,.5,1) both}
+.drawlayer{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.tiltA,.tiltB,.tiltC,.tiltD{transform:none}
+.note.tiltA{animation:noteInA .22s cubic-bezier(.22,1.4,.5,1) both}
+.note.tiltB{animation:noteInB .22s cubic-bezier(.22,1.4,.5,1) both}
+.note.tiltC{animation:noteInC .22s cubic-bezier(.22,1.4,.5,1) both}
+.note.tiltD{animation:noteInD .22s cubic-bezier(.22,1.4,.5,1) both}
+.bar{height:10px;border:1.8px solid var(--edge);border-radius:6px;overflow:hidden;background:var(--paper)}
+.bar i{display:block;height:100%;background:var(--accent2);transition:width .4s ease}
+
+/* ---------- generic app layout ---------- */
+.pad{padding:15px 17px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:12px}
+.tile{padding:11px;text-align:center;background:var(--panel);border:2px solid var(--edge);
+  border-radius:var(--rc);box-shadow:2px 4px 0 var(--shadow);transition:transform .1s,background .1s;animation:popIn .2s cubic-bezier(.22,1.4,.5,1) both}
+.tile:hover{background:var(--paper2);transform:translateY(-1px)}
+.tile .gl{font-size:29px;display:flex;justify-content:center}
+.tile .nm{word-break:break-word;line-height:1.2;margin:4px 0;font-weight:600}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;gap:9px;align-items:center;padding:9px 12px;background:var(--panel);
+  border:2px solid var(--edge);border-radius:var(--rc);box-shadow:2px 4px 0 var(--shadow);animation:popIn .18s cubic-bezier(.22,1.4,.5,1) both}
+.dim{color:var(--soft);font-size:14.5px}
+h4.sec{font-family:var(--flourish);font-weight:700;font-size:22px;margin:17px 0 8px;border-bottom:2px dashed var(--line);padding-bottom:4px;color:var(--ink)}
+h4.sec:first-child{margin-top:0}
+.tag{padding:2px 10px;border:1.6px solid var(--line);border-radius:var(--rt);font-size:14.5px;transition:background .1s}
+.tag.on{background:var(--accent);color:var(--panel);border-color:var(--accent)}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(64px,auto);gap:5px;min-width:0}
+.cal>*{min-width:0}
+.cell{min-width:0;min-height:64px;padding:4px;border:1.8px solid var(--line);border-radius:9px;background:var(--panel);transition:background .1s;overflow:hidden}
+.cell.oth{opacity:.42}.cell.tod{border-color:var(--accent);border-style:dashed}
+.cell.sel{background:var(--sel);border-color:var(--accent)}
+.cell .dn{font-size:13.5px;color:var(--soft)}
+.ev{display:block;min-width:0;max-width:100%;font-size:12.5px;line-height:1.2;margin-top:2px;padding:1px 5px;border-radius:5px;background:var(--accent2);color:var(--panel);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- script editor ---------- */
+.sedit{position:absolute;inset:0;display:flex;flex-direction:column}
+.stool{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 11px;background:var(--paper2);border-bottom:2px dashed var(--line)}
+.smain{flex:1;display:flex;min-height:0}
+.slib{width:188px;flex:0 0 auto;overflow:auto;padding:9px;border-right:2px dashed var(--line);background:var(--paper2)}
+.slib .cat{font-family:var(--flourish);font-weight:600;font-size:18px;margin:10px 0 3px;color:var(--soft)}
+.nbtn{display:block;width:100%;text-align:left;padding:4px 8px;font-size:14.5px;border:1.6px solid transparent;border-radius:7px;transition:background .1s}
+.nbtn:hover{border-color:var(--line);background:var(--panel)}
+.sholder{flex:1;position:relative;overflow:hidden;background:var(--paper)}
+.scanvas{position:absolute;left:0;top:0;transform-origin:0 0}
+.wires{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.node{position:absolute;width:196px;background:var(--panel);border:2px solid var(--edge);
+  border-radius:var(--rc);box-shadow:2px 4px 0 var(--shadow);overflow:hidden;animation:popIn .18s cubic-bezier(.22,1.4,.5,1) both}
+.node.sel{outline:3px dashed var(--accent);outline-offset:3px}
+.node.fire{background:var(--sel)}
+.node.err{border-color:var(--danger);border-style:dashed}
+.node .nh{padding:5px 10px;background:var(--sel);border-bottom:2px dashed var(--line);font-family:var(--flourish);font-weight:600;font-size:18px;
+  display:flex;justify-content:space-between;gap:6px;color:var(--ink)}
+.node .nh-t{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.node .nh .cnt{font-family:var(--hand);font-size:12.5px;color:var(--soft);flex:0 0 auto}
+.node .nb{padding:6px 9px;font-size:14.5px}
+.port{display:flex;align-items:center;gap:6px;margin:3px 0;position:relative}
+.port.out{justify-content:flex-end;text-align:right}
+.dot{width:12px;height:12px;border:2px solid var(--edge);border-radius:50%;background:var(--panel);flex:0 0 auto;transition:background .1s}
+.dot.ex{border-radius:3px;background:var(--ink)}
+.dot:hover{background:var(--accent);border-color:var(--accent)}
+.port .pl{color:var(--soft)}
+.sside{width:216px;flex:0 0 auto;overflow:auto;padding:10px;border-left:2px dashed var(--line);background:var(--paper2)}
+.slog{height:124px;overflow:auto;padding:7px 11px;border-top:2px dashed var(--line);background:var(--paper2);font-size:13.5px}
+.slog div{border-bottom:1px dotted var(--line);padding:2px 0}
+.slog .er{color:var(--danger)}
+.graphwrap{position:relative;width:100%;height:100%;overflow:hidden}
+@media (max-width:760px){
+  .slib{width:132px}.sside{display:none}
+  #chips{max-width:28vw}
+  .dicon{width:74px}
 }
 
-function hashRotation(id, range = 1.4) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return ((h % 200) / 100 - 1) * range;
+/* ---------- sketchy scrapbook animations ---------- */
+@keyframes popIn{0%{opacity:0;transform:scale(.86)}100%{opacity:1;transform:scale(1)}}
+@keyframes noteInA{0%{opacity:0;transform:scale(.8) rotate(-9deg)}100%{opacity:1;transform:scale(1) rotate(-1.4deg)}}
+@keyframes noteInB{0%{opacity:0;transform:scale(.8) rotate(8deg)}100%{opacity:1;transform:scale(1) rotate(1.2deg)}}
+@keyframes noteInC{0%{opacity:0;transform:scale(.8) rotate(-7deg)}100%{opacity:1;transform:scale(1) rotate(-.6deg)}}
+@keyframes noteInD{0%{opacity:0;transform:scale(.8) rotate(9deg)}100%{opacity:1;transform:scale(1) rotate(1.7deg)}}
+@keyframes winOpen{0%{opacity:0;transform:scale(.92) rotate(-1.4deg)}55%{opacity:1;transform:scale(1.02) rotate(.4deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes menuIn{0%{opacity:0;transform:scale(.9) translateY(4px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes modalIn{0%{opacity:0;transform:scale(.9) rotate(-1deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes toastIn{0%{opacity:0;margin-right:-26px}100%{opacity:1;margin-right:0}}
+@keyframes dockIn{0%{opacity:0;transform:translate(-50%,14px) scale(.94)}100%{opacity:1;transform:translate(-50%,0) scale(1)}}
+@keyframes chipIn{0%{opacity:0;transform:scale(.8)}100%{opacity:1;transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}
+}`;
+
+// ============================================================
+// Original Artemis DOM
+// ============================================================
+
+const ARTEMIS_BODY = String.raw`<div id="grain"></div>
+<div id="desk"><div id="icons"></div></div>
+<div id="dock"></div>
+<div id="toasts"></div>
+<svg id="cur" viewBox="0 0 22 26" fill="none"><path d="M3 2 L3 21 L8 16.5 L11.5 24 L14.5 22.5 L11 15.5 L18 15 Z" fill="var(--panel)" stroke="var(--ink)" stroke-width="2.2" stroke-linejoin="round"/></svg>
+<div id="ring"></div>
+<script>
+/* ============================ core ============================ */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const uid=p=>(p||'i')+Math.random().toString(36).slice(2,9);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function localISO(d=new Date()){
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return '${y}-${m}-${day}';
+}
+const todayISO=()=>localISO();
+const TILT=['tiltA','tiltB','tiltC','tiltD'];
+const tiltOf=id=>TILT[[...String(id)].reduce((a,c)=>a+c.charCodeAt(0),0)%4];
+const THEMES=[['parchment','Parchment'],['kraft','Kraft'],['cotton','Cotton'],['sage','Sage'],['chalkboard','Chalkboard'],['blueprint','Blueprint'],['charcoal','Charcoal'],['inkwell','Inkwell']];
+const NOTE_COLORS=['#ffe397','#ffc2cf','#b7ecd2','#c2ddff','#e6c8fb','#ffd8ac'];
+const KEY='artemis-os-v1';
+const ICON_BOW=\`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.6 C3.4 8 3.4 16 8 21.4"/><path d="M8 2.6 L8 21.4"/><line x1="3.5" y1="12" x2="21" y2="12" stroke="var(--accent)"/><path d="M21 12 L17 10.2 M21 12 L17 13.8" stroke="var(--accent)"/><path d="M3.5 12 L6.4 10.4 M3.5 12 L6.4 13.6" stroke-width="1.3"/></svg>\`;
+const ICON_PALETTE=\`<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="var(--ink)" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.3c-5 0-9 3.5-9 7.9 0 3 2 4.9 4.4 4.9.9 0 1.5-.5 1.5-1.3 0-.6-.4-1-.4-1.6 0-1 1-1.5 2-1.5h3.4c3 0 5.9-2.1 5.9-5.4 0-2.6-3.6-4.4-7.8-4.4Z"/><circle cx="8.3" cy="9.4" r="1.05" fill="var(--accent)" stroke="none"/><circle cx="12" cy="7.3" r="1.05" fill="var(--accent2)" stroke="none"/><circle cx="15.5" cy="9.4" r="1.05" fill="var(--line)" stroke="none"/></svg>\`;
+const ICON_CURSOR=\`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink)" stroke-width="1.6" stroke-linejoin="round"><path d="M5 3.5 L5 18 L9 14.3 L11.6 20.4 L14.3 19.2 L11.6 13.1 L17 12.7 Z" fill="var(--paper)"/></svg>\`;
+
+/* ---------- one consistent line-art icon set for every app ---------- */
+const APP_ICON_PATHS={
+  boards:'<rect x="3.6" y="4.2" width="16.8" height="15.6" rx="2.3"/><line x1="9" y1="4.2" x2="9" y2="19.8"/><line x1="15" y1="4.2" x2="15" y2="19.8"/>',
+  'files-mgr':'<path d="M3.5 7.2 L3.5 18.4 L20.5 18.4 L20.5 9.2 L11.2 9.2 L9.4 7.2 Z"/>',
+  projects:'<path d="M4 12.2 L12 4.2 L19 4.2 L19 11.2 L11 19.2 Z"/><circle cx="15.6" cy="7.6" r="1.25" fill="var(--ink)" stroke="none"/>',
+  graph:'<circle cx="6.2" cy="7" r="2.15"/><circle cx="17.8" cy="7" r="2.15"/><circle cx="12" cy="18" r="2.15"/><line x1="7.9" y1="8.3" x2="10.4" y2="16.1"/><line x1="16.1" y1="8.3" x2="13.6" y2="16.1"/><line x1="8.3" y1="7" x2="15.7" y2="7"/>',
+  calendar:'<rect x="3.6" y="5.6" width="16.8" height="14.6" rx="2"/><line x1="3.6" y1="9.8" x2="20.4" y2="9.8"/><line x1="7.6" y1="3.4" x2="7.6" y2="7.4"/><line x1="16.4" y1="3.4" x2="16.4" y2="7.4"/>',
+  files:'<rect x="6.2" y="4.6" width="12" height="14.6" rx="1.6" transform="rotate(-7 12.2 12)"/><rect x="5.8" y="5.2" width="12" height="14.6" rx="1.6" fill="var(--panel)"/>',
+  search:'<circle cx="10.4" cy="10.4" r="6.1"/><line x1="14.9" y1="14.9" x2="20.2" y2="20.2"/>',
+  scripts:'<circle cx="12" cy="12" r="4.1"/><circle cx="12" cy="12" r="1.3" fill="var(--ink)" stroke="none"/><line x1="12" y1="3.6" x2="12" y2="6.3"/><line x1="12" y1="17.7" x2="12" y2="20.4"/><line x1="3.6" y1="12" x2="6.3" y2="12"/><line x1="17.7" y1="12" x2="20.4" y2="12"/><line x1="6.3" y1="6.3" x2="8.1" y2="8.1"/><line x1="15.9" y1="15.9" x2="17.7" y2="17.7"/><line x1="17.7" y1="6.3" x2="15.9" y2="8.1"/><line x1="8.1" y1="15.9" x2="6.3" y2="17.7"/>',
+};
+function appIcon(id,size){
+  const p=APP_ICON_PATHS[id];if(!p)return '';
+  const s=size||19;
+  return \`<svg viewBox="0 0 24 24" width="\${s}" height="\${s}" fill="none" stroke="var(--ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto">\${p}</svg>\`;
 }
 
-const norm = (s) => (s || "").trim().toLowerCase();
-
-function findBoardKey(boards, name) {
-  const n = norm(name);
-  return Object.keys(boards).find((k) => norm(k) === n) || null;
+/* ---------- cursor glyph system ---------- */
+const CURSOR_DEFS={
+  arrow:{name:'Arrow',vb:'0 0 16 19',w:15,h:18,svg:'<path d="M2 1 L2 15 L5.4 12 L7.8 17 L10.2 15.8 L7.8 11 L12.8 10.6 Z" fill="var(--panel)" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/>'},
+  pencil:{name:'Pencil',vb:'0 0 17 19',w:15,h:18,svg:'<path d="M3 16 L3 13 L11 5 L14 8 L6 16 Z" fill="var(--panel)" stroke="var(--ink)" stroke-width="1.5" stroke-linejoin="round"/><path d="M11 5 L14 8" stroke="var(--accent)" stroke-width="1.5"/><path d="M2.2 17 L3.4 13.6 L5.4 15.6 Z" fill="var(--ink)"/>'},
+  dot:{name:'Dot',vb:'0 0 16 16',w:14,h:14,svg:'<circle cx="8" cy="8" r="4.3" fill="var(--accent)" stroke="var(--ink)" stroke-width="1.5"/>'},
+  star:{name:'Star',vb:'0 0 18 18',w:16,h:16,svg:'<path d="M9 1.4 L10.6 6.4 L15.8 6.7 L11.7 9.9 L13.1 14.8 L9 11.9 L4.9 14.8 L6.3 9.9 L2.2 6.7 L7.4 6.4 Z" fill="var(--accent)" stroke="var(--ink)" stroke-width="1.2" stroke-linejoin="round"/>'},
+};
+function setCursorGlyph(id){
+  const d=CURSOR_DEFS[id]||CURSOR_DEFS.arrow;const cur=$('#cur');if(!cur)return;
+  cur.setAttribute('viewBox',d.vb);cur.style.width=d.w+'px';cur.style.height=d.h+'px';cur.innerHTML=d.svg;
 }
-function findProjectKey(projects, name) {
-  const n = norm(name);
-  return projects.find((p) => norm(p) === n) || null;
-}
-function findTaskByName(tasks, name) {
-  const n = norm(name);
-  const matches = tasks.filter((t) => norm(t.name) === n);
-  if (matches.length === 1) return matches[0];
-  const partial = tasks.filter((t) => norm(t.name).includes(n));
-  if (partial.length === 1) return partial[0];
-  return null;
+function cursorMenu(x,y){
+  menu(x,y,Object.entries(CURSOR_DEFS).map(([id,d])=>[(S.cursor===id?'● ':'○ ')+d.name,()=>{
+    S.cursor=id;setCursorGlyph(id);save();}]),'Cursor');
 }
 
-function countStats(board) {
-  const total = board.tasks.length;
-  const done = board.tasks.filter((t) => t.done).length;
-  return { total, done, pct: total === 0 ? 0 : Math.round((done / total) * 100) };
+let S=null, saveT=null;
+function blankState(){
+  const home={id:'b_home',name:'Home',parent:null,projects:[],tasks:[],notes:[],files:[],strokes:[],cam:{x:0,y:0,z:1},created:Date.now()};
+  return {v:1,theme:'parchment',boards:{b_home:home},projects:[],events:[],files:[],scripts:{},
+    desktop:['boards','scripts','calendar'],cursor:'arrow',seenIntro:false};
+}
+function load(){
+  try{const raw=localStorage.getItem(KEY); S=raw?JSON.parse(raw):blankState();}catch(e){S=blankState();}
+  if(!S||!S.boards)S=blankState();
+  for(const b of Object.values(S.boards)){b.tasks||=[];b.notes||=[];b.files||=[];b.strokes||=[];b.projects||=[];b.cam||={x:0,y:0,z:1};}
+  S.scripts||={};S.projects||=[];S.events||=[];S.files||=[];S.desktop||=['boards','scripts','calendar'];S.cursor||='arrow';
+  document.documentElement.dataset.theme=S.theme||'parchment';
+}
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{
+  try{localStorage.setItem(KEY,JSON.stringify(S));}
+  catch(e){toast('Out of storage. Delete a few attached files to keep saving.');}
+},220);}
+
+/* ---------- event bus (scripts listen here) ---------- */
+const Bus={h:{},on(t,f){(this.h[t]||=[]).push(f)},emit(t,p){(this.h[t]||[]).forEach(f=>{try{f(p)}catch(e){console.warn(e)}});(this.h['*']||[]).forEach(f=>f(t,p))}};
+const dirty=new Set();
+function changed(kind,payload){ if(kind)Bus.emit(kind,payload||{}); save(); refresh(); }
+const refreshers=new Map();
+function refresh(){refreshers.forEach(f=>{try{f()}catch(e){}});}
+
+/* ---------- toasts ---------- */
+function toast(msg,ms=3200){
+  const d=document.createElement('div');d.className='toast';d.textContent=msg;
+  d.style.transform=\`rotate(\${(Math.random()*3-1.5).toFixed(2)}deg)\`;
+  $('#toasts').appendChild(d);setTimeout(()=>d.remove(),ms);
 }
 
-function collectDescendantTaskIds(tasks, rootId) {
-  const ids = [rootId];
-  let frontier = [rootId];
-  while (frontier.length) {
-    const next = [];
-    tasks.forEach((t) => {
-      if (t.parentId && frontier.includes(t.parentId) && !ids.includes(t.id)) {
-        ids.push(t.id);
-        next.push(t.id);
-      }
-    });
-    frontier = next;
+/* ---------- cursor ---------- */
+(function(){
+  const cur=$('#cur'),ring=$('#ring');let rx=0,ry=0,mx=0,my=0;
+  addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.transform=\`translate(\${mx}px,\${my}px)\`;
+    const t=e.target,cs=t&&t.closest?t.closest('input,textarea,[contenteditable="true"]'):null;
+    const dg=t&&t.closest?t.closest('.card,.note,.fcard,.node,.wbar,.bcard,.chip'):null;
+    const ck=t&&t.closest?t.closest('button,.dicon,.tile,.mi,.item,.dot,.cell'):null;
+    document.body.classList.toggle('c-text',!!cs);
+    document.body.classList.toggle('c-drag',!cs&&!!dg);
+    document.body.classList.toggle('c-click',!cs&&!dg&&!!ck);
+  },{passive:true});
+  (function loop(){rx+=(mx-rx)*.22;ry+=(my-ry)*.22;ring.style.transform=\`translate(\${rx}px,\${ry}px)\`;requestAnimationFrame(loop)})();
+})();
+
+/* ---------- drag helper ---------- */
+function drag(handle,onMove,onStart,onEnd){
+  handle.addEventListener('mousedown',e=>{
+    if(e.button!==0)return;
+    if(e.target.closest('input,textarea,button,select,[contenteditable="true"],.dot'))return;
+    e.preventDefault();const sx=e.clientX,sy=e.clientY;let moved=false;
+    onStart&&onStart(e);
+    const mv=ev=>{if(Math.abs(ev.clientX-sx)+Math.abs(ev.clientY-sy)>2)moved=true;onMove(ev.clientX-sx,ev.clientY-sy,ev)};
+    const up=ev=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);onEnd&&onEnd(moved,ev)};
+    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  });
+}
+
+/* ---------- context menu ---------- */
+let openMenu=null;
+function menu(x,y,items,head){
+  closeMenu();const m=document.createElement('div');m.className='menu';
+  if(head)m.insertAdjacentHTML('beforeend',\`<div class="mh">\${esc(head)}</div>\`);
+  items.forEach(it=>{
+    if(it==='-'){m.insertAdjacentHTML('beforeend','<hr>');return;}
+    const b=document.createElement('button');b.className='mi';b.textContent=it[0];
+    b.onclick=()=>{closeMenu();it[1]()};m.appendChild(b);
+  });
+  document.body.appendChild(m);
+  const r=m.getBoundingClientRect();
+  m.style.left=Math.min(x,innerWidth-r.width-8)+'px';
+  m.style.top=Math.min(y,innerHeight-r.height-8)+'px';
+  openMenu=m;setTimeout(()=>document.addEventListener('mousedown',closeOnOut),0);
+}
+function closeOnOut(e){if(openMenu&&!openMenu.contains(e.target))closeMenu()}
+function closeMenu(){if(openMenu){openMenu.remove();openMenu=null;document.removeEventListener('mousedown',closeOnOut)}}
+
+/* ---------- modal ---------- */
+function modal(title,bodyHTML,buttons,onMount){
+  const sc=document.createElement('div');sc.id='scrim';
+  sc.innerHTML=\`<div class="modal"><h3>\${esc(title)}</h3><div class="mbody">\${bodyHTML}</div>
+    <div class="row" style="margin-top:16px;justify-content:flex-end"></div></div>\`;
+  const row=$('.row:last-child',sc);
+  (buttons||[['Close',null]]).forEach(([lb,fn,pri])=>{
+    const b=document.createElement('button');b.className='btn'+(pri?' pri':'');b.textContent=lb;
+    b.onclick=()=>{if(!fn||fn($('.mbody',sc))!==false)sc.remove()};row.appendChild(b);
+  });
+  sc.addEventListener('mousedown',e=>{if(e.target===sc)sc.remove()});
+  document.body.appendChild(sc);onMount&&onMount($('.mbody',sc),sc);
+  const f=$('input,textarea,select',sc);f&&f.focus();
+  return sc;
+}
+function ask(title,label,val,cb){
+  modal(title,\`<label class="fld">\${esc(label)}</label><input type="text" id="_v" value="\${esc(val||'')}">\`,
+    [['Cancel',null],['Save',b=>{const v=$('#_v',b).value.trim();if(v)cb(v)},1]],
+    b=>{$('#_v',b).onkeydown=e=>{if(e.key==='Enter')$('.btn.pri',b.parentElement).click()}});
+}
+function confirmBox(title,msg,cb,label){
+  modal(title,\`<p>\${esc(msg)}</p>\`,[['Cancel',null],[label||'Delete',()=>cb(),1]]);
+}
+
+/* ============================ windows ============================ */
+let zTop=100;const WINS=new Map();
+function openWin(opt){
+  if(opt.id&&WINS.has(opt.id)){const w=WINS.get(opt.id);focusWin(w);if(opt.onReopen)opt.onReopen(w);return w;}
+  const id=opt.id||uid('w');
+  const el=document.createElement('div');el.className='win';
+  const w=Math.min(opt.w||760,innerWidth-40),h=Math.min(opt.h||520,innerHeight-130);
+  el.style.width=w+'px';el.style.height=h+'px';
+  el.style.left=clamp((innerWidth-w)/2+(WINS.size%5)*24-48,8,innerWidth-w-8)+'px';
+  el.style.top=clamp(58+(WINS.size%5)*22,8,Math.max(8,innerHeight-h-100))+'px';
+  el.innerHTML=\`<div class="wbar"><span style="font-size:19px">\${opt.icon||'📄'}</span>
+    <div class="wtitle"></div>
+    <button class="wbtn" data-a="min" title="Minimize">–</button>
+    <button class="wbtn" data-a="max" title="Maximize">▢</button>
+    <button class="wbtn" data-a="close" title="Close">✕</button></div>
+    <div class="wbody"></div><div class="wgrip"></div>\`;
+  $('.wtitle',el).textContent=opt.title||'Window';
+  $('#desk').appendChild(el);
+  const win={id,el,body:$('.wbody',el),opt,min:false,max:false,
+    setTitle(t){$('.wtitle',el).textContent=t;opt.title=t;renderChips();}};
+  WINS.set(id,win);
+  drag($('.wbar',el),(dx,dy)=>{if(win.max)return;
+    el.style.left=clamp(win._l+dx,-w+90,innerWidth-70)+'px';el.style.top=clamp(win._t+dy,0,innerHeight-60)+'px';},
+    ()=>{win._l=parseFloat(el.style.left);win._t=parseFloat(el.style.top);focusWin(win)});
+  drag($('.wgrip',el),(dx,dy)=>{el.style.width=Math.max(300,win._w+dx)+'px';el.style.height=Math.max(200,win._h+dy)+'px';
+    win.opt.onResize&&win.opt.onResize();},
+    ()=>{win._w=el.offsetWidth;win._h=el.offsetHeight});
+  el.addEventListener('mousedown',()=>focusWin(win));
+  $$('.wbtn',el).forEach(b=>b.onclick=e=>{e.stopPropagation();
+    const a=b.dataset.a;
+    if(a==='close')closeWin(win);
+    else if(a==='min'){win.min=true;el.style.display='none';renderChips();}
+    else{win.max=!win.max;el.classList.toggle('max',win.max);
+      if(win.max){win._r={l:el.style.left,t:el.style.top,w:el.style.width,h:el.style.height};
+        Object.assign(el.style,{left:'6px',top:'6px',width:'calc(100vw - 12px)',height:'calc(100vh - 104px)'});}
+      else Object.assign(el.style,{left:win._r.l,top:win._r.t,width:win._r.w,height:win._r.h});
+      win.opt.onResize&&win.opt.onResize();}
+  });
+  focusWin(win);
+  if(opt.render)opt.render(win.body,win);
+  if(opt.refresh)refreshers.set(id,()=>opt.refresh(win));
+  renderChips();
+  return win;
+}
+function focusWin(w){
+  if(w.min){w.min=false;w.el.style.display='';}
+  zTop++;w.el.style.zIndex=zTop;
+  WINS.forEach(x=>x.el.classList.toggle('on',x===w));
+  renderChips();
+}
+function closeWin(w){
+  if(w.opt.onClose)w.opt.onClose();
+  refreshers.delete(w.id);WINS.delete(w.id);w.el.remove();renderChips();
+}
+
+/* ============================ desktop + dock ============================ */
+const APPS=[
+  {id:'boards',icon:appIcon('boards'),name:'Boards',run:()=>openBoard('b_home')},
+  {id:'files-mgr',icon:appIcon('files-mgr'),name:'File Manager',run:()=>openFileManager()},
+  {id:'projects',icon:appIcon('projects'),name:'Projects',run:()=>openProjects()},
+  {id:'graph',icon:appIcon('graph'),name:'Graph View',run:()=>openGraph()},
+  {id:'calendar',icon:appIcon('calendar'),name:'Calendar',run:()=>openCalendar()},
+  {id:'files',icon:appIcon('files'),name:'Files',run:()=>openFiles()},
+  {id:'search',icon:appIcon('search'),name:'Search & Stats',run:()=>openSearch()},
+  {id:'scripts',icon:appIcon('scripts'),name:'Scripts',run:()=>openScripts()},
+];
+function renderDesktop(){
+  const shown=(S.desktop||[]).map(id=>APPS.find(a=>a.id===id)).filter(Boolean);
+  $('#icons').innerHTML=shown.map(a=>\`<button class="dicon" data-a="\${a.id}"><div class="gl">\${a.icon}</div><div class="lb">\${a.name}</div></button>\`).join('');
+  $$('#icons .dicon').forEach(b=>{
+    b.onclick=()=>APPS.find(a=>a.id===b.dataset.a).run();
+    b.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();
+      menu(e.clientX,e.clientY,[['Open',()=>APPS.find(a=>a.id===b.dataset.a).run()],
+        ['Remove from desk',()=>{S.desktop=S.desktop.filter(x=>x!==b.dataset.a);save();renderDesktop()}]],
+        APPS.find(a=>a.id===b.dataset.a).name)};
+  });
+}
+function addIconMenu(x,y){
+  const missing=APPS.filter(a=>!(S.desktop||[]).includes(a.id));
+  if(!missing.length)return menu(x,y,[['Everything is already on the desk',()=>{}]],'Add an icon');
+  menu(x,y,missing.map(a=>[a.name,()=>{S.desktop.push(a.id);save();renderDesktop()}]),'Add an icon');
+}
+
+function deskMenu(){
+  $('#desk').addEventListener('contextmenu',e=>{
+    if(e.target.closest('.win'))return;e.preventDefault();
+    menu(e.clientX,e.clientY,[['New board',()=>newBoardDialog(null)],
+      ['Add an icon…',()=>addIconMenu(e.clientX,e.clientY)],
+      ['All apps…',()=>appMenu(e.clientX,e.clientY)],
+      ['Change theme…',()=>themeMenu(e.clientX,e.clientY)]],'Desk');
+  });
+}
+function appMenu(x,y){menu(x,y,APPS.map(a=>[a.name,a.run]),'Apps')}
+const DOCK_QUICK=['boards','scripts','calendar','search'];
+function renderDock(){
+  const quick=DOCK_QUICK.map(id=>APPS.find(a=>a.id===id)).filter(Boolean);
+  $('#dock').innerHTML=
+    \`<button class="dk" id="startb" title="Artemis OS">\${ICON_BOW}</button>
+     <span class="sep"></span>
+     \${quick.map(a=>\`<button class="dk" data-a="\${a.id}" title="\${a.name}">\${a.icon}<span class="lb">\${a.name}</span></button>\`).join('')}
+     <span class="sep"></span>
+     <div id="chips"></div>
+     <span class="sep"></span>
+     <button class="dk" id="cursorb" title="Cursor">\${ICON_CURSOR}</button>
+     <button class="dk" id="themeb" title="Theme">\${ICON_PALETTE}</button>
+     <div id="clock"></div>\`;
+  $$('#dock .dk[data-a]').forEach(b=>b.onclick=()=>APPS.find(a=>a.id===b.dataset.a).run());
+  $('#themeb').onclick=e=>themeMenu(e.clientX,e.clientY-320);
+  $('#cursorb').onclick=e=>cursorMenu(e.clientX,e.clientY-260);
+  $('#startb').onclick=e=>{const r=e.currentTarget.getBoundingClientRect();
+    menu(r.left,Math.max(20,r.top-30-APPS.length*30),[...APPS.map(a=>[a.name,a.run]),'-',
+      ['Add a desk icon…',()=>addIconMenu(r.left,r.top-300)],
+      ['Change theme…',()=>themeMenu(r.left,r.top-320)],
+      ['Change cursor…',()=>cursorMenu(r.left,r.top-260)],
+      ['Close all windows',()=>[...WINS.values()].forEach(closeWin)]],'Artemis OS');
+  };
+  renderChips();
+  setInterval(()=>{const d=new Date();$('#clock').textContent=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})},1000);
+  $('#clock').textContent=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+}
+function renderChips(){
+  const c=$('#chips');if(!c)return;c.innerHTML='';
+  WINS.forEach(w=>{const b=document.createElement('button');
+    b.className='chip'+(w.el.classList.contains('on')&&!w.min?' on':'');
+    b.textContent=w.opt.title||'';
+    b.onclick=()=>{w.min||!w.el.classList.contains('on')?focusWin(w):(w.min=true,w.el.style.display='none',renderChips())};
+    b.oncontextmenu=e=>{e.preventDefault();menu(e.clientX,e.clientY,[['Close',()=>closeWin(w)]])};
+    c.appendChild(b);});
+}
+function themeMenu(x,y){
+  menu(x,y,THEMES.map(([id,nm])=>[(S.theme===id?'● ':'○ ')+nm,()=>{S.theme=id;document.documentElement.dataset.theme=id;save();}]),'Themes');
+}
+</script>
+<script>
+/* ============================ data API ============================ */
+const A={
+  board:id=>S.boards[id],
+  allBoards:()=>Object.values(S.boards),
+  children:id=>Object.values(S.boards).filter(b=>b.parent===id),
+  parent:id=>{const b=S.boards[id];return b&&b.parent?S.boards[b.parent]:null},
+  path(id){const out=[];let b=S.boards[id];while(b){out.unshift(b);b=b.parent?S.boards[b.parent]:null}return out},
+  createBoard(name,parent,projects){
+    const b={id:uid('b'),name:name||'New board',parent:parent||null,projects:projects||[],
+      tasks:[],notes:[],files:[],strokes:[],cam:{x:0,y:0,z:1},created:Date.now()};
+    S.boards[b.id]=b;Bus.emit('board.created',{board:b});return b;},
+  deleteBoard(id){ if(id==='b_home')return false;
+    A.children(id).forEach(c=>c.parent=S.boards[id].parent);
+    Object.values(S.scripts).filter(s=>s.boardId===id).forEach(s=>s.boardId=null);
+    delete S.boards[id];[...WINS.values()].filter(w=>w.id==='board:'+id).forEach(closeWin);return true;},
+  dupBoard(id){const src=S.boards[id];if(!src)return null;
+    const b=JSON.parse(JSON.stringify(src));b.id=uid('b');b.name=src.name+' copy';b.created=Date.now();
+    b.tasks.forEach(t=>t.id=uid('t'));b.notes.forEach(n=>n.id=uid('n'));b.files.forEach(f=>f.id=uid('fc'));
+    S.boards[b.id]=b;Bus.emit('board.created',{board:b});return b;},
+  stats(id){const b=S.boards[id];if(!b)return{done:0,total:0,pct:0};
+    const total=b.tasks.length,done=b.tasks.filter(t=>t.done).length;
+    return{done,total,pct:total?Math.round(done/total*100):0};},
+  freeSpot(b,w=230,h=130){
+    let x=40,y=40;const items=[...b.tasks,...b.notes,...b.files];
+    for(let r=0;r<400;r++){const ok=!items.some(i=>Math.abs(i.x-x)<w&&Math.abs(i.y-y)<h);
+      if(ok)return{x,y};x+=w;if(x>40+w*4){x=40;y+=h}}
+    return{x:40+Math.random()*400,y:40+Math.random()*300};},
+  addTask(boardId,title,opts){
+    const b=S.boards[boardId];if(!b)return null;
+    const p=A.freeSpot(b);
+    const t=Object.assign({id:uid('t'),title:title||'New task',done:false,x:p.x,y:p.y,priority:'normal',
+      status:'todo',desc:'',deadline:'',tags:[],subtasks:[],created:Date.now()},opts||{});
+    b.tasks.push(t);Bus.emit('task.created',{boardId,task:t});return t;},
+  findTask(id){for(const b of Object.values(S.boards)){const t=b.tasks.find(x=>x.id===id);if(t)return{board:b,task:t}}return null},
+  delTask(id){const f=A.findTask(id);if(!f)return false;
+    f.board.tasks=f.board.tasks.filter(t=>t.id!==id);Bus.emit('task.deleted',{boardId:f.board.id,task:f.task});return true;},
+  moveTaskToBoard(id,boardId){const f=A.findTask(id),to=S.boards[boardId];if(!f||!to||f.board.id===boardId)return false;
+    f.board.tasks=f.board.tasks.filter(t=>t.id!==id);const p=A.freeSpot(to);f.task.x=p.x;f.task.y=p.y;to.tasks.push(f.task);
+    Bus.emit('task.moved',{from:f.board.id,boardId,task:f.task});return true;},
+  setDone(id,v){const f=A.findTask(id);if(!f)return false;const was=f.task.done;f.task.done=!!v;
+    if(was!==!!v)Bus.emit(v?'task.completed':'task.uncompleted',{boardId:f.board.id,task:f.task});return true;},
+  rename(id,name){const f=A.findTask(id);if(!f)return false;const old=f.task.title;f.task.title=name;
+    Bus.emit('task.renamed',{boardId:f.board.id,task:f.task,old});return true;},
+  addSub(taskId,title){const f=A.findTask(taskId);if(!f)return null;
+    const s={id:uid('s'),title:title||'Subtask',done:false};f.task.subtasks.push(s);
+    Bus.emit('subtask.created',{boardId:f.board.id,task:f.task,subtask:s});return s;},
+  addNote(boardId,text,color){const b=S.boards[boardId];if(!b)return null;const p=A.freeSpot(b,200,120);
+    const n={id:uid('n'),text:text||'',x:p.x,y:p.y,w:180,h:110,color:color||NOTE_COLORS[Math.floor(Math.random()*NOTE_COLORS.length)]};
+    b.notes.push(n);Bus.emit('note.created',{boardId,note:n});return n;},
+  addFileCard(boardId,fileId){const b=S.boards[boardId];if(!b)return null;const p=A.freeSpot(b,170,140);
+    const c={id:uid('fc'),fileId,x:p.x,y:p.y};b.files.push(c);Bus.emit('file.attached',{boardId,card:c});return c;},
+  file:id=>S.files.find(f=>f.id===id),
+  project:id=>S.projects.find(p=>p.id===id),
+  projName:id=>{const p=A.project(id);return p?p.name:'?'},
+  isOverdue:t=>!!t.deadline&&!t.done&&t.deadline<todayISO(),
+  objects(b){return[...b.tasks.map(o=>({o,k:'task'})),...b.notes.map(o=>({o,k:'note'})),...b.files.map(o=>({o,k:'file'}))]},
+};
+const PRIOS=['low','normal','high','urgent'],STATUSES=['todo','doing','blocked','done'];
+
+/* ---------- layout engine (shared with scripts) ---------- */
+function sizeOf(k){return k==='task'?[212,120]:k==='note'?[180,110]:[150,140]}
+const Layout={
+  grid(items,opt={}){const cols=opt.cols||Math.ceil(Math.sqrt(items.length))||1;
+    const gx=opt.gx||240,gy=opt.gy||150,ox=opt.x??60,oy=opt.y??60;
+    items.forEach((it,i)=>{it.o.x=ox+(i%cols)*gx;it.o.y=oy+Math.floor(i/cols)*gy});},
+  rows(items,o={}){Layout.grid(items,{cols:o.cols||Math.ceil(items.length/Math.max(1,o.rows||2)),...o})},
+  columns(items,o={}){Layout.grid(items,{cols:o.cols||3,...o})},
+  vertical(items,o={}){const x=o.x??80,y=o.y??60,g=o.gap||140;items.forEach((it,i)=>{it.o.x=x;it.o.y=y+i*g})},
+  horizontal(items,o={}){const x=o.x??60,y=o.y??80,g=o.gap||240;items.forEach((it,i)=>{it.o.x=x+i*g;it.o.y=y})},
+  circle(items,o={}){const cx=o.x??520,cy=o.y??380,r=o.r||Math.max(190,items.length*34);
+    items.forEach((it,i)=>{const a=i/items.length*Math.PI*2-Math.PI/2;it.o.x=cx+Math.cos(a)*r;it.o.y=cy+Math.sin(a)*r});},
+  spiral(items,o={}){const cx=o.x??520,cy=o.y??380;items.forEach((it,i)=>{const a=i*.6,r=60+i*26;
+    it.o.x=cx+Math.cos(a)*r;it.o.y=cy+Math.sin(a)*r});},
+  stack(items,o={}){const x=o.x??90,y=o.y??90;items.forEach((it,i)=>{it.o.x=x+i*11;it.o.y=y+i*13})},
+  align(items,o={}){const how=o.how||'left';
+    if(!items.length)return;
+    if(how==='left'){const m=Math.min(...items.map(i=>i.o.x));items.forEach(i=>i.o.x=m)}
+    else if(how==='right'){const m=Math.max(...items.map(i=>i.o.x));items.forEach(i=>i.o.x=m)}
+    else if(how==='top'){const m=Math.min(...items.map(i=>i.o.y));items.forEach(i=>i.o.y=m)}
+    else if(how==='bottom'){const m=Math.max(...items.map(i=>i.o.y));items.forEach(i=>i.o.y=m)}
+    else{const m=items.reduce((a,i)=>a+i.o.y,0)/items.length;items.forEach(i=>i.o.y=m)}},
+  distribute(items,o={}){if(items.length<3)return;const axis=o.axis||'x';
+    const s=[...items].sort((a,b)=>a.o[axis]-b.o[axis]),lo=s[0].o[axis],hi=s[s.length-1].o[axis],st=(hi-lo)/(s.length-1);
+    s.forEach((it,i)=>it.o[axis]=lo+st*i);},
+  pack(items,o={}){let x=o.x??50,y=o.y??50,rowH=0;const maxW=o.w||960;
+    items.forEach(it=>{const[w,h]=sizeOf(it.k);if(x+w>maxW+(o.x??50)){x=o.x??50;y+=rowH+22;rowH=0}
+      it.o.x=x;it.o.y=y;x+=w+22;rowH=Math.max(rowH,h)});},
+};
+</script>
+<script>
+/* ============================ board app ============================ */
+function openBoard(id){
+  const b=A.board(id);if(!b){toast('That board is gone.');return}
+  const win=openWin({id:'board:'+id,title:b.name,icon:appIcon('boards'),w:900,h:600,
+    render:(body,w)=>buildBoard(body,w,id),refresh:w=>w.api&&w.api.render(),
+    onResize:()=>{}});
+  return win;
+}
+function buildBoard(body,win,id){
+  body.innerHTML=\`<div class="bwrap">
+    <div class="btool"></div>
+    <div class="bcanvasholder"><div class="bcanvas">
+      <svg class="drawlayer" width="4000" height="3000"></svg>
+    </div></div></div>\`;
+  const holder=$('.bcanvasholder',body),canvas=$('.bcanvas',body),svg=$('.drawlayer',body),tool=$('.btool',body);
+  const st={tool:'select',pen:'#2c2620',penW:3,sel:new Set()};
+  const B=()=>A.board(id);
+  const cam=()=>B().cam;
+
+  function applyCam(){const c=cam();canvas.style.transform=\`translate(\${c.x}px,\${c.y}px) scale(\${c.z})\`}
+  function toBoard(ev){const r=holder.getBoundingClientRect(),c=cam();
+    return{x:(ev.clientX-r.left-c.x)/c.z,y:(ev.clientY-r.top-c.y)/c.z}}
+
+  /* ---------- toolbar ---------- */
+  function renderTool(){
+    const bd=B(),s=A.stats(id);
+    tool.innerHTML=\`
+      <button class="btn sm" data-a="add">+ Add</button>
+      <button class="btn sm \${st.tool!=='select'?'on':''}" data-a="draw">\${st.tool==='pen'?'✏ Pen':st.tool==='erase'?'🧽 Eraser':'✏ Draw'}</button>
+      <button class="btn sm" data-a="view">\${Math.round(cam().z*100)}%</button>
+      <button class="btn sm" data-a="more">⋯</button>
+      <div style="flex:1;min-width:20px"></div>
+      <span class="dim">\${s.done}/\${s.total}</span>
+      <div class="bar" style="width:76px"><i style="width:\${s.pct}%"></i></div>\`;
+    $$('[data-a]',tool).forEach(el=>el.onclick=e=>act(el.dataset.a,e));
   }
-  return ids;
-}
-
-function boardChildren(boards, key) {
-  return Object.keys(boards).filter(
-    (k) => boards[k].parent && norm(boards[k].parent) === norm(key)
-  );
-}
-
-function isAncestorBoard(boards, candidateAncestorKey, key) {
-  let cur = boards[key] ? boards[key].parent : null;
-  let guard = 0;
-  while (cur && guard < 500) {
-    if (norm(cur) === norm(candidateAncestorKey)) return true;
-    cur = boards[cur] ? boards[cur].parent : null;
-    guard += 1;
+  function mpos(e){const r=e.currentTarget?e.currentTarget.getBoundingClientRect():null;
+    return r?{x:r.left,y:r.bottom+4}:{x:e.clientX,y:e.clientY}}
+  function act(a,e){
+    const bd=B(),m=mpos(e);
+    if(a==='add')menu(m.x,m.y,[
+      ['Task',()=>{A.addTask(id,'New task');changed('board.changed',{boardId:id})}],
+      ['Sticky note',()=>{A.addNote(id,'');changed('board.changed',{boardId:id})}],
+      ['Sub-board',()=>newBoardDialog(id)],
+      ['File attachment…',()=>pickFiles(fs=>{fs.forEach(f=>A.addFileCard(id,f.id));changed('board.changed',{boardId:id})})],
+    ],'Add to board');
+    else if(a==='draw')menu(m.x,m.y,[
+      [(st.tool==='select'?'● ':'○ ')+'Move & pan',()=>{st.tool='select';renderTool()}],
+      [(st.tool==='erase'?'● ':'○ ')+'Eraser',()=>{st.tool='erase';renderTool()}],
+      '-',
+      ...[['Ink','#2c2620'],['Coral','#ff6f61'],['Azure','#4d96ff'],['Meadow','#37b874'],['Violet','#8c6bff']]
+        .map(([nm,c])=>[(st.tool==='pen'&&st.pen===c?'● ':'○ ')+'Pen — '+nm,()=>{st.tool='pen';st.pen=c;renderTool()}]),
+    ],'Drawing');
+    else if(a==='view')menu(m.x,m.y,[
+      ['Zoom in',()=>zoomAt(holder.clientWidth/2,holder.clientHeight/2,1.2)],
+      ['Zoom out',()=>zoomAt(holder.clientWidth/2,holder.clientHeight/2,1/1.2)],
+      ['Fit everything',fit],
+      ['Reset to 100%',()=>{const c=cam();c.x=0;c.y=0;c.z=1;applyCam();renderTool();save()}],
+    ],'View');
+    else if(a==='more')menu(m.x,m.y,[
+      ['Check every task',()=>{bd.tasks.forEach(t=>A.setDone(t.id,true));changed('board.changed',{boardId:id})}],
+      ['Uncheck every task',()=>{bd.tasks.forEach(t=>A.setDone(t.id,false));changed('board.changed',{boardId:id})}],
+      ['Clear completed',()=>{const n=bd.tasks.filter(t=>t.done).length;
+        if(!n)return toast('Nothing completed to clear.');
+        confirmBox('Clear completed',\`Remove \${n} completed task\${n>1?'s':''} from this board?\`,()=>{
+          bd.tasks.filter(t=>t.done).forEach(t=>A.delTask(t.id));changed('board.changed',{boardId:id})},'Clear')}],
+      ['Arrange in a grid',()=>{Layout.grid(A.objects(bd));changed('board.changed',{boardId:id})}],
+      '-',
+      ['Projects: '+(bd.projects.length?bd.projects.map(A.projName).join(', '):'none'),()=>tagMenu({clientX:m.x,clientY:m.y},bd)],
+      ['Scripts…',()=>boardScriptsMenu({clientX:m.x,clientY:m.y},id)],
+      ['Rename board…',()=>ask('Rename board','Name',bd.name,v=>{bd.name=v;changed('board.changed',{boardId:id})})],
+    ],A.path(id).map(x=>x.name).join(' › '));
   }
+  function tagMenu(e,bd){
+    if(!S.projects.length)return menu(e.clientX,e.clientY,[['Create a project first…',()=>openProjects()]],'Projects');
+    menu(e.clientX,e.clientY,S.projects.map(p=>[(bd.projects.includes(p.id)?'● ':'○ ')+p.name,()=>{
+      bd.projects.includes(p.id)?bd.projects=bd.projects.filter(x=>x!==p.id):bd.projects.push(p.id);
+      changed('project.changed',{boardId:id});renderTool();}]),'Tag this board');
+  }
+
+  /* ---------- camera ---------- */
+  function zoomAt(px,py,f){const c=cam();const z=clamp(c.z*f,.2,3);
+    c.x=px-(px-c.x)*(z/c.z);c.y=py-(py-c.y)*(z/c.z);c.z=z;applyCam();renderTool();save();}
+  holder.addEventListener('wheel',e=>{e.preventDefault();
+    const r=holder.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:1/1.12);},{passive:false});
+  function fit(){const b=B(),items=A.objects(b);const c=cam();
+    if(!items.length){c.x=0;c.y=0;c.z=1;applyCam();renderTool();return}
+    const xs=items.map(i=>i.o.x),ys=items.map(i=>i.o.y);
+    const minx=Math.min(...xs)-40,miny=Math.min(...ys)-40,maxx=Math.max(...xs)+250,maxy=Math.max(...ys)+180;
+    const z=clamp(Math.min(holder.clientWidth/(maxx-minx),holder.clientHeight/(maxy-miny)),.2,1.6);
+    c.z=z;c.x=-minx*z+10;c.y=-miny*z+10;applyCam();renderTool();save();}
+
+  /* ---------- canvas interaction: pan / draw / erase ---------- */
+  let panning=null,stroke=null;
+  holder.addEventListener('contextmenu',e=>e.preventDefault());
+  holder.addEventListener('mousedown',e=>{
+    const onItem=e.target.closest('.card,.note,.fcard,.bcard');
+    if(e.button===2||(e.button===0&&!onItem&&st.tool==='select')){
+      const c=cam();panning={sx:e.clientX,sy:e.clientY,cx:c.x,cy:c.y};
+      if(e.button===2&&stroke){stroke=null}
+      return;
+    }
+    if(onItem||e.button!==0)return;
+    const p=toBoard(e);
+    if(st.tool==='pen'){stroke={id:uid('k'),color:st.pen,w:st.penW,pts:[[p.x,p.y]]};B().strokes.push(stroke);drawStrokes();}
+    else if(st.tool==='erase'){eraseAt(p)}
+  });
+  addEventListener('mousemove',e=>{
+    if(panning){const c=cam();c.x=panning.cx+(e.clientX-panning.sx);c.y=panning.cy+(e.clientY-panning.sy);applyCam();return}
+    if(!win.el.isConnected)return;
+    const p=toBoard(e);
+    if(stroke&&(e.buttons&1)){stroke.pts.push([p.x,p.y]);drawStrokes();}
+    else if(st.tool==='erase'&&(e.buttons&1)&&holder.contains(e.target))eraseAt(p);
+  });
+  addEventListener('mouseup',()=>{if(panning){panning=null;save()}if(stroke){stroke=null;save()}});
+  function eraseAt(p){const b=B(),r=16/cam().z;const before=b.strokes.length;
+    b.strokes=b.strokes.filter(s=>!s.pts.some(pt=>Math.hypot(pt[0]-p.x,pt[1]-p.y)<r));
+    if(b.strokes.length!==before){drawStrokes();save()}}
+  function drawStrokes(){
+    svg.innerHTML=B().strokes.map(s=>\`<polyline points="\${s.pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}"
+      fill="none" stroke="\${s.color}" stroke-width="\${s.w}" stroke-linecap="round" stroke-linejoin="round"/>\`).join('');}
+
+  /* ---------- items ---------- */
+  function render(){
+    const b=B();if(!b)return;win.setTitle(b.name);
+    $$('.card,.note,.fcard,.bcard',canvas).forEach(e=>e.remove());
+    b.tasks.forEach(t=>canvas.appendChild(taskEl(t)));
+    b.notes.forEach(n=>canvas.appendChild(noteEl(n)));
+    b.files.forEach(c=>canvas.appendChild(fileEl(c)));
+    A.children(id).forEach((c,i)=>canvas.appendChild(subEl(c,i)));
+    drawStrokes();applyCam();renderTool();
+  }
+  function place(el,o){el.style.left=o.x+'px';el.style.top=o.y+'px'}
+  function makeDraggable(el,o,after){
+    drag(el,(dx,dy)=>{el.style.left=(el._x+dx/cam().z)+'px';el.style.top=(el._y+dy/cam().z)+'px';},
+      ()=>{el._x=o.x;el._y=o.y;el.style.zIndex=++zTop},
+      (moved)=>{if(!moved)return;o.x=Math.round(parseFloat(el.style.left));o.y=Math.round(parseFloat(el.style.top));
+        save();after&&after()});
+  }
+  function editable(el,get,set){
+    el.ondblclick=e=>{e.stopPropagation();el.contentEditable='true';el.focus();
+      document.execCommand&&document.getSelection().selectAllChildren(el);
+      const done=()=>{el.contentEditable='false';const v=el.textContent.trim();if(v&&v!==get())set(v);else el.textContent=get();};
+      el.onblur=done;el.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();el.blur()}if(ev.key==='Escape'){el.textContent=get();el.blur()}};};
+  }
+  function taskEl(t){
+    const el=document.createElement('div');
+    el.className='card '+(t.done?'done ':'')+tiltOf(t.id);el.dataset.tid=t.id;place(el,t);
+    const over=A.isOverdue(t);
+    el.innerHTML=\`<div class="ttl"><button class="chk">\${t.done?'✓':''}</button><div class="tx">\${esc(t.title)}</div></div>
+      <div class="meta">
+        \${t.priority!=='normal'?\`<span class="pill p-\${t.priority}">\${t.priority}</span>\`:''}
+        \${t.status&&t.status!=='todo'?\`<span class="pill">\${t.status}</span>\`:''}
+        \${t.deadline?\`<span class="pill \${over?'over':''}">\${t.deadline.slice(5)}</span>\`:''}
+        \${t.tags.map(g=>\`<span class="pill">#\${esc(g)}</span>\`).join('')}
+        \${t.subtasks.length?\`<span class="pill">\${t.subtasks.filter(s=>s.done).length}/\${t.subtasks.length}</span>\`:''}
+      </div>
+      \${t.desc?\`<div class="dim" style="margin-top:4px">\${esc(t.desc)}</div>\`:''}
+      \${t.subtasks.length?\`<ul class="subs">\${t.subtasks.map(s=>
+        \`<li class="\${s.done?'d':''}" data-sid="\${s.id}"><button class="chk" style="width:15px;height:15px;font-size:11px">\${s.done?'✓':''}</button><span class="stx">\${esc(s.title)}</span></li>\`).join('')}</ul>\`:''}\`;
+    $('.chk',el).onclick=e=>{e.stopPropagation();A.setDone(t.id,!t.done);changed('board.changed',{boardId:id})};
+    $$('.subs li',el).forEach(li=>{const s=t.subtasks.find(x=>x.id===li.dataset.sid);
+      $('.chk',li).onclick=e=>{e.stopPropagation();s.done=!s.done;changed('board.changed',{boardId:id})};
+      $('.stx',li).ondblclick=e=>{e.stopPropagation();ask('Rename subtask','Subtask',s.title,v=>{s.title=v;changed()})};});
+    editable($('.tx',el),()=>t.title,v=>{A.rename(t.id,v);changed('board.changed',{boardId:id})});
+    el.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();taskMenu(e,t)};
+    makeDraggable(el,t,()=>Bus.emit('task.moved',{boardId:id,task:t}));
+    return el;
+  }
+  function taskMenu(e,t){
+    menu(e.clientX,e.clientY,[
+      [t.done?'Mark not done':'Mark done',()=>{A.setDone(t.id,!t.done);changed('board.changed',{boardId:id})}],
+      ['Rename…',()=>ask('Rename task','Title',t.title,v=>{A.rename(t.id,v);changed('board.changed',{boardId:id})})],
+      ['Add subtask…',()=>ask('New subtask','Title','',v=>{A.addSub(t.id,v);changed('board.changed',{boardId:id})})],
+      ['Edit details…',()=>taskDetails(t,id)],
+      ['Priority ▸',()=>menu(e.clientX+40,e.clientY,PRIOS.map(p=>[(t.priority===p?'● ':'○ ')+p,()=>{t.priority=p;changed('board.changed',{boardId:id})}]),'Priority')],
+      ['Status ▸',()=>menu(e.clientX+40,e.clientY,STATUSES.map(p=>[(t.status===p?'● ':'○ ')+p,()=>{t.status=p;if(p==='done')A.setDone(t.id,true);changed('board.changed',{boardId:id})}]),'Status')],
+      '-',
+      ['Duplicate',()=>{const c=JSON.parse(JSON.stringify(t));c.id=uid('t');c.x+=26;c.y+=26;c.subtasks.forEach(s=>s.id=uid('s'));
+        B().tasks.push(c);Bus.emit('task.created',{boardId:id,task:c});changed('board.changed',{boardId:id})}],
+      ['Move to board…',()=>pickBoard('Move task to…',bid=>{A.moveTaskToBoard(t.id,bid);changed('board.changed',{boardId:id})},id)],
+      ['Make subtask of…',()=>pickTask(id,t.id,other=>{
+        other.subtasks.push({id:uid('s'),title:t.title,done:t.done});A.delTask(t.id);changed('board.changed',{boardId:id})})],
+      '-',
+      ['Delete',()=>{A.delTask(t.id);changed('board.changed',{boardId:id})}],
+    ],t.title);
+  }
+  function noteEl(n){
+    const el=document.createElement('div');el.className='note '+tiltOf(n.id);place(el,n);
+    el.style.background=n.color;el.style.width=(n.w||180)+'px';el.style.minHeight=(n.h||110)+'px';el.style.color='#3a3026';
+    el.innerHTML=\`<div class="nx"></div>\`;$('.nx',el).textContent=n.text;
+    const nx=$('.nx',el);
+    nx.ondblclick=()=>{nx.contentEditable='true';nx.focus();
+      nx.onblur=()=>{nx.contentEditable='false';n.text=nx.textContent;changed('board.changed',{boardId:id})}};
+    el.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();
+      menu(e.clientX,e.clientY,[['Edit text',()=>nx.dispatchEvent(new Event('dblclick'))],
+        ['Colour ▸',()=>menu(e.clientX+40,e.clientY,NOTE_COLORS.map((c,i)=>['Colour '+(i+1),()=>{n.color=c;changed()}]))],
+        ['Bigger',()=>{n.w=(n.w||180)+40;n.h=(n.h||110)+30;changed()}],
+        ['Smaller',()=>{n.w=Math.max(110,(n.w||180)-40);n.h=Math.max(70,(n.h||110)-30);changed()}],
+        ['Delete',()=>{B().notes=B().notes.filter(x=>x.id!==n.id);changed('board.changed',{boardId:id})}]],'Note')};
+    makeDraggable(el,n);return el;
+  }
+  function fileEl(c){
+    const f=A.file(c.fileId);const el=document.createElement('div');el.className='fcard '+tiltOf(c.id);place(el,c);
+    const img=f&&f.type.startsWith('image/');
+    el.innerHTML=\`\${img?\`<img src="\${f.data}" alt="">\`:\`<div class="fbadge">\${f?esc((f.name.split('.').pop()||'file').slice(0,4)):'?'}</div>\`}
+      <div class="fname">\${f?esc(f.name):'missing file'}</div>\`;
+    el.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();
+      menu(e.clientX,e.clientY,[['Open',()=>f&&window.open(f.data,'_blank')],
+        ['Rename…',()=>f&&ask('Rename file','Name',f.name,v=>{f.name=v;changed()})],
+        ['Remove from board',()=>{B().files=B().files.filter(x=>x.id!==c.id);changed('board.changed',{boardId:id})}]],f?f.name:'File')};
+    makeDraggable(el,c);return el;
+  }
+  function subEl(sb,i){
+    const el=document.createElement('div');el.className='bcard '+tiltOf(sb.id);
+    if(sb.bx==null){sb.bx=760;sb.by=60+i*130}
+    el.style.left=sb.bx+'px';el.style.top=sb.by+'px';
+    const s=A.stats(sb.id);
+    el.innerHTML=\`<div style="display:flex;align-items:center;gap:6px;font-family:var(--scrawl);font-size:20px">\${appIcon('boards',18)}<span>\${esc(sb.name)}</span></div>
+      <div class="dim">\${s.done}/\${s.total} done</div><div class="bar" style="margin-top:4px"><i style="width:\${s.pct}%"></i></div>\`;
+    el.ondblclick=()=>openBoard(sb.id);
+    el.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();
+      menu(e.clientX,e.clientY,[['Open',()=>openBoard(sb.id)],
+        ['Rename…',()=>ask('Rename board','Name',sb.name,v=>{sb.name=v;changed('board.changed',{boardId:sb.id})})],
+        ['Delete board',()=>confirmBox('Delete board',\`Delete “\${sb.name}” and everything on it?\`,()=>{A.deleteBoard(sb.id);changed()})]],sb.name)};
+    drag(el,(dx,dy)=>{el.style.left=(el._x+dx/cam().z)+'px';el.style.top=(el._y+dy/cam().z)+'px'},
+      ()=>{el._x=sb.bx;el._y=sb.by},m=>{if(!m)return;sb.bx=parseFloat(el.style.left);sb.by=parseFloat(el.style.top);save()});
+    return el;
+  }
+  holder.addEventListener('contextmenu',e=>{
+    if(e.target.closest('.card,.note,.fcard,.bcard'))return;
+    const p=toBoard(e);
+    menu(e.clientX,e.clientY,[
+      ['New task here',()=>{const t=A.addTask(id,'New task');t.x=p.x;t.y=p.y;changed('board.changed',{boardId:id})}],
+      ['New sticky note here',()=>{const n=A.addNote(id,'');n.x=p.x;n.y=p.y;changed('board.changed',{boardId:id})}],
+      ['New sub-board',()=>newBoardDialog(id)],
+      ['Attach file…',()=>pickFiles(fs=>{fs.forEach(f=>{const c=A.addFileCard(id,f.id);c.x=p.x;c.y=p.y});changed('board.changed',{boardId:id})})],
+      '-',
+      ['New script for this board',()=>{const s=newScript(id);openScriptEditor(s.id)}],
+      ['Scripts on this board',()=>boardScriptsMenu(e,id)],
+      '-',['Arrange in a grid',()=>{Layout.grid(A.objects(B()));changed('board.changed',{boardId:id})}],
+      ['Fit to view',fit],
+    ],B().name);
+  });
+
+  win.api={render,flash(oid){const el=$(\`[data-tid="\${oid}"]\`,canvas)||canvas.querySelector('.card');
+      if(el){el.classList.add('hi');setTimeout(()=>el.classList.remove('hi'),900)}},
+    focus(o){const c=cam();c.x=holder.clientWidth/2-o.x*c.z-100;c.y=holder.clientHeight/2-o.y*c.z-60;applyCam();save()},
+    pan(dx,dy){const c=cam();c.x+=dx;c.y+=dy;applyCam()},
+    zoom(z){cam().z=clamp(z,.2,3);applyCam();renderTool()},boardId:id};
+  render();
+}
+
+/* ---------- shared pickers ---------- */
+function newBoardDialog(parent){
+  modal('New board',\`<label class="fld">Name</label><input type="text" id="_n" value="New board">
+    <label class="fld">Lives inside</label><select id="_p">\${Object.values(S.boards).map(b=>
+      \`<option value="\${b.id}" \${b.id===parent?'selected':''}>\${esc(A.path(b.id).map(x=>x.name).join(' › '))}</option>\`).join('')}
+      <option value="">— top level —</option></select>
+    <label class="fld">Projects</label><div class="row" id="_pr">\${S.projects.length?S.projects.map(p=>
+      \`<button class="tag" data-p="\${p.id}">\${esc(p.name)}</button>\`).join(''):'<span class="dim">No projects yet.</span>'}</div>\`,
+    [['Cancel',null],['Create board',b=>{
+      const nm=$('#_n',b).value.trim()||'New board',pa=$('#_p',b).value||null;
+      const pr=$$('#_pr .tag.on',b).map(x=>x.dataset.p);
+      const nb=A.createBoard(nm,pa,pr);changed();openBoard(nb.id);},1]],
+    b=>{$$('#_pr .tag',b).forEach(t=>t.onclick=()=>t.classList.toggle('on'))});
+}
+function pickBoard(title,cb,exclude){
+  menu(innerWidth/2-120,120,Object.values(S.boards).filter(b=>b.id!==exclude)
+    .map(b=>[A.path(b.id).map(x=>x.name).join(' › '),()=>cb(b.id)]),title);
+}
+function pickTask(boardId,exclude,cb){
+  const b=A.board(boardId),list=b.tasks.filter(t=>t.id!==exclude);
+  if(!list.length)return toast('No other tasks on this board.');
+  menu(innerWidth/2-120,120,list.map(t=>[t.title,()=>cb(t)]),'Choose a task');
+}
+function pickFiles(cb){
+  const inp=document.createElement('input');inp.type='file';inp.multiple=true;
+  inp.onchange=()=>{const out=[],list=[...inp.files];let left=list.length;
+    if(!left)return;
+    list.forEach(f=>{
+      if(f.size>1_800_000){toast(\`\${f.name} is too big to store (1.8 MB max).\`);if(!--left&&out.length)cb(out);return}
+      const r=new FileReader();
+      r.onload=()=>{const rec={id:uid('f'),name:f.name,type:f.type||'application/octet-stream',size:f.size,data:r.result,added:Date.now()};
+        S.files.push(rec);out.push(rec);if(!--left)cb(out);};
+      r.readAsDataURL(f);});};
+  inp.click();
+}
+function taskDetails(t,boardId){
+  modal('Task details',\`<label class="fld">Title</label><input type="text" id="_t" value="\${esc(t.title)}">
+    <label class="fld">Description</label><textarea id="_d" rows="3">\${esc(t.desc)}</textarea>
+    <div class="row"><div style="flex:1"><label class="fld">Priority</label>
+      <select id="_p">\${PRIOS.map(p=>\`<option \${t.priority===p?'selected':''}>\${p}</option>\`).join('')}</select></div>
+      <div style="flex:1"><label class="fld">Status</label>
+      <select id="_s">\${STATUSES.map(p=>\`<option \${t.status===p?'selected':''}>\${p}</option>\`).join('')}</select></div></div>
+    <label class="fld">Deadline</label><input type="date" id="_dl" value="\${t.deadline||''}">
+    <label class="fld">Tags (comma separated)</label><input type="text" id="_g" value="\${esc(t.tags.join(', '))}">\`,
+    [['Cancel',null],['Save task',b=>{
+      const nv=$('#_t',b).value.trim();if(nv&&nv!==t.title)A.rename(t.id,nv);
+      t.desc=$('#_d',b).value;t.priority=$('#_p',b).value;t.status=$('#_s',b).value;
+      t.deadline=$('#_dl',b).value;t.tags=$('#_g',b).value.split(',').map(s=>s.trim()).filter(Boolean);
+      if(t.status==='done')A.setDone(t.id,true);
+      changed('board.changed',{boardId});},1]]);
+}
+</script>
+<script>
+/* ============================ node registry ============================ */
+const NODES={};
+const CATS=['Events','Board','Task','Query','Sort','Layout','Logic','Data','Notes','Files','Projects','Calendar','Ask','Visual','Script'];
+function def(o){o.ins||=[];o.outs||=[];o.params||=[];NODES[o.t]=o;return o}
+const X=(id,l)=>({id,l,x:true});
+const P=(id,l)=>({id,l});
+const toItems=(list,k='task')=>list.map(o=>({o,k}));
+const asArr=v=>Array.isArray(v)?v:(v==null?[]:[v]);
+const num=v=>{const n=parseFloat(v);return isNaN(n)?0:n};
+function tomorrowISO(){const d=new Date();d.setDate(d.getDate()+1);return d.toISOString().slice(0,10)}
+
+/* ---------- events ---------- */
+const EVENTS=[
+  ['ev.boardOpened','Board Opened','board.opened'],['ev.boardChanged','Board Changed','board.changed'],
+  ['ev.taskCreated','Task Created','task.created'],['ev.taskCompleted','Task Completed','task.completed'],
+  ['ev.taskUncompleted','Task Uncompleted','task.uncompleted'],['ev.taskMoved','Task Moved','task.moved'],
+  ['ev.taskRenamed','Task Renamed','task.renamed'],['ev.taskDeleted','Task Deleted','task.deleted'],
+  ['ev.subCreated','Subtask Created','subtask.created'],['ev.noteCreated','Note Created','note.created'],
+  ['ev.fileAttached','File Attached','file.attached'],['ev.boardCreated','Board Created','board.created'],
+  ['ev.projectChanged','Project Changed','project.changed'],['ev.manual','Manual Run','script.manual'],
+  ['ev.enabled','Script Enabled','script.enabled'],['ev.disabled','Script Disabled','script.disabled'],
+  ['ev.eventCreated','Calendar Event Created','cal.created'],['ev.eventStarting','Event Starting','cal.starting'],
+  ['ev.eventFinished','Event Finished','cal.finished'],
+];
+EVENTS.forEach(([t,title,sig])=>def({t,cat:'Events',title,ev:sig,
+  outs:[X('out','when'),P('task','task'),P('board','board')],
+  run:C=>({next:'out'}),data:C=>({task:C.payload.task||null,board:C.payload.boardId?A.board(C.payload.boardId):C.board()})}));
+def({t:'ev.timer',cat:'Events',title:'Timer',ev:'timer',params:[{id:'sec',l:'Every N seconds',k:'num',d:60}],
+  outs:[X('out','when')],run:()=>({next:'out'})});
+def({t:'ev.interval',cat:'Events',title:'Recurring Interval',ev:'interval',params:[{id:'min',l:'Every N minutes',k:'num',d:15}],
+  outs:[X('out','when')],run:()=>({next:'out'})});
+def({t:'ev.at',cat:'Events',title:'Scheduled Time',ev:'at',params:[{id:'time',l:'At time',k:'time',d:'09:00'}],
+  outs:[X('out','when')],run:()=>({next:'out'})});
+def({t:'ev.morning',cat:'Events',title:'Every Morning',ev:'at',params:[{id:'time',l:'At time',k:'time',d:'08:00'}],
+  outs:[X('out','when')],run:()=>({next:'out'})});
+def({t:'ev.weekly',cat:'Events',title:'Every Monday',ev:'weekly',
+  params:[{id:'day',l:'Day',k:'sel',o:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],d:'Monday'},{id:'time',l:'At',k:'time',d:'08:00'}],
+  outs:[X('out','when')],run:()=>({next:'out'})});
+def({t:'ev.custom',cat:'Events',title:'Custom Event',ev:'custom',params:[{id:'name',l:'Event name',k:'text',d:'ping'}],
+  outs:[X('out','when'),P('data','data')],run:()=>({next:'out'}),data:C=>({data:C.payload.data??null})});
+
+/* ---------- board ---------- */
+def({t:'b.current',cat:'Board',title:'Get Current Board',pure:1,outs:[P('board','board'),P('name','name')],
+  run:C=>{const b=C.board();return{board:b,name:b?b.name:''}}});
+def({t:'b.get',cat:'Board',title:'Get Board',pure:1,params:[{id:'name',l:'Board name',k:'text'}],outs:[P('board','board')],
+  run:(C,I,p)=>({board:Object.values(S.boards).find(b=>b.name.toLowerCase()===String(p.name||'').toLowerCase())||null})});
+def({t:'b.create',cat:'Board',title:'Create Board',ins:[X('in'),P('name','name')],outs:[X('out'),P('board','board')],
+  params:[{id:'name',l:'Name',k:'text',d:'New board'},{id:'child',l:'Inside current board',k:'check',d:true}],
+  run:(C,I,p)=>{if(!C.can('boards'))return C.deny('create boards');
+    const b=C.mut(()=>A.createBoard(I.name||p.name,p.child?C.boardId:null),{name:I.name||p.name});
+    C.plan('Create 1 board');return{next:'out',out:{board:b}}}});
+def({t:'b.delete',cat:'Board',title:'Delete Board',ins:[X('in'),P('board','board')],outs:[X('out')],
+  run:(C,I)=>{const b=I.board;if(!b)return{next:'out'};
+    if(!C.can('boards')||!C.can('delete'))return C.deny('delete boards');
+    C.plan('Delete board “'+b.name+'”');C.mut(()=>A.deleteBoard(b.id));return{next:'out'}}});
+def({t:'b.rename',cat:'Board',title:'Rename Board',ins:[X('in'),P('board','board'),P('name','name')],outs:[X('out')],
+  params:[{id:'name',l:'New name',k:'text'}],
+  run:(C,I,p)=>{const b=I.board||C.board();if(b&&C.can('boards')){C.plan('Rename board');C.mut(()=>b.name=String(I.name??p.name??b.name))}return{next:'out'}}});
+def({t:'b.move',cat:'Board',title:'Move Board',ins:[X('in'),P('board','board'),P('parent','into')],outs:[X('out')],
+  run:(C,I)=>{const b=I.board||C.board();if(b&&I.parent&&C.can('boards'))C.mut(()=>b.parent=I.parent.id);return{next:'out'}}});
+def({t:'b.dup',cat:'Board',title:'Duplicate Board',ins:[X('in'),P('board','board')],outs:[X('out'),P('board','copy')],
+  run:(C,I)=>{const b=I.board||C.board();const c=C.can('boards')?C.mut(()=>A.dupBoard(b.id)):null;
+    C.plan('Duplicate a board');return{next:'out',out:{board:c}}}});
+def({t:'b.parent',cat:'Board',title:'Get Parent Board',pure:1,ins:[P('board','board')],outs:[P('board','parent')],
+  run:(C,I)=>({board:A.parent((I.board||C.board()).id)})});
+def({t:'b.children',cat:'Board',title:'Get Child Boards',pure:1,ins:[P('board','board')],outs:[P('list','boards'),P('count','count')],
+  run:(C,I)=>{const l=A.children((I.board||C.board()).id);return{list:l,count:l.length}}});
+def({t:'b.tags',cat:'Board',title:'Get Project Tags',pure:1,ins:[P('board','board')],outs:[P('list','tags')],
+  run:(C,I)=>({list:(I.board||C.board()).projects.map(A.projName)})});
+def({t:'b.addTag',cat:'Board',title:'Add Project Tag',ins:[X('in'),P('board','board')],outs:[X('out')],
+  params:[{id:'name',l:'Project',k:'proj'}],
+  run:(C,I,p)=>{const b=I.board||C.board(),pr=S.projects.find(x=>x.id===p.name||x.name===p.name);
+    if(b&&pr&&!b.projects.includes(pr.id))C.mut(()=>b.projects.push(pr.id));return{next:'out'}}});
+def({t:'b.rmTag',cat:'Board',title:'Remove Project Tag',ins:[X('in'),P('board','board')],outs:[X('out')],
+  params:[{id:'name',l:'Project',k:'proj'}],
+  run:(C,I,p)=>{const b=I.board||C.board(),pr=S.projects.find(x=>x.id===p.name||x.name===p.name);
+    if(b&&pr)C.mut(()=>b.projects=b.projects.filter(x=>x!==pr.id));return{next:'out'}}});
+def({t:'b.stats',cat:'Board',title:'Board Statistics',pure:1,ins:[P('board','board')],
+  outs:[P('done','done'),P('total','total'),P('pct','percent')],
+  run:(C,I)=>{const s=A.stats((I.board||C.board()).id);return{done:s.done,total:s.total,pct:s.pct}}});
+
+/* ---------- task getters ---------- */
+const GETTERS=[
+  ['t.all','All Tasks',ts=>ts],['t.done','Completed Tasks',ts=>ts.filter(t=>t.done)],
+  ['t.open','Incomplete Tasks',ts=>ts.filter(t=>!t.done)],
+  ['t.overdue','Overdue Tasks',ts=>ts.filter(A.isOverdue)],
+  ['t.today','Tasks Due Today',ts=>ts.filter(t=>t.deadline===todayISO())],
+  ['t.tomorrow','Tasks Due Tomorrow',ts=>ts.filter(t=>t.deadline===tomorrowISO())],
+  ['t.nodl','Tasks Without Deadlines',ts=>ts.filter(t=>!t.deadline)],
+];
+GETTERS.forEach(([t,title,fn])=>def({t,cat:'Task',title,pure:1,ins:[P('board','board')],
+  outs:[P('list','tasks'),P('count','count')],
+  run:(C,I)=>{const b=I.board||C.board();const l=fn(b?b.tasks.slice():[]);return{list:l,count:l.length}}}));
+def({t:'t.tagged',cat:'Task',title:'Tasks With Tag',pure:1,ins:[P('board','board')],params:[{id:'tag',l:'Tag',k:'text'}],
+  outs:[P('list','tasks')],run:(C,I,p)=>({list:(I.board||C.board()).tasks.filter(t=>t.tags.includes(p.tag))})});
+def({t:'t.project',cat:'Task',title:'Get Project Tasks',pure:1,params:[{id:'name',l:'Project',k:'proj'}],
+  outs:[P('list','tasks'),P('count','count')],
+  run:(C,I,p)=>{const pr=S.projects.find(x=>x.id===p.name||x.name===p.name);
+    const l=pr?Object.values(S.boards).filter(b=>b.projects.includes(pr.id)).flatMap(b=>b.tasks):[];
+    return{list:l,count:l.length}}});
+def({t:'t.allBoards',cat:'Task',title:'Tasks Across All Boards',pure:1,outs:[P('list','tasks'),P('count','count')],
+  run:()=>{const l=Object.values(S.boards).flatMap(b=>b.tasks);return{list:l,count:l.length}}});
+
+/* ---------- task actions ---------- */
+def({t:'t.create',cat:'Task',title:'Create Task',ins:[X('in'),P('title','title'),P('board','board')],
+  outs:[X('out'),P('task','task')],params:[{id:'title',l:'Title',k:'text',d:'New task'},{id:'prio',l:'Priority',k:'sel',o:PRIOS,d:'normal'}],
+  run:(C,I,p)=>{if(!C.can('tasks'))return C.deny('create tasks');
+    const b=I.board||C.board();C.plan('Create 1 task');
+    const t=C.mut(()=>A.addTask(b.id,String(I.title??p.title),{priority:p.prio}),{title:I.title??p.title});
+    return{next:'out',out:{task:t}}}});
+def({t:'t.delete',cat:'Task',title:'Delete Task',ins:[X('in'),P('task','task')],outs:[X('out')],
+  run:(C,I)=>{const list=asArr(I.task);if(!C.can('tasks')||!C.can('delete'))return C.deny('delete tasks');
+    C.plan(\`Delete \${list.length} task(s)\`);C.mut(()=>list.forEach(t=>t&&A.delTask(t.id)));return{next:'out'}}});
+def({t:'t.dup',cat:'Task',title:'Duplicate Task',ins:[X('in'),P('task','task')],outs:[X('out'),P('task','copy')],
+  run:(C,I)=>{const t=asArr(I.task)[0];let c=null;
+    if(t&&C.can('tasks'))c=C.mut(()=>{const f=A.findTask(t.id);const n=JSON.parse(JSON.stringify(t));n.id=uid('t');n.x+=24;n.y+=24;
+      f.board.tasks.push(n);Bus.emit('task.created',{boardId:f.board.id,task:n});return n});
+    return{next:'out',out:{task:c}}}});
+def({t:'t.rename',cat:'Task',title:'Rename Task',ins:[X('in'),P('task','task'),P('name','name')],outs:[X('out')],
+  params:[{id:'name',l:'New name',k:'text'}],
+  run:(C,I,p)=>{asArr(I.task).forEach(t=>t&&C.can('tasks')&&C.mut(()=>A.rename(t.id,String(I.name??p.name))));
+    C.plan('Rename task(s)');return{next:'out'}}});
+def({t:'t.complete',cat:'Task',title:'Complete Task',ins:[X('in'),P('task','task')],outs:[X('out')],
+  run:(C,I)=>{const l=asArr(I.task);C.plan(\`Complete \${l.length} task(s)\`);
+    if(C.can('tasks'))C.mut(()=>l.forEach(t=>t&&A.setDone(t.id,true)));return{next:'out'}}});
+def({t:'t.uncomplete',cat:'Task',title:'Uncomplete Task',ins:[X('in'),P('task','task')],outs:[X('out')],
+  run:(C,I)=>{const l=asArr(I.task);if(C.can('tasks'))C.mut(()=>l.forEach(t=>t&&A.setDone(t.id,false)));return{next:'out'}}});
+def({t:'t.toBoard',cat:'Task',title:'Move Task to Board',ins:[X('in'),P('task','task'),P('board','board')],outs:[X('out')],
+  params:[{id:'name',l:'Board name (if unlinked)',k:'text'}],
+  run:(C,I,p)=>{const l=asArr(I.task);
+    const to=I.board||Object.values(S.boards).find(b=>b.name.toLowerCase()===String(p.name||'').toLowerCase());
+    if(!to)return{next:'out'};C.plan(\`Move \${l.length} task(s) to “\${to.name}”\`);
+    if(C.can('tasks'))C.mut(()=>l.forEach(t=>t&&A.moveTaskToBoard(t.id,to.id)));return{next:'out'}}});
+def({t:'t.sub',cat:'Task',title:'Create Subtask',ins:[X('in'),P('task','task'),P('title','title')],outs:[X('out')],
+  params:[{id:'title',l:'Title',k:'text',d:'Subtask'}],
+  run:(C,I,p)=>{asArr(I.task).forEach(t=>t&&C.mut(()=>A.addSub(t.id,String(I.title??p.title))));return{next:'out'}}});
+def({t:'t.rmSub',cat:'Task',title:'Remove Subtasks',ins:[X('in'),P('task','task')],outs:[X('out')],
+  params:[{id:'only',l:'Only completed',k:'check',d:true}],
+  run:(C,I,p)=>{asArr(I.task).forEach(t=>t&&C.mut(()=>t.subtasks=p.only?t.subtasks.filter(s=>!s.done):[]));return{next:'out'}}});
+def({t:'t.prio',cat:'Task',title:'Set Priority',ins:[X('in'),P('task','task')],outs:[X('out')],
+  params:[{id:'v',l:'Priority',k:'sel',o:PRIOS,d:'high'}],
+  run:(C,I,p)=>{const l=asArr(I.task);C.plan(\`Set priority on \${l.length} task(s)\`);
+    C.mut(()=>l.forEach(t=>t&&(t.priority=p.v)));return{next:'out'}}});
+def({t:'t.status',cat:'Task',title:'Set Status',ins:[X('in'),P('task','task')],outs:[X('out')],
+  params:[{id:'v',l:'Status',k:'sel',o:STATUSES,d:'doing'}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.task).forEach(t=>t&&(t.status=p.v)));return{next:'out'}}});
+def({t:'t.desc',cat:'Task',title:'Set Description',ins:[X('in'),P('task','task'),P('text','text')],outs:[X('out')],
+  params:[{id:'text',l:'Description',k:'text'}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.task).forEach(t=>t&&(t.desc=String(I.text??p.text??''))));return{next:'out'}}});
+def({t:'t.deadline',cat:'Task',title:'Set Deadline',ins:[X('in'),P('task','task'),P('date','date')],outs:[X('out')],
+  params:[{id:'date',l:'Date',k:'date'},{id:'rel',l:'Or relative',k:'sel',o:['—','today','tomorrow','+7 days'],d:'—'}],
+  run:(C,I,p)=>{let d=I.date||p.date||'';
+    if(p.rel==='today')d=todayISO();else if(p.rel==='tomorrow')d=tomorrowISO();
+    else if(p.rel==='+7 days'){const x=new Date();x.setDate(x.getDate()+7);d=x.toISOString().slice(0,10)}
+    C.mut(()=>asArr(I.task).forEach(t=>t&&(t.deadline=d)));return{next:'out'}}});
+def({t:'t.addTag',cat:'Task',title:'Add Tag',ins:[X('in'),P('task','task')],outs:[X('out')],params:[{id:'tag',l:'Tag',k:'text'}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.task).forEach(t=>t&&!t.tags.includes(p.tag)&&t.tags.push(p.tag)));return{next:'out'}}});
+def({t:'t.rmTag',cat:'Task',title:'Remove Tag',ins:[X('in'),P('task','task')],outs:[X('out')],params:[{id:'tag',l:'Tag',k:'text'}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.task).forEach(t=>t&&(t.tags=t.tags.filter(g=>g!==p.tag))));return{next:'out'}}});
+def({t:'t.sync',cat:'Task',title:'Sync Task States',ins:[X('in'),P('task','task')],outs:[X('out')],
+  params:[{id:'by',l:'Match tasks elsewhere by',k:'sel',o:['same title'],d:'same title'}],
+  run:(C,I)=>{asArr(I.task).forEach(t=>{if(!t)return;
+    Object.values(S.boards).forEach(b=>b.tasks.forEach(o=>{
+      if(o.id!==t.id&&o.title===t.title&&o.done!==t.done)C.mut(()=>A.setDone(o.id,t.done))}))});
+    C.plan('Synchronise matching tasks');return{next:'out'}}});
+
+/* ---------- query ---------- */
+const OPS=['equals','does not equal','greater than','less than','greater or equal','less or equal','contains','starts with','is empty','exists'];
+function cmp(v,op,b){
+  const sv=v==null?'':String(v).toLowerCase(),sb=String(b??'').toLowerCase();
+  switch(op){
+    case 'equals':return sv===sb;case 'does not equal':return sv!==sb;
+    case 'greater than':return num(v)>num(b);case 'less than':return num(v)<num(b);
+    case 'greater or equal':return num(v)>=num(b);case 'less or equal':return num(v)<=num(b);
+    case 'contains':return sv.includes(sb);case 'starts with':return sv.startsWith(sb);
+    case 'is empty':return sv==='';case 'exists':return sv!=='';}
   return false;
 }
+const FIELDS=['title','done','priority','status','deadline','tags','description','subtask count','overdue'];
+function fieldOf(t,f){switch(f){case 'title':return t.title;case 'done':return t.done?'true':'false';
+  case 'priority':return t.priority;case 'status':return t.status;case 'deadline':return t.deadline;
+  case 'tags':return (t.tags||[]).join(',');case 'description':return t.desc;
+  case 'subtask count':return (t.subtasks||[]).length;case 'overdue':return A.isOverdue(t)?'true':'false';}return ''}
+def({t:'q.filter',cat:'Query',title:'Filter',pure:1,ins:[P('list','list')],outs:[P('list','matches'),P('count','count'),P('rest','rejected')],
+  params:[{id:'f',l:'Field',k:'sel',o:FIELDS,d:'title'},{id:'op',l:'Condition',k:'sel',o:OPS,d:'contains'},{id:'v',l:'Value',k:'text'}],
+  run:(C,I,p)=>{const l=asArr(I.list),m=l.filter(t=>cmp(fieldOf(t,p.f),p.op,p.v));
+    return{list:m,count:m.length,rest:l.filter(t=>!m.includes(t))}}});
+def({t:'q.and',cat:'Query',title:'AND',pure:1,ins:[P('a','a'),P('b','b')],outs:[P('v','result')],
+  run:(C,I)=>({v:!!truthy(I.a)&&!!truthy(I.b)})});
+def({t:'q.or',cat:'Query',title:'OR',pure:1,ins:[P('a','a'),P('b','b')],outs:[P('v','result')],
+  run:(C,I)=>({v:!!truthy(I.a)||!!truthy(I.b)})});
+def({t:'q.not',cat:'Query',title:'NOT',pure:1,ins:[P('a','value')],outs:[P('v','result')],run:(C,I)=>({v:!truthy(I.a)})});
+def({t:'q.compare',cat:'Query',title:'Compare',pure:1,ins:[P('a','a'),P('b','b')],outs:[P('v','result')],
+  params:[{id:'op',l:'Condition',k:'sel',o:OPS,d:'equals'},{id:'b',l:'…value',k:'text'}],
+  run:(C,I,p)=>({v:cmp(I.a,p.op,I.b??p.b)})});
+def({t:'q.intersect',cat:'Query',title:'Both Lists (AND)',pure:1,ins:[P('a','list a'),P('b','list b')],outs:[P('list','list')],
+  run:(C,I)=>({list:asArr(I.a).filter(x=>asArr(I.b).includes(x))})});
+function truthy(v){return Array.isArray(v)?v.length>0:!!v&&v!=='false'}
 
-function buildTaskTree(items) {
-  const byId = new Map();
-  items.forEach((it) => byId.set(it.id, { ...it, children: [] }));
-  const roots = [];
-  items.forEach((it) => {
-    const node = byId.get(it.id);
-    if (it.parentId && byId.has(it.parentId)) {
-      byId.get(it.parentId).children.push(node);
-    } else {
-      roots.push(node);
+/* ---------- sort ---------- */
+const SORTK=['name','priority','deadline','creation date','completion status','status','tags','subtask count'];
+function sortKey(t,k){switch(k){case 'name':return (t.title||'').toLowerCase();
+  case 'priority':return PRIOS.indexOf(t.priority);case 'deadline':return t.deadline||'9999';
+  case 'creation date':return t.created||0;case 'completion status':return t.done?1:0;
+  case 'status':return STATUSES.indexOf(t.status);case 'tags':return (t.tags||[]).join(',');
+  case 'subtask count':return (t.subtasks||[]).length;}return 0}
+def({t:'s.sort',cat:'Sort',title:'Sort',pure:1,ins:[P('list','list')],outs:[P('list','sorted')],
+  params:[{id:'k',l:'By',k:'sel',o:SORTK,d:'priority'},{id:'dir',l:'Order',k:'sel',o:['ascending','descending'],d:'descending'}],
+  run:(C,I,p)=>{const l=asArr(I.list).slice().sort((a,b)=>{const x=sortKey(a,p.k),y=sortKey(b,p.k);
+      return x<y?-1:x>y?1:0});if(p.dir==='descending')l.reverse();return{list:l}}});
+def({t:'s.group',cat:'Sort',title:'Group By',pure:1,ins:[P('list','list')],outs:[P('groups','groups'),P('count','groups #')],
+  params:[{id:'k',l:'Field',k:'sel',o:FIELDS,d:'priority'}],
+  run:(C,I,p)=>{const g={};asArr(I.list).forEach(t=>{(g[fieldOf(t,p.k)]||=[]).push(t)});
+    return{groups:Object.entries(g).map(([k,v])=>({key:k,items:v})),count:Object.keys(g).length}}});
+def({t:'s.unique',cat:'Sort',title:'Unique',pure:1,ins:[P('list','list')],outs:[P('list','list')],
+  params:[{id:'k',l:'By field',k:'sel',o:FIELDS,d:'title'}],
+  run:(C,I,p)=>{const seen=new Set(),out=[];asArr(I.list).forEach(t=>{const k=fieldOf(t,p.k);
+    if(!seen.has(k)){seen.add(k);out.push(t)}});return{list:out}}});
+
+/* ---------- layout ---------- */
+const LAYOUTS=[['l.grid','Arrange Grid','grid'],['l.rows','Arrange Rows','rows'],['l.cols','Arrange Columns','columns'],
+ ['l.vert','Arrange Vertically','vertical'],['l.horiz','Arrange Horizontally','horizontal'],
+ ['l.circle','Arrange Circle','circle'],['l.spiral','Arrange Spiral','spiral'],['l.stack','Stack','stack'],['l.pack','Pack','pack']];
+LAYOUTS.forEach(([t,title,fn])=>def({t,cat:'Layout',title,ins:[X('in'),P('list','items')],outs:[X('out')],
+  params:[{id:'x',l:'Start X',k:'num',d:60},{id:'y',l:'Start Y',k:'num',d:60},{id:'cols',l:'Columns / gap',k:'num',d:0}],
+  run:(C,I,p)=>{const l=asArr(I.list);if(!l.length)return{next:'out'};
+    C.plan(\`Rearrange \${l.length} card(s)\`);
+    C.mut(()=>Layout[fn](toItems(l),{x:num(p.x),y:num(p.y),cols:num(p.cols)||undefined,gap:num(p.cols)||undefined}));
+    C.touch();return{next:'out'}}}));
+def({t:'l.align',cat:'Layout',title:'Align',ins:[X('in'),P('list','items')],outs:[X('out')],
+  params:[{id:'how',l:'Edge',k:'sel',o:['left','right','top','bottom','middle'],d:'left'}],
+  run:(C,I,p)=>{C.mut(()=>Layout.align(toItems(asArr(I.list)),{how:p.how}));C.touch();return{next:'out'}}});
+def({t:'l.dist',cat:'Layout',title:'Distribute',ins:[X('in'),P('list','items')],outs:[X('out')],
+  params:[{id:'axis',l:'Axis',k:'sel',o:['x','y'],d:'x'}],
+  run:(C,I,p)=>{C.mut(()=>Layout.distribute(toItems(asArr(I.list)),{axis:p.axis}));C.touch();return{next:'out'}}});
+def({t:'l.move',cat:'Layout',title:'Move Object',ins:[X('in'),P('obj','object')],outs:[X('out')],
+  params:[{id:'x',l:'X',k:'num',d:80},{id:'y',l:'Y',k:'num',d:80},{id:'rel',l:'Relative',k:'check',d:false}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.obj).forEach(o=>{if(!o)return;
+    o.x=p.rel?o.x+num(p.x):num(p.x);o.y=p.rel?o.y+num(p.y):num(p.y)}));C.touch();return{next:'out'}}});
+def({t:'l.resize',cat:'Layout',title:'Resize Note',ins:[X('in'),P('obj','note')],outs:[X('out')],
+  params:[{id:'w',l:'Width',k:'num',d:200},{id:'h',l:'Height',k:'num',d:140}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.obj).forEach(o=>{if(o){o.w=num(p.w);o.h=num(p.h)}}));C.touch();return{next:'out'}}});
+def({t:'l.urgent',cat:'Layout',title:'Move to Urgent Area',ins:[X('in'),P('list','tasks')],outs:[X('out')],
+  run:(C,I)=>{const l=asArr(I.list);C.plan(\`Move \${l.length} task(s) to the urgent corner\`);
+    C.mut(()=>Layout.vertical(toItems(l),{x:-260,y:60,gap:140}));C.touch();return{next:'out'}}});
+
+/* ---------- logic ---------- */
+def({t:'x.if',cat:'Logic',title:'If / Else',ins:[X('in'),P('cond','condition')],outs:[X('then','then'),X('else','else')],
+  run:(C,I)=>({next:truthy(I.cond)?'then':'else'})});
+def({t:'x.switch',cat:'Logic',title:'Switch / Case',ins:[X('in'),P('v','value')],
+  outs:[X('a','case A'),X('b','case B'),X('c','case C'),X('out','default')],
+  params:[{id:'a',l:'Case A',k:'text'},{id:'b',l:'Case B',k:'text'},{id:'c',l:'Case C',k:'text'}],
+  run:(C,I,p)=>{const v=String(I.v??'').toLowerCase();
+    return{next:v===String(p.a??'').toLowerCase()?'a':v===String(p.b??'').toLowerCase()?'b':v===String(p.c??'').toLowerCase()?'c':'out'}}});
+def({t:'x.foreach',cat:'Logic',title:'For Each',ins:[X('in'),P('list','list')],
+  outs:[X('body','each'),X('out','after'),P('item','item'),P('i','index')],loop:'list',
+  run:()=>({next:'out'})});
+def({t:'x.repeat',cat:'Logic',title:'Repeat',ins:[X('in')],outs:[X('body','each'),X('out','after'),P('i','index')],
+  params:[{id:'n',l:'Times',k:'num',d:3}],loop:'count',run:()=>({next:'out'})});
+def({t:'x.while',cat:'Logic',title:'While',ins:[X('in'),P('cond','condition')],outs:[X('body','each'),X('out','after')],
+  loop:'while',run:()=>({next:'out'})});
+def({t:'x.delay',cat:'Logic',title:'Delay',ins:[X('in')],outs:[X('out')],params:[{id:'ms',l:'Milliseconds',k:'num',d:400}],
+  run:async(C,I,p)=>{if(!C.dry)await new Promise(r=>setTimeout(r,clamp(num(p.ms),0,5000)));return{next:'out'}}});
+def({t:'x.wait',cat:'Logic',title:'Wait Seconds',ins:[X('in')],outs:[X('out')],params:[{id:'s',l:'Seconds',k:'num',d:1}],
+  run:async(C,I,p)=>{if(!C.dry)await new Promise(r=>setTimeout(r,clamp(num(p.s)*1000,0,10000)));return{next:'out'}}});
+def({t:'x.stop',cat:'Logic',title:'Stop',ins:[X('in')],outs:[],run:C=>{C.log('Stopped.');return{stop:true}}});
+def({t:'x.log',cat:'Logic',title:'Log Message',ins:[X('in'),P('v','value')],outs:[X('out')],
+  params:[{id:'m',l:'Message',k:'text',d:'…'}],
+  run:(C,I,p)=>{C.log(String(p.m)+(I.v!==undefined?' → '+fmt(I.v):''));return{next:'out'}}});
+
+/* ---------- data ---------- */
+function fmt(v){if(v==null)return '—';if(Array.isArray(v))return \`[\${v.length} item\${v.length===1?'':'s'}]\`;
+  if(typeof v==='object')return v.title||v.name||'{object}';return String(v)}
+def({t:'d.text',cat:'Data',title:'Text',pure:1,outs:[P('v','text')],params:[{id:'v',l:'Value',k:'text',d:''}],run:(C,I,p)=>({v:String(p.v??'')})});
+def({t:'d.num',cat:'Data',title:'Number',pure:1,outs:[P('v','number')],params:[{id:'v',l:'Value',k:'num',d:0}],run:(C,I,p)=>({v:num(p.v)})});
+def({t:'d.bool',cat:'Data',title:'Boolean',pure:1,outs:[P('v','value')],params:[{id:'v',l:'True',k:'check',d:true}],run:(C,I,p)=>({v:!!p.v})});
+def({t:'d.date',cat:'Data',title:'Date',pure:1,outs:[P('v','date')],
+  params:[{id:'mode',l:'Which',k:'sel',o:['today','tomorrow','fixed'],d:'today'},{id:'v',l:'Fixed date',k:'date'}],
+  run:(C,I,p)=>({v:p.mode==='today'?todayISO():p.mode==='tomorrow'?tomorrowISO():(p.v||todayISO())})});
+def({t:'d.time',cat:'Data',title:'Time Now',pure:1,outs:[P('v','time'),P('hour','hour'),P('weekday','weekday')],
+  run:()=>{const d=new Date();return{v:d.toTimeString().slice(0,5),hour:d.getHours(),
+    weekday:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()]}}});
+def({t:'d.get',cat:'Data',title:'Get Property',pure:1,ins:[P('obj','object')],outs:[P('v','value')],
+  params:[{id:'f',l:'Field',k:'sel',o:FIELDS,d:'title'}],
+  run:(C,I,p)=>{const o=Array.isArray(I.obj)?I.obj[0]:I.obj;return{v:o?fieldOf(o,p.f):''}}});
+def({t:'d.var.get',cat:'Data',title:'Get Variable',pure:1,outs:[P('v','value')],params:[{id:'n',l:'Name',k:'text',d:'count'}],
+  run:(C,I,p)=>({v:C.vars[p.n]})});
+def({t:'d.var.set',cat:'Data',title:'Set Variable',ins:[X('in'),P('v','value')],outs:[X('out')],
+  params:[{id:'n',l:'Name',k:'text',d:'count'},{id:'v',l:'Fallback value',k:'text'}],
+  run:(C,I,p)=>{C.vars[p.n]=I.v!==undefined?I.v:p.v;return{next:'out'}}});
+const AGG=[['d.count','Count',l=>l.length],['d.sum','Sum',l=>l.reduce((a,b)=>a+num(b),0)],
+  ['d.avg','Average',l=>l.length?l.reduce((a,b)=>a+num(b),0)/l.length:0],
+  ['d.min','Minimum',l=>l.length?Math.min(...l.map(num)):0],['d.max','Maximum',l=>l.length?Math.max(...l.map(num)):0]];
+AGG.forEach(([t,title,fn])=>def({t,cat:'Data',title,pure:1,ins:[P('list','list')],outs:[P('v','value')],
+  params:t==='d.count'?[]:[{id:'f',l:'Field',k:'sel',o:FIELDS,d:'subtask count'}],
+  run:(C,I,p)=>({v:fn(asArr(I.list).map(x=>p&&p.f?fieldOf(x,p.f):x))})}));
+def({t:'d.math',cat:'Data',title:'Maths',pure:1,ins:[P('a','a'),P('b','b')],outs:[P('v','result')],
+  params:[{id:'op',l:'Operation',k:'sel',o:['+','−','×','÷','%'],d:'+'},{id:'b',l:'…or b',k:'num',d:0}],
+  run:(C,I,p)=>{const a=num(I.a),b=I.b!==undefined?num(I.b):num(p.b);
+    return{v:p.op==='+'?a+b:p.op==='−'?a-b:p.op==='×'?a*b:p.op==='÷'?(b?a/b:0):(b?a%b:0)}}});
+def({t:'d.format',cat:'Data',title:'Format Text',pure:1,ins:[P('a','a'),P('b','b')],outs:[P('v','text')],
+  params:[{id:'tpl',l:'Template ({a} {b})',k:'text',d:'{a} of {b}'}],
+  run:(C,I,p)=>({v:String(p.tpl).replace(/\\{a\\}/g,fmt(I.a)).replace(/\\{b\\}/g,fmt(I.b))})});
+def({t:'d.merge',cat:'Data',title:'Merge Lists',pure:1,ins:[P('a','a'),P('b','b')],outs:[P('list','list')],
+  run:(C,I)=>({list:[...asArr(I.a),...asArr(I.b)]})});
+def({t:'d.split',cat:'Data',title:'Split Text',pure:1,ins:[P('v','text')],outs:[P('list','parts')],
+  params:[{id:'sep',l:'Separator',k:'text',d:','}],
+  run:(C,I,p)=>({list:String(I.v??'').split(p.sep||',').map(s=>s.trim())})});
+def({t:'d.replace',cat:'Data',title:'Replace Text',pure:1,ins:[P('v','text')],outs:[P('v','text')],
+  params:[{id:'a',l:'Find',k:'text'},{id:'b',l:'Replace with',k:'text'}],
+  run:(C,I,p)=>({v:String(I.v??'').split(p.a||'').join(p.b||'')})});
+def({t:'d.first',cat:'Data',title:'First / Nth Item',pure:1,ins:[P('list','list')],outs:[P('v','item')],
+  params:[{id:'i',l:'Index (0 = first)',k:'num',d:0}],run:(C,I,p)=>({v:asArr(I.list)[num(p.i)]??null})});
+
+/* ---------- notes & files ---------- */
+def({t:'n.create',cat:'Notes',title:'Create Note',ins:[X('in'),P('text','text'),P('board','board')],outs:[X('out'),P('note','note')],
+  params:[{id:'text',l:'Text',k:'text',d:'Note'}],
+  run:(C,I,p)=>{if(!C.can('notes'))return C.deny('create notes');
+    C.plan('Create 1 note');const n=C.mut(()=>A.addNote((I.board||C.board()).id,String(I.text??p.text)),{});
+    return{next:'out',out:{note:n}}}});
+def({t:'n.find',cat:'Notes',title:'Find Notes',pure:1,ins:[P('board','board')],outs:[P('list','notes')],
+  params:[{id:'q',l:'Text contains',k:'text'}],
+  run:(C,I,p)=>({list:(I.board||C.board()).notes.filter(n=>!p.q||n.text.toLowerCase().includes(String(p.q).toLowerCase()))})});
+def({t:'n.edit',cat:'Notes',title:'Edit Note',ins:[X('in'),P('note','note'),P('text','text')],outs:[X('out')],
+  params:[{id:'text',l:'New text',k:'text'}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.note).forEach(n=>n&&(n.text=String(I.text??p.text??''))));C.touch();return{next:'out'}}});
+def({t:'n.summary',cat:'Notes',title:'Update Summary Note',ins:[X('in'),P('text','text')],outs:[X('out')],
+  params:[{id:'title',l:'Note starts with',k:'text',d:'Summary'},{id:'text',l:'Fallback text',k:'text'}],
+  run:(C,I,p)=>{const b=C.board();const txt=String(I.text??p.text??'');
+    let n=b.notes.find(x=>x.text.startsWith(p.title));
+    C.plan('Update 1 summary note');
+    C.mut(()=>{if(!n)n=A.addNote(b.id,'');n.text=p.title+'\\n'+txt});C.touch();return{next:'out'}}});
+def({t:'n.color',cat:'Notes',title:'Change Note Colour',ins:[X('in'),P('note','note')],outs:[X('out')],
+  params:[{id:'i',l:'Colour 1–6',k:'num',d:1}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.note).forEach(n=>n&&(n.color=NOTE_COLORS[clamp(num(p.i)-1,0,5)])));C.touch();return{next:'out'}}});
+def({t:'n.delete',cat:'Notes',title:'Delete Notes',ins:[X('in'),P('note','note')],outs:[X('out')],
+  run:(C,I)=>{if(!C.can('delete'))return C.deny('delete notes');const b=C.board();
+    const ids=asArr(I.note).map(n=>n&&n.id);C.plan(\`Delete \${ids.length} note(s)\`);
+    C.mut(()=>b.notes=b.notes.filter(n=>!ids.includes(n.id)));C.touch();return{next:'out'}}});
+def({t:'f.find',cat:'Files',title:'Find Files',pure:1,ins:[P('board','board')],outs:[P('list','file cards'),P('count','count')],
+  params:[{id:'q',l:'Name contains',k:'text'}],
+  run:(C,I,p)=>{const b=I.board||C.board();
+    const l=b.files.filter(c=>{const f=A.file(c.fileId);return f&&(!p.q||f.name.toLowerCase().includes(String(p.q).toLowerCase()))});
+    return{list:l,count:l.length}}});
+def({t:'f.rename',cat:'Files',title:'Rename File',ins:[X('in'),P('file','file card'),P('name','name')],outs:[X('out')],
+  params:[{id:'name',l:'New name',k:'text'}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.file).forEach(c=>{const f=c&&A.file(c.fileId);if(f)f.name=String(I.name??p.name??f.name)}));return{next:'out'}}});
+def({t:'f.group',cat:'Files',title:'Group Files',ins:[X('in'),P('file','file cards')],outs:[X('out')],
+  params:[{id:'x',l:'X',k:'num',d:820},{id:'y',l:'Y',k:'num',d:60}],
+  run:(C,I,p)=>{C.mut(()=>Layout.grid(toItems(asArr(I.file),'file'),{x:num(p.x),y:num(p.y),cols:2,gx:170,gy:160}));C.touch();return{next:'out'}}});
+def({t:'f.delete',cat:'Files',title:'Remove File Cards',ins:[X('in'),P('file','file cards')],outs:[X('out')],
+  run:(C,I)=>{if(!C.can('delete'))return C.deny('remove files');const b=C.board();
+    const ids=asArr(I.file).map(c=>c&&c.id);C.plan(\`Remove \${ids.length} file card(s)\`);
+    C.mut(()=>b.files=b.files.filter(c=>!ids.includes(c.id)));C.touch();return{next:'out'}}});
+
+/* ---------- projects ---------- */
+def({t:'p.boards',cat:'Projects',title:'Find Project Boards',pure:1,params:[{id:'name',l:'Project',k:'proj'}],
+  outs:[P('list','boards'),P('count','count')],
+  run:(C,I,p)=>{const pr=S.projects.find(x=>x.id===p.name||x.name===p.name);
+    const l=pr?Object.values(S.boards).filter(b=>b.projects.includes(pr.id)):[];return{list:l,count:l.length}}});
+def({t:'p.aggregate',cat:'Projects',title:'Aggregate Across Boards',pure:1,ins:[P('list','boards')],
+  outs:[P('list','tasks'),P('done','done'),P('total','total'),P('pct','percent')],
+  run:(C,I)=>{const bs=asArr(I.list),tasks=bs.flatMap(b=>b.tasks||[]);
+    const done=tasks.filter(t=>t.done).length;
+    return{list:tasks,done,total:tasks.length,pct:tasks.length?Math.round(done/tasks.length*100):0}}});
+def({t:'p.summary',cat:'Projects',title:'Create Project Summary',ins:[X('in'),P('list','boards')],outs:[X('out'),P('text','text')],
+  run:(C,I)=>{const bs=asArr(I.list);
+    const text=bs.map(b=>{const s=A.stats(b.id);return \`\${b.name}: \${s.done}/\${s.total} (\${s.pct}%)\`}).join('\\n');
+    C.plan('Write a project summary');return{next:'out',out:{text}}}});
+
+/* ---------- calendar ---------- */
+def({t:'c.create',cat:'Calendar',title:'Create Calendar Event',ins:[X('in'),P('title','title'),P('date','date')],outs:[X('out')],
+  params:[{id:'title',l:'Title',k:'text',d:'Event'},{id:'date',l:'Date',k:'date'},{id:'time',l:'Time',k:'time',d:'09:00'}],
+  run:(C,I,p)=>{C.plan('Create 1 calendar event');
+    C.mut(()=>{S.events.push({id:uid('e'),title:String(I.title??p.title),date:I.date||p.date||todayISO(),time:p.time,project:null});
+      Bus.emit('cal.created',{})});return{next:'out'}}});
+def({t:'c.upcoming',cat:'Calendar',title:'Upcoming Events',pure:1,outs:[P('list','events'),P('count','count')],
+  params:[{id:'days',l:'Within N days',k:'num',d:7}],
+  run:(C,I,p)=>{const end=new Date();end.setDate(end.getDate()+num(p.days));const e2=end.toISOString().slice(0,10);
+    const l=S.events.filter(e=>e.date>=todayISO()&&e.date<=e2);return{list:l,count:l.length}}});
+
+/* ---------- interaction ---------- */
+def({t:'u.message',cat:'Ask',title:'Show Message',ins:[X('in'),P('v','value')],outs:[X('out')],
+  params:[{id:'m',l:'Message',k:'text',d:'Done.'}],
+  run:async(C,I,p)=>{const msg=String(p.m)+(I.v!==undefined?' '+fmt(I.v):'');
+    C.log(msg);if(!C.dry)await new Promise(r=>modal('Script says',\`<p>\${esc(msg)}</p>\`,[['OK',()=>r(),1]]));return{next:'out'}}});
+def({t:'u.notify',cat:'Ask',title:'Show Notification',ins:[X('in'),P('v','value')],outs:[X('out')],
+  params:[{id:'m',l:'Message',k:'text',d:'Script finished'}],
+  run:(C,I,p)=>{const m=String(p.m)+(I.v!==undefined?' '+fmt(I.v):'');C.log(m);if(!C.dry)toast(m);return{next:'out'}}});
+def({t:'u.confirm',cat:'Ask',title:'Confirm',ins:[X('in')],outs:[X('then','yes'),X('else','no')],
+  params:[{id:'m',l:'Question',k:'text',d:'Continue?'}],
+  run:async(C,I,p)=>{if(C.dry)return{next:'then'};
+    const ok=await new Promise(r=>modal('Script asks',\`<p>\${esc(p.m)}</p>\`,[['No',()=>r(false)],['Yes',()=>r(true),1]]));
+    return{next:ok?'then':'else'}}});
+def({t:'u.input',cat:'Ask',title:'Ask User',ins:[X('in')],outs:[X('out'),P('v','answer')],
+  params:[{id:'m',l:'Question',k:'text',d:'Name?'},{id:'kind',l:'Answer',k:'sel',o:['text','number'],d:'text'}],
+  run:async(C,I,p)=>{if(C.dry)return{next:'out',out:{v:''}};
+    const v=await new Promise(r=>modal('Script asks',
+      \`<label class="fld">\${esc(p.m)}</label><input type="\${p.kind==='number'?'number':'text'}" id="_a">\`,
+      [['Cancel',()=>r(null)],['OK',b=>r($('#_a',b).value),1]]));
+    return{next:'out',out:{v:p.kind==='number'?num(v):v}}}});
+def({t:'u.choose',cat:'Ask',title:'Choose Option',ins:[X('in')],outs:[X('out'),P('v','choice')],
+  params:[{id:'o',l:'Options (comma separated)',k:'text',d:'A, B, C'}],
+  run:async(C,I,p)=>{const opts=String(p.o).split(',').map(s=>s.trim()).filter(Boolean);
+    if(C.dry)return{next:'out',out:{v:opts[0]}};
+    const v=await new Promise(r=>modal('Choose',\`<div class="row">\${opts.map((o,i)=>
+      \`<button class="btn" data-i="\${i}">\${esc(o)}</button>\`).join('')}</div>\`,[['Cancel',()=>r(null)]],
+      b=>$$('[data-i]',b).forEach(x=>x.onclick=()=>{r(opts[+x.dataset.i]);b.closest('#scrim').remove()})));
+    return{next:'out',out:{v}}}});
+def({t:'u.chooseTask',cat:'Ask',title:'Choose Task',ins:[X('in'),P('list','from')],outs:[X('out'),P('task','task')],
+  run:async(C,I)=>{const l=asArr(I.list).length?asArr(I.list):C.board().tasks;
+    if(C.dry||!l.length)return{next:'out',out:{task:l[0]||null}};
+    const t=await new Promise(r=>modal('Choose a task',\`<div class="list">\${l.map((t,i)=>
+      \`<button class="item" data-i="\${i}">\${esc(t.title)}</button>\`).join('')}</div>\`,[['Cancel',()=>r(null)]],
+      b=>$$('[data-i]',b).forEach(x=>x.onclick=()=>{r(l[+x.dataset.i]);b.closest('#scrim').remove()})));
+    return{next:'out',out:{task:t}}}});
+def({t:'u.chooseBoard',cat:'Ask',title:'Choose Board',ins:[X('in')],outs:[X('out'),P('board','board')],
+  run:async(C)=>{const l=Object.values(S.boards);if(C.dry)return{next:'out',out:{board:l[0]}};
+    const b=await new Promise(r=>modal('Choose a board',\`<div class="list">\${l.map((b,i)=>
+      \`<button class="item" data-i="\${i}">\${esc(A.path(b.id).map(x=>x.name).join(' › '))}</button>\`).join('')}</div>\`,
+      [['Cancel',()=>r(null)]],bd=>$$('[data-i]',bd).forEach(x=>x.onclick=()=>{r(l[+x.dataset.i]);bd.closest('#scrim').remove()})));
+    return{next:'out',out:{board:b}}}});
+
+/* ---------- visual ---------- */
+def({t:'v.highlight',cat:'Visual',title:'Highlight Task',ins:[X('in'),P('task','task')],outs:[X('out')],
+  run:(C,I)=>{if(!C.dry)asArr(I.task).forEach(t=>t&&C.view()&&C.view().flash(t.id));return{next:'out'}}});
+def({t:'v.focus',cat:'Visual',title:'Focus Camera',ins:[X('in'),P('obj','object')],outs:[X('out')],
+  run:(C,I)=>{const o=asArr(I.obj)[0];if(o&&!C.dry&&C.view())C.view().focus(o);return{next:'out'}}});
+def({t:'v.zoom',cat:'Visual',title:'Zoom Camera',ins:[X('in')],outs:[X('out')],params:[{id:'z',l:'Zoom %',k:'num',d:100}],
+  run:(C,I,p)=>{if(!C.dry&&C.view())C.view().zoom(num(p.z)/100);return{next:'out'}}});
+def({t:'v.pan',cat:'Visual',title:'Pan Camera',ins:[X('in')],outs:[X('out')],
+  params:[{id:'x',l:'dX',k:'num',d:100},{id:'y',l:'dY',k:'num',d:0}],
+  run:(C,I,p)=>{if(!C.dry&&C.view())C.view().pan(num(p.x),num(p.y));return{next:'out'}}});
+def({t:'v.flash',cat:'Visual',title:'Flash Object',ins:[X('in'),P('obj','object')],outs:[X('out')],
+  run:(C,I)=>{if(!C.dry&&C.view())asArr(I.obj).forEach(o=>o&&C.view().flash(o.id));return{next:'out'}}});
+def({t:'v.open',cat:'Visual',title:'Open Board Window',ins:[X('in'),P('board','board')],outs:[X('out')],
+  run:(C,I)=>{const b=I.board||C.board();if(b&&!C.dry)openBoard(b.id);return{next:'out'}}});
+
+/* ---------- script io ---------- */
+def({t:'sc.input',cat:'Script',title:'Script Input',pure:1,outs:[P('v','value')],params:[{id:'n',l:'Input name',k:'text',d:'Tasks'}],
+  run:(C,I,p)=>({v:C.inputs[p.n]})});
+def({t:'sc.output',cat:'Script',title:'Script Output',ins:[X('in'),P('v','value')],outs:[X('out')],
+  params:[{id:'n',l:'Output name',k:'text',d:'Result'}],
+  run:(C,I,p)=>{C.outputs[p.n]=I.v;C.log('Output '+p.n+' = '+fmt(I.v));return{next:'out'}}});
+def({t:'sc.emit',cat:'Script',title:'Emit Custom Event',ins:[X('in'),P('v','data')],outs:[X('out')],
+  params:[{id:'n',l:'Event name',k:'text',d:'ping'}],
+  run:(C,I,p)=>{C.log('Emitted “'+p.n+'”');if(!C.dry)setTimeout(()=>Bus.emit('custom:'+p.n,{data:I.v}),0);return{next:'out'}}});
+def({t:'sc.run',cat:'Script',title:'Run Another Script',ins:[X('in'),P('v','input')],outs:[X('out'),P('v','outputs')],
+  params:[{id:'n',l:'Script name',k:'text'}],
+  run:async(C,I,p)=>{const s=Object.values(S.scripts).find(x=>x.name===p.n);
+    if(!s||C.dry)return{next:'out',out:{v:null}};
+    const r=await runScript(s,{},{Tasks:I.v});return{next:'out',out:{v:r&&r.outputs}}}});
+</script>
+<script>
+/* ============================ interpreter ============================ */
+class Ctx{
+  constructor(script,opt,inputs){
+    this.s=script;this.opt=opt||{};this.payload=this.opt.payload||{};
+    this.boardId=this.opt.boardId||this.payload.boardId||script.boardId||'b_home';
+    if(!S.boards[this.boardId])this.boardId='b_home';
+    this.vars={};(script.vars||[]).forEach(v=>this.vars[v.name]=v.value);
+    this.inputs=inputs||{};this.outputs={};this.dry=!!this.opt.dry;
+    this.plans=[];this.logs=[];this.steps=0;this.tick=0;this.outCache={};this.loopVals={};
+    this.counts={};this.errs=0;this.dirtyBoard=false;
+  }
+  board(){return S.boards[this.boardId]}
+  view(){const w=WINS.get('board:'+this.boardId);return w&&w.api}
+  node(id){return this.s.nodes.find(n=>n.id===id)}
+  nextOf(id,port){const e=this.s.edges.find(e=>e.from.n===id&&e.from.port===port);return e?e.to.n:null}
+  paramsOf(n){const d=NODES[n.t],p={};(d.params||[]).forEach(q=>p[q.id]=(n.p&&n.p[q.id]!==undefined)?n.p[q.id]:q.d);return p}
+  inputsOf(n){const d=NODES[n.t],o={};
+    (d.ins||[]).filter(i=>!i.x).forEach(i=>{o[i.id]=this.evalIn(n,i.id)});return o}
+  evalIn(n,port){
+    const e=this.s.edges.find(e=>e.to.n===n.id&&e.to.port===port);
+    if(!e)return undefined;
+    const src=this.node(e.from.n);if(!src)return undefined;
+    return this.outValue(src,e.from.port);
+  }
+  outValue(src,port){
+    const d=NODES[src.t];if(!d)return undefined;
+    if(d.loop){const lv=this.loopVals[src.id]||{};return port==='item'?lv.item:port==='i'?lv.i:undefined}
+    if(d.data)return d.data(this)[port];
+    if(d.pure){
+      this._pc=this._pc||{};
+      const k=src.id+':'+this.tick;
+      if(!(k in this._pc)){
+        let v;try{v=d.run(this,this.inputsOf(src),this.paramsOf(src),src)}catch(e){this.err(src,e);v={}}
+        this._pc[k]=v||{};this.fire(src.id,true);
+      }
+      return this._pc[k][port];
     }
-  });
-  return roots;
-}
-
-function flattenWithDepth(nodes, depth = 0, out = []) {
-  nodes.forEach((n) => {
-    const { children, ...rest } = n;
-    out.push({ ...rest, depth });
-    if (children && children.length) flattenWithDepth(children, depth + 1, out);
-  });
-  return out;
-}
-
-function layoutBoardForest(boards, w, h) {
-  const keys = Object.keys(boards);
-  const isRoot = (k) => !boards[k].parent || !boards[boards[k].parent];
-  const rootKeys = keys.filter(isRoot);
-  const childrenOf = (k) => keys.filter((kk) => boards[kk].parent === k);
-  const cx = w / 2;
-  const cy = h / 2;
-  const ringGap = Math.max(56, Math.min(w, h) / 5.2);
-  const positions = {};
-
-  function place(key, depth, aFrom, aTo) {
-    const angle = (aFrom + aTo) / 2;
-    const r = depth * ringGap;
-    const rad = ((angle - 90) * Math.PI) / 180;
-    positions[key] = { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad), depth };
-    const kids = childrenOf(key);
-    if (kids.length) {
-      const span = aTo - aFrom;
-      const step = span / kids.length;
-      kids.forEach((ck, i) => place(ck, depth + 1, aFrom + i * step, aFrom + (i + 1) * step));
+    return (this.outCache[src.id]||{})[port];
+  }
+  fire(id,quiet){this.counts[id]=(this.counts[id]||0)+1;if(this.opt.onFire&&!quiet)this.opt.onFire(id)}
+  log(m){const line=m;this.logs.push(line);if(this.opt.onLog)this.opt.onLog(line,false)}
+  err(n,e){this.errs++;const m=(NODES[n.t]?NODES[n.t].title:n.t)+': '+(e&&e.message||e);
+    this.logs.push(m);if(this.opt.onLog)this.opt.onLog(m,true);if(this.opt.onErr)this.opt.onErr(n.id)}
+  can(perm){return (this.s.perms||{})[perm]!==false}
+  deny(what){this.log('Blocked: this script is not allowed to '+what+'.');return{next:'out'}}
+  plan(t){this.plans.push(t)}
+  mut(fn,dryVal){if(this.dry)return dryVal||null;this.dirtyBoard=true;return fn()}
+  touch(){this.dirtyBoard=true}
+  async execChain(id){
+    let guard=0;
+    while(id&&guard++<800&&this.steps<5000){
+      const n=this.node(id);if(!n)break;
+      const d=NODES[n.t];if(!d){this.log('Unknown node '+n.t);break}
+      this.steps++;this.tick++;this._pc={};this.fire(n.id);
+      let res;
+      try{res=d.loop?await this.runLoop(n,d):await d.run(this,this.inputsOf(n),this.paramsOf(n),n)}
+      catch(e){this.err(n,e);break}
+      if(res&&res.out)this.outCache[n.id]=res.out;
+      if(res&&res.stop)return 'stop';
+      id=this.nextOf(n.id,(res&&res.next)||'out');
     }
+    if(this.steps>=5000)this.log('Stopped: step limit reached.');
+    return 'ok';
   }
-  const angleStep = 360 / Math.max(rootKeys.length, 1);
-  rootKeys.forEach((k, i) => place(k, 1, i * angleStep, (i + 1) * angleStep));
-  return positions;
-}
-
-/* ------------------------------------------------------------------ */
-/* Calendar helpers                                                    */
-/* ------------------------------------------------------------------ */
-
-function dateKey(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
-}
-
-function getMonthCells(year, month) {
-  const first = new Date(year, month, 1);
-  const startOffset = (first.getDay() + 6) % 7; // Monday-first grid
-  const gridStart = new Date(year, month, 1 - startOffset);
-  const cells = [];
-  for (let i = 0; i < 42; i++) {
-    const d = new Date(gridStart);
-    d.setDate(gridStart.getDate() + i);
-    cells.push(d);
-  }
-  return cells;
-}
-
-const PROJECT_PALETTE = ["#6d5ae6", "#e2536e", "#1ea672", "#e8a24a", "#4ee7ff", "#ff8b7a", "#9b6bff"];
-function projectColorFor(projects, name) {
-  const idx = projects.findIndex((p) => norm(p) === norm(name));
-  if (idx === -1) return "var(--accent)";
-  return PROJECT_PALETTE[idx % PROJECT_PALETTE.length];
-}
-
-const STORAGE_KEY = "artemis-os-state-v3";
-
-function resolvePersistBackend() {
-  if (typeof window === "undefined") return null;
-  if (window.storage && typeof window.storage.get === "function") {
-    return {
-      kind: "platform",
-      get: (key) => window.storage.get(key, false),
-      set: (key, value) => window.storage.set(key, value, false),
-    };
-  }
-  try {
-    const probeKey = "artemis_probe";
-    window.localStorage.setItem(probeKey, "1");
-    window.localStorage.removeItem(probeKey);
-    return {
-      kind: "local",
-      get: async (key) => {
-        const value = window.localStorage.getItem(key);
-        return value == null ? null : { key, value };
-      },
-      set: async (key, value) => {
-        window.localStorage.setItem(key, value);
-        return { key, value };
-      },
-    };
-  } catch (e) {
-    return null;
+  async runLoop(n,d){
+    const body=this.nextOf(n.id,'body');
+    if(d.loop==='list'){
+      const items=asArr(this.evalIn(n,'list'));
+      for(let i=0;i<items.length&&i<600;i++){
+        this.loopVals[n.id]={item:items[i],i};this.tick++;
+        if(body&&await this.execChain(body)==='stop')return{stop:true};
+      }
+    }else if(d.loop==='count'){
+      const t=clamp(num(this.paramsOf(n).n),0,500);
+      for(let i=0;i<t;i++){this.loopVals[n.id]={item:i,i};this.tick++;
+        if(body&&await this.execChain(body)==='stop')return{stop:true}}
+    }else{
+      let i=0;
+      while(truthy(this.evalIn(n,'cond'))&&i<500){this.loopVals[n.id]={item:i,i:i++};this.tick++;
+        if(body&&await this.execChain(body)==='stop')return{stop:true}}
+    }
+    return{next:'out'};
   }
 }
+const RUNNING=new Set();
+async function runScript(script,opt={},inputs={}){
+  if(!script||!script.nodes)return null;
+  const C=new Ctx(script,opt,inputs);
+  const starts=opt.start?[opt.start]:script.nodes.filter(n=>NODES[n.t]&&NODES[n.t].ev).map(n=>n.id);
+  if(!starts.length){C.log('No trigger node — add one from Events.');return C}
+  RUNNING.add(script.id);
+  const t0=performance.now();
+  try{for(const s of starts)await C.execChain(s)}finally{RUNNING.delete(script.id)}
+  C.ms=Math.round(performance.now()-t0);
+  if(!C.dry){
+    script.runs=(script.runs||0)+1;script.lastRun=Date.now();script.lastMs=C.ms;
+    script.err=C.errs>0;
+    script.log=[...(script.log||[]),...C.logs.map(l=>({t:Date.now(),m:l}))].slice(-60);
+    if(C.dirtyBoard){save();refresh()}else save();
+  }
+  return C;
+}
+/* ---------- triggers ---------- */
+const FIRE_GUARD={depth:0,last:{}};
+function scriptsFor(evName,payload){
+  return Object.values(S.scripts).filter(s=>s.enabled&&!RUNNING.has(s.id)&&(s.nodes||[]).some(n=>{
+    const d=NODES[n.t];if(!d||!d.ev)return false;
+    if(d.ev==='custom')return evName==='custom:'+((n.p&&n.p.name)||'ping');
+    if(d.ev!==evName)return false;
+    if(s.boardId&&payload&&payload.boardId&&payload.boardId!==s.boardId)return false;
+    return true;}));
+}
+function triggerNodes(s,evName){
+  return (s.nodes||[]).filter(n=>{const d=NODES[n.t];
+    return d&&d.ev&&(d.ev==='custom'?evName==='custom:'+((n.p&&n.p.name)||'ping'):d.ev===evName)});
+}
+Bus.on('*',(ev,payload)=>{
+  if(ev.startsWith('script.'))return;
+  if(FIRE_GUARD.depth>3)return;
+  const list=scriptsFor(ev,payload);
+  list.forEach(s=>{
+    const key=s.id+ev;const now=Date.now();
+    if(FIRE_GUARD.last[key]&&now-FIRE_GUARD.last[key]<180)return;
+    FIRE_GUARD.last[key]=now;
+    setTimeout(async()=>{
+      FIRE_GUARD.depth++;
+      try{for(const n of triggerNodes(s,ev))
+        await runScript(s,{start:n.id,payload,boardId:payload&&payload.boardId||s.boardId,
+          onFire:id=>liveFire(s.id,id),onLog:(m,e)=>liveLog(s.id,m,e)});}
+      finally{FIRE_GUARD.depth--}
+    },60);
+  });
+});
+/* timers */
+const TIMER_LAST={};
+setInterval(()=>{
+  const now=new Date(),hm=now.toTimeString().slice(0,5),day=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getDay()];
+  Object.values(S.scripts).forEach(s=>{
+    if(!s.enabled||RUNNING.has(s.id))return;
+    (s.nodes||[]).forEach(n=>{
+      const d=NODES[n.t];if(!d||!d.ev)return;const p=n.p||{},k=s.id+n.id;
+      let go=false;
+      if(d.ev==='timer'){const ms=clamp(num(p.sec??60),5,86400)*1000;
+        if(Date.now()-(TIMER_LAST[k]||0)>=ms)go=true}
+      else if(d.ev==='interval'){const ms=clamp(num(p.min??15),1,1440)*60000;
+        if(Date.now()-(TIMER_LAST[k]||0)>=ms)go=true}
+      else if(d.ev==='at'){if(hm===(p.time||'09:00')&&TIMER_LAST[k]!==hm+todayISO())
+        {TIMER_LAST[k]=hm+todayISO();go=true;runScript(s,{start:n.id,onFire:id=>liveFire(s.id,id),onLog:(m,e)=>liveLog(s.id,m,e)});return}}
+      else if(d.ev==='weekly'){if(day===(p.day||'Monday')&&hm===(p.time||'08:00')&&TIMER_LAST[k]!==hm+todayISO())
+        {TIMER_LAST[k]=hm+todayISO();runScript(s,{start:n.id,onFire:id=>liveFire(s.id,id),onLog:(m,e)=>liveLog(s.id,m,e)});return}}
+      if(go){TIMER_LAST[k]=Date.now();
+        runScript(s,{start:n.id,onFire:id=>liveFire(s.id,id),onLog:(m,e)=>liveLog(s.id,m,e)})}
+    });
+  });
+  const hm2=new Date().toTimeString().slice(0,5);
+  S.events.filter(e=>e.date===todayISO()&&e.time===hm2&&!e._fired).forEach(e=>{e._fired=1;Bus.emit('cal.starting',{event:e})});
+},10000);
 
-/* ------------------------------------------------------------------ */
-/* OS themes — 4 light, 4 dark                                        */
-/* ------------------------------------------------------------------ */
-
-const OS_THEMES = {
-  parchment: {
-    label: "Parchment", mode: "light",
-    vars: {
-      "--bg-a": "#f7f2e7", "--bg-b": "#efe6d3", "--bg-c": "#e6d9bd",
-      "--surface": "#fffdf7", "--surface-solid": "#fffefa", "--surface-muted": "#f4ecda",
-      "--border": "rgba(60,45,20,0.32)", "--border-strong": "rgba(50,35,10,0.55)",
-      "--accent": "#4a5fd9", "--accent-soft": "rgba(74,95,217,0.14)", "--accent-contrast": "#fffefa",
-      "--text": "#2b2114", "--text-muted": "#6f6248", "--text-faint": "#a79a78",
-      "--dock-bg": "#fffaf0", "--ring": "rgba(74,95,217,0.35)",
-      "--danger": "#c0483f", "--success": "#3c7d4f", "--scrim": "rgba(43,33,20,0.25)", "--ink": "#2b2114",
-    },
-  },
-  kraft: {
-    label: "Kraft", mode: "light",
-    vars: {
-      "--bg-a": "#e8d9b8", "--bg-b": "#ddc89f", "--bg-c": "#cdb27f",
-      "--surface": "#f4e9d2", "--surface-solid": "#f8efdc", "--surface-muted": "#efe0bf",
-      "--border": "rgba(69,45,10,0.28)", "--border-strong": "rgba(69,45,10,0.5)",
-      "--accent": "#2f5f8a", "--accent-soft": "rgba(47,95,138,0.16)", "--accent-contrast": "#fbf3e1",
-      "--text": "#3a2c17", "--text-muted": "#7a6440", "--text-faint": "#a68f65",
-      "--dock-bg": "#f2e3c4", "--ring": "rgba(47,95,138,0.35)",
-      "--danger": "#a8402f", "--success": "#39724b", "--scrim": "rgba(43,30,10,0.28)", "--ink": "#3a2c17",
-    },
-  },
-  cotton: {
-    label: "Cotton", mode: "light",
-    vars: {
-      "--bg-a": "#ffffff", "--bg-b": "#f4f4f4", "--bg-c": "#e9e9e9",
-      "--surface": "#ffffff", "--surface-solid": "#ffffff", "--surface-muted": "#f4f4f4",
-      "--border": "rgba(20,20,20,0.16)", "--border-strong": "rgba(20,20,20,0.4)",
-      "--accent": "#c8393f", "--accent-soft": "rgba(200,57,63,0.12)", "--accent-contrast": "#ffffff",
-      "--text": "#1c1c1c", "--text-muted": "#6b6b6b", "--text-faint": "#a3a3a3",
-      "--dock-bg": "#ffffff", "--ring": "rgba(200,57,63,0.3)",
-      "--danger": "#c8393f", "--success": "#2e8b57", "--scrim": "rgba(0,0,0,0.18)", "--ink": "#1c1c1c",
-    },
-  },
-  sage: {
-    label: "Sage", mode: "light",
-    vars: {
-      "--bg-a": "#eef3e6", "--bg-b": "#e2ecd6", "--bg-c": "#d1e1c1",
-      "--surface": "#f7fbf1", "--surface-solid": "#fbfdf7", "--surface-muted": "#eaf1de",
-      "--border": "rgba(35,60,25,0.22)", "--border-strong": "rgba(35,60,25,0.45)",
-      "--accent": "#c96a3d", "--accent-soft": "rgba(201,106,61,0.15)", "--accent-contrast": "#fffdf8",
-      "--text": "#26301f", "--text-muted": "#647256", "--text-faint": "#9dab8d",
-      "--dock-bg": "#f3f8ec", "--ring": "rgba(201,106,61,0.35)",
-      "--danger": "#b1473c", "--success": "#3f8a52", "--scrim": "rgba(30,40,20,0.22)", "--ink": "#26301f",
-    },
-  },
-  chalkboard: {
-    label: "Chalkboard", mode: "dark",
-    vars: {
-      "--bg-a": "#16221c", "--bg-b": "#101a15", "--bg-c": "#0b120e",
-      "--surface": "rgba(255,255,255,0.045)", "--surface-solid": "#1a2620", "--surface-muted": "rgba(255,255,255,0.03)",
-      "--border": "rgba(255,255,255,0.14)", "--border-strong": "rgba(255,255,255,0.26)",
-      "--accent": "#e7cf5c", "--accent-soft": "rgba(231,207,92,0.16)", "--accent-contrast": "#1a2620",
-      "--text": "#eef2ea", "--text-muted": "#a3b3a4", "--text-faint": "#5d6d5e",
-      "--dock-bg": "rgba(22,34,28,0.9)", "--ring": "rgba(231,207,92,0.4)",
-      "--danger": "#ff8a7a", "--success": "#7fd99a", "--scrim": "rgba(0,0,0,0.45)", "--ink": "#eef2ea",
-    },
-  },
-  blueprint: {
-    label: "Blueprint", mode: "dark",
-    vars: {
-      "--bg-a": "#0d2138", "--bg-b": "#0a1b2e", "--bg-c": "#071523",
-      "--surface": "rgba(255,255,255,0.05)", "--surface-solid": "#11253c", "--surface-muted": "rgba(255,255,255,0.03)",
-      "--border": "rgba(255,255,255,0.16)", "--border-strong": "rgba(255,255,255,0.28)",
-      "--accent": "#7fd4ff", "--accent-soft": "rgba(127,212,255,0.16)", "--accent-contrast": "#071523",
-      "--text": "#e7f3fb", "--text-muted": "#93b3c8", "--text-faint": "#4f7188",
-      "--dock-bg": "rgba(13,33,56,0.9)", "--ring": "rgba(127,212,255,0.4)",
-      "--danger": "#ff8a8a", "--success": "#7fe3b0", "--scrim": "rgba(0,0,0,0.45)", "--ink": "#e7f3fb",
-    },
-  },
-  charcoal: {
-    label: "Charcoal", mode: "dark",
-    vars: {
-      "--bg-a": "#1c1a18", "--bg-b": "#151312", "--bg-c": "#0f0d0c",
-      "--surface": "rgba(255,255,255,0.045)", "--surface-solid": "#211e1c", "--surface-muted": "rgba(255,255,255,0.03)",
-      "--border": "rgba(255,255,255,0.13)", "--border-strong": "rgba(255,255,255,0.24)",
-      "--accent": "#ff9757", "--accent-soft": "rgba(255,151,87,0.16)", "--accent-contrast": "#211e1c",
-      "--text": "#f1ece6", "--text-muted": "#b1a599", "--text-faint": "#655c53",
-      "--dock-bg": "rgba(28,26,24,0.9)", "--ring": "rgba(255,151,87,0.4)",
-      "--danger": "#ff7a7a", "--success": "#7fd99a", "--scrim": "rgba(0,0,0,0.5)", "--ink": "#f1ece6",
-    },
-  },
-  inkwell: {
-    label: "Inkwell", mode: "dark",
-    vars: {
-      "--bg-a": "#181229", "--bg-b": "#120d1f", "--bg-c": "#0c0817",
-      "--surface": "rgba(255,255,255,0.05)", "--surface-solid": "#1d1730", "--surface-muted": "rgba(255,255,255,0.03)",
-      "--border": "rgba(255,255,255,0.14)", "--border-strong": "rgba(255,255,255,0.26)",
-      "--accent": "#ff7ad1", "--accent-soft": "rgba(255,122,209,0.16)", "--accent-contrast": "#1d1730",
-      "--text": "#efe9fb", "--text-muted": "#ab9dc4", "--text-faint": "#5f5480",
-      "--dock-bg": "rgba(24,18,41,0.9)", "--ring": "rgba(255,122,209,0.4)",
-      "--danger": "#ff8a8a", "--success": "#7fd9b0", "--scrim": "rgba(0,0,0,0.5)", "--ink": "#efe9fb",
-    },
-  },
+/* ---------- script helpers ---------- */
+function newScript(boardId,name){
+  const s={id:uid('sc'),name:name||'New script',boardId:boardId||null,enabled:false,
+    nodes:[{id:uid('n'),t:'ev.manual',x:60,y:80,p:{}}],edges:[],vars:[],runs:0,log:[],
+    perms:{tasks:true,boards:true,notes:true,files:true,delete:false}};
+  S.scripts[s.id]=s;save();refresh();return s;
+}
+function previewScript(s,after){
+  runScript(s,{dry:true}).then(C=>{
+    const lines=C.plans.length?C.plans:['Nothing would change — this script only reads.'];
+    modal('Script preview',\`<p class="dim">“\${esc(s.name)}” would:</p>
+      <div class="list" style="margin-top:8px">\${lines.map(l=>\`<div class="item">✓ \${esc(l)}</div>\`).join('')}</div>
+      \${C.errs?\`<p style="color:var(--accent)">\${C.errs} node(s) reported an error during the dry run.</p>\`:''}\`,
+      after?[['Cancel',null],['Enable script',()=>after(),1]]:[['Close',null]]);
+  });
+}
+function scriptStateLabel(s){return s.err?'⚠ Error':RUNNING.has(s.id)?'● Running':s.enabled?'● Enabled':'○ Disabled'}
+function boardScriptsMenu(e,boardId){
+  const list=Object.values(S.scripts).filter(s=>s.boardId===boardId);
+  menu(e.clientX,e.clientY,[
+    ...list.map(s=>[scriptStateLabel(s)+'  '+s.name,()=>openScriptEditor(s.id)]),
+    ...(list.length?['-']:[]),
+    ['+ New script for this board',()=>{const s=newScript(boardId);openScriptEditor(s.id)}],
+    ['Use a template…',()=>templateMenu(boardId)],
+    ['Open Scripts manager',openScripts],
+  ],'Scripts on this board');
+}
+/* ---------- templates ---------- */
+const TEMPLATES={
+  'Automatic Task Organiser':b=>chain(b,[['ev.taskCreated',{}],['t.all',{}],['s.sort',{k:'priority',dir:'descending'}],
+    ['s.sort',{k:'deadline',dir:'ascending'}],['l.grid',{x:60,y:60,cols:4}]],'Keeps every card sorted and laid out.'),
+  'Overdue Task Manager':b=>chain(b,[['ev.morning',{time:'08:00'}],['t.overdue',{}],['t.prio',{v:'urgent'}],
+    ['l.urgent',{}],['u.notify',{m:'Overdue tasks moved to the urgent column'}]],'Sweeps overdue work into one place each morning.'),
+  'Completed Task Cleaner':b=>{
+    if(!Object.values(S.boards).some(x=>x.name==='Archive'))A.createBoard('Archive',b||null,[]);
+    return chain(b,[['ev.weekly',{day:'Sunday',time:'20:00'}],['t.done',{}],
+      ['t.toBoard',{name:'Archive'}]],'Files finished tasks into an Archive board every Sunday.');},
+  'Project Dashboard':b=>{const s=chain(b,[['ev.boardChanged',{}],['b.stats',{}],
+    ['d.format',{tpl:'{a} of {b} tasks done'}],['n.summary',{title:'Summary'}]],'Keeps a live summary note on the board.');
+    const st=s.nodes.find(n=>n.t==='b.stats'),f=s.nodes.find(n=>n.t==='d.format');
+    if(st&&f)s.edges.push({id:uid('e'),from:{n:st.id,port:'total'},to:{n:f.id,port:'b'}});
+    return s;},
 };
-const OS_THEME_ORDER = ["parchment", "kraft", "cotton", "sage", "chalkboard", "blueprint", "charcoal", "inkwell"];
-/* ------------------------------------------------------------------ */
-/* Initial state                                                       */
-/* ------------------------------------------------------------------ */
-
-function makeInitialState() {
-  const t1 = uid("t");
-  const t2 = uid("t");
-  const t3 = uid("t");
-  const t4 = uid("t");
-  return {
-    boards: {
-      "getting-started": {
-        tasks: [
-          { id: t1, name: "Open the File Manager", done: true, parentId: null, x: 40, y: 40 },
-          { id: t2, name: "Press Shift+T to summon the terminal", done: false, parentId: null, x: 40, y: 160 },
-          { id: t3, name: "Try: board -add sprint-1", done: false, parentId: null, x: 340, y: 40 },
-          { id: t4, name: "Drag tasks & notes anywhere, or draw on the canvas", done: false, parentId: null, x: 340, y: 160 },
-        ],
-        notes: [
-          { id: uid("note"), x: 40, y: 300, color: "#fff6c9", noteType: "sticky", text: "This board is a free canvas now — scroll around, drag things, sketch ideas." },
-        ],
-        drawings: [],
-        parent: null,
-        tags: ["demo"],
-      },
-      "sprint-1": { tasks: [], notes: [], drawings: [], parent: null, tags: [] },
-    },
-    projects: ["artemis-os"],
-    windows: [],
-    activeBoard: null,
-    calendarEvents: {},
-    files: [],
-  };
-}
-
-/* ------------------------------------------------------------------ */
-/* Reducer                                                             */
-/* ------------------------------------------------------------------ */
-
-function osReducer(state, action) {
-  switch (action.type) {
-    case "HYDRATE":
-      return { ...state, ...action.payload };
-
-    case "ADD_BOARD": {
-      const name = action.name.trim();
-      if (!name || state.boards[name]) return state;
-      let parent = action.parent || null;
-      if (parent && !state.boards[parent]) parent = null;
-      return {
-        ...state,
-        boards: {
-          ...state.boards,
-          [name]: { tasks: [], notes: [], drawings: [], parent, tags: action.tags || [] },
-        },
-      };
-    }
-    case "DELETE_BOARD": {
-      const { name } = action;
-      if (!state.boards[name]) return state;
-      const grandParent = state.boards[name].parent;
-      const boards = { ...state.boards };
-      delete boards[name];
-      Object.keys(boards).forEach((k) => {
-        if (boards[k].parent === name) boards[k] = { ...boards[k], parent: grandParent };
-      });
-      const windows = state.windows.filter(
-        (w) => !(w.kind === "board" && w.boardName === name)
-      );
-      return {
-        ...state,
-        boards,
-        windows,
-        activeBoard: state.activeBoard === name ? null : state.activeBoard,
-      };
-    }
-    case "RENAME_BOARD": {
-      const { oldName, newName } = action;
-      const clean = newName.trim();
-      if (!state.boards[oldName] || !clean || state.boards[clean]) return state;
-      const boards = { ...state.boards };
-      boards[clean] = boards[oldName];
-      delete boards[oldName];
-      Object.keys(boards).forEach((k) => {
-        if (boards[k].parent === oldName) boards[k] = { ...boards[k], parent: clean };
-      });
-      const windows = state.windows.map((w) =>
-        w.kind === "board" && w.boardName === oldName ? { ...w, boardName: clean } : w
-      );
-      return {
-        ...state,
-        boards,
-        windows,
-        activeBoard: state.activeBoard === oldName ? clean : state.activeBoard,
-      };
-    }
-    case "SET_BOARD_PARENT": {
-      const { child, parent } = action;
-      if (!state.boards[child] || !state.boards[parent]) return state;
-      if (norm(child) === norm(parent)) return state;
-      if (isAncestorBoard(state.boards, child, parent)) return state;
-      return {
-        ...state,
-        boards: { ...state.boards, [child]: { ...state.boards[child], parent } },
-      };
-    }
-    case "UNSET_BOARD_PARENT": {
-      const { name } = action;
-      if (!state.boards[name]) return state;
-      return { ...state, boards: { ...state.boards, [name]: { ...state.boards[name], parent: null } } };
-    }
-    case "TAG_BOARD": {
-      const { name, tag } = action;
-      const board = state.boards[name];
-      if (!board || board.tags.includes(tag)) return state;
-      return { ...state, boards: { ...state.boards, [name]: { ...board, tags: [...board.tags, tag] } } };
-    }
-    case "UNTAG_BOARD": {
-      const { name, tag } = action;
-      const board = state.boards[name];
-      if (!board) return state;
-      return {
-        ...state,
-        boards: { ...state.boards, [name]: { ...board, tags: board.tags.filter((t) => norm(t) !== norm(tag)) } },
-      };
-    }
-    case "ADD_TASK": {
-      const { board, name, parentId, x, y } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      const clean = name.trim();
-      if (!clean) return state;
-      const count = b.tasks.length;
-      const task = {
-        id: uid("task"),
-        name: clean,
-        done: false,
-        parentId: parentId || null,
-        x: x != null ? x : 40 + (count % 5) * 220,
-        y: y != null ? y : 40 + Math.floor(count / 5) * 160,
-      };
-      return { ...state, boards: { ...state.boards, [board]: { ...b, tasks: [...b.tasks, task] } } };
-    }
-    case "MOVE_TASK_POS": {
-      const { board, taskId, x, y } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      return {
-        ...state,
-        boards: { ...state.boards, [board]: { ...b, tasks: b.tasks.map((t) => (t.id === taskId ? { ...t, x, y } : t)) } },
-      };
-    }
-    case "TOGGLE_TASK": {
-      const { board, taskId, done } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      const affected = new Set(collectDescendantTaskIds(b.tasks, taskId));
-      return {
-        ...state,
-        boards: {
-          ...state.boards,
-          [board]: { ...b, tasks: b.tasks.map((t) => (affected.has(t.id) ? { ...t, done } : t)) },
-        },
-      };
-    }
-    case "CHECK_ALL": {
-      const { board, mark } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      return {
-        ...state,
-        boards: { ...state.boards, [board]: { ...b, tasks: b.tasks.map((t) => ({ ...t, done: mark })) } },
-      };
-    }
-    case "CLEAR_DONE": {
-      const { board } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      const doneIds = new Set(b.tasks.filter((t) => t.done).map((t) => t.id));
-      const resolveParent = (pid) => {
-        let cur = pid;
-        while (cur && doneIds.has(cur)) {
-          const parentTask = b.tasks.find((t) => t.id === cur);
-          cur = parentTask ? parentTask.parentId : null;
-        }
-        return cur || null;
-      };
-      return {
-        ...state,
-        boards: {
-          ...state.boards,
-          [board]: {
-            ...b,
-            tasks: b.tasks.filter((t) => !doneIds.has(t.id)).map((t) => ({ ...t, parentId: resolveParent(t.parentId) })),
-          },
-        },
-      };
-    }
-    case "RENAME_TASK": {
-      const { board, taskId, name } = action;
-      const b = state.boards[board];
-      const clean = name.trim();
-      if (!b || !clean) return state;
-      return {
-        ...state,
-        boards: { ...state.boards, [board]: { ...b, tasks: b.tasks.map((t) => (t.id === taskId ? { ...t, name: clean } : t)) } },
-      };
-    }
-    case "DELETE_TASK": {
-      const { board, taskId } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      const target = b.tasks.find((t) => t.id === taskId);
-      const grandParentId = target ? target.parentId : null;
-      return {
-        ...state,
-        boards: {
-          ...state.boards,
-          [board]: {
-            ...b,
-            tasks: b.tasks
-              .filter((t) => t.id !== taskId)
-              .map((t) => (t.parentId === taskId ? { ...t, parentId: grandParentId } : t)),
-          },
-        },
-      };
-    }
-    case "SET_TASK_PARENT": {
-      const { board, taskId, parentId } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      if (taskId === parentId) return state;
-      let cursor = parentId;
-      const byId = Object.fromEntries(b.tasks.map((t) => [t.id, t]));
-      while (cursor) {
-        if (cursor === taskId) return state;
-        cursor = byId[cursor] ? byId[cursor].parentId : null;
-      }
-      return {
-        ...state,
-        boards: { ...state.boards, [board]: { ...b, tasks: b.tasks.map((t) => (t.id === taskId ? { ...t, parentId } : t)) } },
-      };
-    }
-    case "MOVE_TASK": {
-      const { fromBoard, toBoard, taskId } = action;
-      const src = state.boards[fromBoard];
-      const tgt = state.boards[toBoard];
-      if (!src || !tgt) return state;
-      const subtree = new Set(collectDescendantTaskIds(src.tasks, taskId));
-      const moving = src.tasks
-        .filter((t) => subtree.has(t.id))
-        .map((t) => (t.id === taskId ? { ...t, parentId: null } : t));
-      return {
-        ...state,
-        boards: {
-          ...state.boards,
-          [fromBoard]: { ...src, tasks: src.tasks.filter((t) => !subtree.has(t.id)) },
-          [toBoard]: { ...tgt, tasks: [...tgt.tasks, ...moving] },
-        },
-      };
-    }
-    case "ADD_NOTE": {
-      const { board, x, y, color, noteType, fileId, fileName, text } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      const note = {
-        id: uid("note"),
-        x: x != null ? x : 40,
-        y: y != null ? y : 40,
-        color: color || "#fff6c9",
-        noteType: noteType || "sticky",
-        text: text || "",
-        fileId: fileId || null,
-        fileName: fileName || null,
-      };
-      return { ...state, boards: { ...state.boards, [board]: { ...b, notes: [...(b.notes || []), note] } } };
-    }
-    case "MOVE_NOTE_POS": {
-      const { board, noteId, x, y } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      return {
-        ...state,
-        boards: { ...state.boards, [board]: { ...b, notes: (b.notes || []).map((n) => (n.id === noteId ? { ...n, x, y } : n)) } },
-      };
-    }
-    case "UPDATE_NOTE_TEXT": {
-      const { board, noteId, text } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      return {
-        ...state,
-        boards: { ...state.boards, [board]: { ...b, notes: (b.notes || []).map((n) => (n.id === noteId ? { ...n, text } : n)) } },
-      };
-    }
-    case "DELETE_NOTE": {
-      const { board, noteId } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      return {
-        ...state,
-        boards: { ...state.boards, [board]: { ...b, notes: (b.notes || []).filter((n) => n.id !== noteId) } },
-      };
-    }
-    case "ADD_DRAWING": {
-      const { board, path } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      return { ...state, boards: { ...state.boards, [board]: { ...b, drawings: [...(b.drawings || []), path] } } };
-    }
-    case "CLEAR_DRAWINGS": {
-      const { board } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      return { ...state, boards: { ...state.boards, [board]: { ...b, drawings: [] } } };
-    }
-    case "CLEAR_DRAWINGS": {
-      const { board } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      return { ...state, boards: { ...state.boards, [board]: { ...b, drawings: [] } } };
-    }
-    case "DELETE_DRAWING": {
-      const { board, id } = action;
-      const b = state.boards[board];
-      if (!b) return state;
-      return {
-        ...state,
-        boards: { ...state.boards, [board]: { ...b, drawings: (b.drawings || []).filter((d) => d.id !== id) } },
-      };
-    }
-    case "ADD_FILE":
-      return { ...state, files: [...(state.files || []), action.file] };
-    case "DELETE_FILE":
-      return { ...state, files: (state.files || []).filter((f) => f.id !== action.id) };
-
-    case "ADD_PROJECT": {
-      const name = action.name.trim();
-      if (!name || state.projects.includes(name)) return state;
-      return { ...state, projects: [...state.projects, name] };
-    }
-    case "RENAME_PROJECT": {
-      const { oldName, newName } = action;
-      if (!state.projects.includes(oldName) || state.projects.includes(newName)) return state;
-      const boards = { ...state.boards };
-      Object.keys(boards).forEach((k) => {
-        if ((boards[k].tags || []).some((t) => norm(t) === norm(oldName))) {
-          boards[k] = { ...boards[k], tags: boards[k].tags.map((t) => (norm(t) === norm(oldName) ? newName : t)) };
-        }
-      });
-      return {
-        ...state,
-        boards,
-        projects: state.projects.map((p) => (p === oldName ? newName : p)),
-      };
-    }
-    case "DELETE_PROJECT": {
-      const { name } = action;
-      const boards = { ...state.boards };
-      Object.keys(boards).forEach((k) => {
-        if ((boards[k].tags || []).some((t) => norm(t) === norm(name))) {
-          boards[k] = { ...boards[k], tags: boards[k].tags.filter((t) => norm(t) !== norm(name)) };
-        }
-      });
-      return {
-        ...state,
-        boards,
-        projects: state.projects.filter((p) => norm(p) !== norm(name)),
-        windows: state.windows.filter((w) => !(w.kind === "project" && norm(w.projectName) === norm(name))),
-      };
-    }
-    case "SET_ACTIVE_BOARD":
-      return { ...state, activeBoard: action.name };
-
-    case "ADD_EVENT": {
-      const { date, text, project, time } = action;
-      const clean = text.trim();
-      if (!clean) return state;
-      const list = state.calendarEvents[date] || [];
-      return {
-        ...state,
-        calendarEvents: {
-          ...state.calendarEvents,
-          [date]: [...list, { id: uid("ev"), text: clean, project: project || null, time: time || null }],
-        },
-      };
-    }
-    case "DELETE_EVENT": {
-      const { date, id } = action;
-      const list = state.calendarEvents[date] || [];
-      return {
-        ...state,
-        calendarEvents: { ...state.calendarEvents, [date]: list.filter((e) => e.id !== id) },
-      };
-    }
-
-    case "OPEN_WINDOW": {
-      const { kind, boardName, projectName, rect } = action;
-      const singleton = kind === "terminal" || kind === "file-manager" || kind === "graph" || kind === "calendar" || kind === "files";
-      let existing = null;
-      if (singleton) existing = state.windows.find((w) => w.kind === kind);
-      else if (kind === "board") existing = state.windows.find((w) => w.kind === "board" && w.boardName === boardName);
-      else if (kind === "project") existing = state.windows.find((w) => w.kind === "project" && w.projectName === projectName);
-      const maxZ = state.windows.reduce((m, w) => Math.max(m, w.z), 0);
-      if (existing) {
-        return {
-          ...state,
-          windows: state.windows.map((w) => (w.id === existing.id ? { ...w, minimized: false, z: maxZ + 1 } : w)),
-        };
-      }
-      const count = state.windows.length;
-      const dims = {
-        terminal: { w: 720, h: 460 },
-        "file-manager": { w: 680, h: 460 },
-        board: { w: 780, h: 540 },
-        graph: { w: 620, h: 440 },
-        project: { w: 500, h: 400 },
-        projects: { w: 540, h: 440 },
-        search: { w: 580, h: 480 },
-        calendar: { w: 660, h: 440 },
-        files: { w: 560, h: 420 },
-      }[kind] || { w: 560, h: 400 };
-      const maxX = Math.max(40, (rect?.width || 1200) - dims.w - 20);
-      const maxY = Math.max(40, (rect?.height || 700) - dims.h - 20);
-      const win = {
-        id: uid("w"),
-        kind,
-        boardName: boardName || null,
-        projectName: projectName || null,
-        x: clamp(60 + ((count * 34) % 260), 10, maxX),
-        y: clamp(40 + ((count * 28) % 200), 10, maxY),
-        width: dims.w,
-        height: dims.h,
-        z: maxZ + 1,
-        minimized: false,
-        maximized: false,
-        prev: null,
-      };
-      return { ...state, windows: [...state.windows, win] };
-    }
-    case "CLOSE_WINDOW":
-      return { ...state, windows: state.windows.filter((w) => w.id !== action.id) };
-    case "FOCUS_WINDOW": {
-      const maxZ = state.windows.reduce((m, w) => Math.max(m, w.z), 0);
-      return { ...state, windows: state.windows.map((w) => (w.id === action.id ? { ...w, z: maxZ + 1 } : w)) };
-    }
-    case "MINIMIZE_WINDOW":
-      return { ...state, windows: state.windows.map((w) => (w.id === action.id ? { ...w, minimized: true } : w)) };
-    case "RESTORE_WINDOW": {
-      const maxZ = state.windows.reduce((m, w) => Math.max(m, w.z), 0);
-      return {
-        ...state,
-        windows: state.windows.map((w) => (w.id === action.id ? { ...w, minimized: false, z: maxZ + 1 } : w)),
-      };
-    }
-    case "TOGGLE_MAXIMIZE": {
-      const { id, rect } = action;
-      return {
-        ...state,
-        windows: state.windows.map((w) => {
-          if (w.id !== id) return w;
-          if (w.maximized) {
-            return {
-              ...w,
-              maximized: false,
-              x: w.prev?.x ?? w.x,
-              y: w.prev?.y ?? w.y,
-              width: w.prev?.width ?? w.width,
-              height: w.prev?.height ?? w.height,
-              prev: null,
-            };
-          }
-          return {
-            ...w,
-            maximized: true,
-            prev: { x: w.x, y: w.y, width: w.width, height: w.height },
-            x: 8,
-            y: 8,
-            width: (rect?.width || 1200) - 16,
-            height: (rect?.height || 700) - 16,
-          };
-        }),
-      };
-    }
-    case "MOVE_WINDOW":
-      return { ...state, windows: state.windows.map((w) => (w.id === action.id ? { ...w, x: action.x, y: action.y } : w)) };
-
-    case "RESET":
-      return makeInitialState();
-
-    default:
-      return state;
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* Custom cursor                                                       */
-/* ------------------------------------------------------------------ */
-
-function CustomCursor({ containerRef }) {
-  const dotRef = useRef(null);
-  const ringRef = useRef(null);
-  const pos = useRef({ x: -100, y: -100 });
-  const ring = useRef({ x: -100, y: -100 });
-  const [variant, setVariant] = useState("default");
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return undefined;
-    const onMove = (e) => {
-      const rect = el.getBoundingClientRect();
-      pos.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      if (dotRef.current) {
-        dotRef.current.style.transform = `translate(${pos.current.x}px, ${pos.current.y}px)`;
-      }
-      setVisible(true);
-      const target = e.target.closest("button, a, [data-cursor-hover]");
-      const isText = e.target.closest("input, textarea");
-      const isDrag = e.target.closest("[data-cursor-drag]");
-      setVariant(isDrag ? "drag" : target ? "pointer" : isText ? "text" : "default");
-    };
-    const onLeave = () => setVisible(false);
-    el.addEventListener("mousemove", onMove);
-    el.addEventListener("mouseleave", onLeave);
-    return () => {
-      el.removeEventListener("mousemove", onMove);
-      el.removeEventListener("mouseleave", onLeave);
-    };
-  }, [containerRef]);
-
-  useEffect(() => {
-    let raf;
-    const animate = () => {
-      ring.current.x += (pos.current.x - ring.current.x) * 0.28;
-      ring.current.y += (pos.current.y - ring.current.y) * 0.28;
-      if (ringRef.current) {
-        ringRef.current.style.transform = `translate(${ring.current.x}px, ${ring.current.y}px) translate(-50%, -50%)`;
-      }
-      raf = requestAnimationFrame(animate);
-    };
-    raf = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  const ringStyle =
-    variant === "pointer"
-      ? { width: 30, height: 30, border: "2px dashed var(--accent)", background: "var(--accent-soft)", borderRadius: "9999px" }
-      : variant === "drag"
-      ? { width: 34, height: 34, border: "2px dashed var(--accent)", background: "transparent", borderRadius: "9999px" }
-      : variant === "text"
-      ? { width: 2, height: 18, borderRadius: 2, background: "var(--accent)", border: "none" }
-      : { width: 0, height: 0, border: "none", background: "transparent" };
-
-  return (
-    <div className="pointer-events-none absolute inset-0 z-[10000]" style={{ opacity: visible ? 1 : 0, transition: "opacity 150ms ease" }}>
-      <div ref={ringRef} className="pointer-events-none absolute left-0 top-0 transition-[width,height,background-color,border-color] duration-150" style={ringStyle} />
-      <div ref={dotRef} className="pointer-events-none absolute left-0 top-0" style={{ filter: "drop-shadow(1px 2px 0 rgba(0,0,0,0.2))" }}>
-        <MousePointer2 size={20} strokeWidth={2} fill="var(--surface-solid)" stroke="var(--ink)" />
-      </div>
-    </div>
-  );
-}
-/* ------------------------------------------------------------------ */
-/* Modals                                                               */
-/* ------------------------------------------------------------------ */
-
-function Modal({ title, children, onClose }) {
-  return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center animate-[fadeIn_120ms_ease-out]"
-      style={{ background: "var(--scrim)" }}
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        className="w-[340px] scale-100 animate-[popIn_160ms_ease-out] p-5"
-        style={{ background: "var(--surface-solid)", border: "2px solid var(--border-strong)", borderRadius: "16px 20px 16px 22px", boxShadow: "6px 8px 0 rgba(0,0,0,0.08), 0 20px 40px rgba(0,0,0,0.16)" }}
-      >
-        <div className="mb-3 text-[14px] font-semibold" style={{ color: "var(--text)" }}>{title}</div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function PromptModal({ title, initial = "", confirmLabel = "Create", onSubmit, onClose }) {
-  const [value, setValue] = useState(initial);
-  const ref = useRef(null);
-  useEffect(() => {
-    ref.current?.focus();
-    ref.current?.select();
-  }, []);
-  return (
-    <Modal title={title} onClose={onClose}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (value.trim()) onSubmit(value.trim());
-        }}
-      >
-        <input
-          ref={ref}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          className="w-full rounded-lg border px-3 py-2 text-sm outline-none"
-          style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--text)" }}
-        />
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-lg px-3 py-1.5 text-sm transition-transform active:scale-95" style={{ color: "var(--text-muted)" }}>
-            Cancel
-          </button>
-          <button type="submit" className="rounded-lg px-3 py-1.5 text-sm font-medium transition-transform active:scale-95" style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}>
-            {confirmLabel}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function ConfirmModal({ title, message, danger, onConfirm, onClose }) {
-  return (
-    <Modal title={title} onClose={onClose}>
-      <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-        {message}
-      </p>
-      <div className="mt-4 flex justify-end gap-2">
-        <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-sm transition-transform active:scale-95" style={{ color: "var(--text-muted)" }}>
-          Cancel
-        </button>
-        <button
-          onClick={() => {
-            onConfirm();
-            onClose();
-          }}
-          className="rounded-lg px-3 py-1.5 text-sm font-medium text-white transition-transform active:scale-95"
-          style={{ background: danger ? "var(--danger)" : "var(--accent)" }}
-        >
-          Confirm
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Window frame                                                        */
-/* ------------------------------------------------------------------ */
-
-function WindowFrame({ win, title, icon, dark, isTop, onClose, onMinimize, onToggleMax, onFocus, onDragStart, children }) {
-  if (win.minimized) return null;
-  const tilt = dark ? 0 : hashRotation(win.id, 1.1);
-  return (
-    <div
-      className={`absolute flex flex-col overflow-hidden transition-[box-shadow,transform] duration-200 will-change-transform ${
-        dark ? "animate-[terminalIn_280ms_ease-out]" : "animate-[winIn_220ms_cubic-bezier(0.16,1,0.3,1)]"
-      }`}
-      style={{
-        left: win.x, top: win.y, width: win.width, height: win.height, zIndex: win.z,
-        background: dark ? "#0b0906" : "var(--surface-solid)",
-        border: `2px solid ${dark ? "rgba(120,80,20,0.4)" : isTop ? "var(--border-strong)" : "var(--border)"}`,
-        borderRadius: dark ? "8px" : "13px 17px 14px 18px",
-        boxShadow: isTop
-          ? "6px 10px 0px -3px rgba(0,0,0,0.10), 0 18px 34px rgba(0,0,0,0.16)"
-          : "3px 5px 0px -3px rgba(0,0,0,0.08), 0 8px 18px rgba(0,0,0,0.10)",
-        transform: `rotate(${isTop ? 0 : tilt}deg)`,
-      }}
-      onMouseDown={onFocus}
-    >
-      <div
-        className="flex select-none items-center gap-2 px-3 py-2"
-        style={{
-          background: dark ? "linear-gradient(180deg, rgba(60,38,0,0.55), rgba(11,9,6,0))" : "var(--surface-muted)",
-          borderBottom: `2px dashed ${dark ? "rgba(120,80,20,0.3)" : "var(--border)"}`,
-          color: dark ? "#c98f2e" : "var(--text)",
-          cursor: "inherit",
-        }}
-        data-cursor-drag
-        onMouseDown={(e) => { onFocus(); onDragStart(e); }}
-        onDoubleClick={onToggleMax}
-      >
-        <div className="mr-1 flex items-center gap-1">
-          {[
-            { fn: onClose, r: "3px 6px 4px 7px", Icon: X, s: 9 },
-            { fn: onMinimize, r: "6px 3px 7px 4px", Icon: Minus, s: 9 },
-            { fn: onToggleMax, r: "4px 7px 3px 6px", Icon: Maximize2, s: 8 },
-          ].map(({ fn, r, Icon, s }, i) => (
-            <button
-              key={i}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={fn}
-              className="grid h-4 w-4 place-items-center transition-transform hover:scale-110 active:scale-90"
-              style={{ border: `1.5px solid ${dark ? "#c98f2e" : "var(--ink)"}`, borderRadius: r, color: dark ? "#c98f2e" : "var(--ink)" }}
-            >
-              <Icon size={s} strokeWidth={2.5} />
-            </button>
-          ))}
-        </div>
-        <span style={{ color: dark ? "#c98f2e" : "var(--text-faint)" }}>{icon}</span>
-        <span className="text-[12px] font-medium tracking-wide" style={{ color: dark ? "#e7b45b" : "var(--text)" }}>
-          {title}
-        </span>
-      </div>
-      <div className={`min-h-0 flex-1 ${dark ? "" : "overflow-auto"}`}>{children}</div>
-    </div>
-  );
-}
-/* ------------------------------------------------------------------ */
-/* File Manager (boards)                                               */
-/* ------------------------------------------------------------------ */
-
-function FileManagerApp({ boards, projects, dispatch, openWindow }) {
-  const [menu, setMenu] = useState(null);
-  const [modal, setModal] = useState(null);
-  const [newParent, setNewParent] = useState("");
-  const [newTag, setNewTag] = useState("");
-
-  useEffect(() => {
-    const close = () => setMenu(null);
-    window.addEventListener("click", close);
-    return () => window.removeEventListener("click", close);
-  }, []);
-
-  const names = Object.keys(boards).sort();
-
-  return (
-    <div className="flex h-full flex-col" style={{ background: "var(--surface-muted)" }}>
-      <div className="flex items-center justify-between border-b px-4 py-2.5" style={{ borderColor: "var(--border)" }}>
-        <div className="text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>
-          Boards · {names.length}
-        </div>
-        <button
-          onClick={() => {
-            setNewParent("");
-            setNewTag("");
-            setModal({ type: "new" });
-          }}
-          className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-transform active:scale-95"
-          style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
-        >
-          <Kanban size={13} /> New Board
-        </button>
-      </div>
-
-      <div className="grid flex-1 auto-rows-min grid-cols-3 gap-3 overflow-auto p-4 sm:grid-cols-4">
-        {names.length === 0 && (
-          <div className="col-span-full mt-10 text-center text-sm" style={{ color: "var(--text-faint)" }}>
-            No boards yet — create one to get started.
-          </div>
-        )}
-        {names.map((name, i) => {
-          const { total, done, pct } = countStats(boards[name]);
-          const parent = boards[name].parent;
-          const tags = boards[name].tags || [];
-          return (
-            <button
-              key={name}
-              style={{ animationDelay: `${Math.min(i, 12) * 20}ms` }}
-              onClick={() => openWindow("board", { boardName: name })}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setMenu({ name, x: e.clientX, y: e.clientY });
-              }}
-              className="group flex animate-[popIn_200ms_ease-out_backwards] flex-col items-center gap-1.5 rounded-lg p-2 text-center transition-colors hover:bg-black/5"
-            >
-              <div className="relative">
-                <Folder size={36} strokeWidth={1.4} style={{ color: "var(--text-faint)" }} />
-                <span
-                  className="absolute -bottom-1 -right-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
-                  style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
-                >
-                  {done}/{total}
-                </span>
-              </div>
-              <span className="line-clamp-1 max-w-[92px] text-[11px] font-medium" style={{ color: "var(--text)" }}>
-                {name}
-              </span>
-              {parent && (
-                <span className="text-[9px]" style={{ color: "var(--text-faint)" }}>
-                  in {parent}
-                </span>
-              )}
-              {tags.length > 0 && (
-                <span className="line-clamp-1 text-[8px]" style={{ color: "var(--accent)" }}>
-                  {tags.map((t) => `@${t}`).join(" ")}
-                </span>
-              )}
-              <div className="h-1 w-14 overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
-                <div className="h-full transition-all duration-500" style={{ width: `${pct}%`, background: "var(--accent)" }} />
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {menu && (
-        <div
-          className="fixed z-[9998] w-44 origin-top-left animate-[popIn_110ms_ease-out] overflow-hidden rounded-lg border shadow-xl"
-          style={{ left: menu.x, top: menu.y, background: "var(--surface-solid)", borderColor: "var(--border)" }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <button onClick={() => { openWindow("board", { boardName: menu.name }); setMenu(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}>
-            <FolderOpen size={13} /> Open
-          </button>
-          <button onClick={() => { setModal({ type: "rename", name: menu.name }); setMenu(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}>
-            <Pencil size={13} /> Rename
-          </button>
-          <button onClick={() => { setModal({ type: "parent", name: menu.name }); setMenu(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}>
-            <Layers size={13} /> Set parent board…
-          </button>
-          {boards[menu.name]?.parent && (
-            <button onClick={() => { dispatch({ type: "UNSET_BOARD_PARENT", name: menu.name }); setMenu(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}>
-              <FolderUp size={13} /> Move to top level
-            </button>
-          )}
-          <button onClick={() => { setModal({ type: "delete", name: menu.name }); setMenu(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--danger)" }}>
-            <Trash2 size={13} /> Delete
-          </button>
-        </div>
-      )}
-
-      {modal?.type === "new" && (
-        <Modal title="Create New Board" onClose={() => setModal(null)}>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const name = e.target.boardTitle.value.trim();
-              if (name) {
-                dispatch({
-                  type: "ADD_BOARD",
-                  name,
-                  parent: newParent || null,
-                  tags: newTag ? [newTag] : [],
-                });
-                openWindow("board", { boardName: name });
-                setModal(null);
-              }
-            }}
-            className="space-y-3"
-          >
-            <div>
-              <label className="mb-1 block text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>Board Name</label>
-              <input
-                autoFocus
-                name="boardTitle"
-                placeholder="e.g. design-sprint"
-                required
-                className="w-full rounded-lg border px-3 py-1.5 text-xs outline-none"
-                style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--text)" }}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>Nest under board (optional)</label>
-              <select
-                value={newParent}
-                onChange={(e) => setNewParent(e.target.value)}
-                className="w-full rounded-lg border px-2 py-1.5 text-xs outline-none"
-                style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--text)" }}
-              >
-                <option value="">Top-level board</option>
-                {names.map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>Tag with project (optional)</label>
-              <select
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                className="w-full rounded-lg border px-2 py-1.5 text-xs outline-none"
-                style={{ background: "var(--surface-muted)", borderColor: "var(--border)", color: "var(--text)" }}
-              >
-                <option value="">No project tag</option>
-                {projects.map((p) => (
-                  <option key={p} value={p}>@{p}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setModal(null)} className="rounded-lg px-3 py-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
-                Cancel
-              </button>
-              <button type="submit" className="rounded-lg px-3 py-1.5 text-xs font-medium" style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}>
-                Create Board
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
-
-      {modal?.type === "parent" && (
-        <Modal title={`Nest "${modal.name}" under`} onClose={() => setModal(null)}>
-          <div className="space-y-1">
-            {boards[modal.name]?.parent && (
-              <button
-                onClick={() => {
-                  dispatch({ type: "UNSET_BOARD_PARENT", name: modal.name });
-                  setModal(null);
-                }}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs text-red-500 hover:bg-black/5"
-              >
-                <FolderUp size={12} /> Remove parent (make top-level)
-              </button>
-            )}
-            {names
-              .filter((k) => k !== modal.name && !isAncestorBoard(boards, modal.name, k))
-              .map((bName) => (
-                <button
-                  key={bName}
-                  onClick={() => {
-                    dispatch({ type: "SET_BOARD_PARENT", child: modal.name, parent: bName });
-                    setModal(null);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-black/5"
-                  style={{ color: "var(--text)" }}
-                >
-                  <Folder size={12} style={{ color: "var(--text-faint)" }} /> {bName}
-                </button>
-              ))}
-          </div>
-        </Modal>
-      )}
-
-      {modal?.type === "rename" && (
-        <PromptModal
-          title={`Rename "${modal.name}"`}
-          initial={modal.name}
-          confirmLabel="Rename"
-          onClose={() => setModal(null)}
-          onSubmit={(val) => {
-            dispatch({ type: "RENAME_BOARD", oldName: modal.name, newName: val });
-            setModal(null);
-          }}
-        />
-      )}
-      {modal?.type === "delete" && (
-        <ConfirmModal
-          title="Delete board"
-          message={`Delete "${modal.name}" and all of its tasks? This can't be undone.`}
-          danger
-          onClose={() => setModal(null)}
-          onConfirm={() => dispatch({ type: "DELETE_BOARD", name: modal.name })}
-        />
-      )}
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Board canvas — Milanote-style freeform board                        */
-/* ------------------------------------------------------------------ */
-
-const NOTE_COLORS = ["#fff6c9", "#ffe1e8", "#d9f2e6", "#dbe7ff", "#f1e0ff", "#ffe8cf"];
-const DRAW_COLORS = ["#ff6b6b", "#4d96ff", "#37b874", "#f2b134", "#7c5cff", "#222222"];
-const CANVAS_W = 2600;
-const CANVAS_H = 1800;
-
-function TaskCardOnCanvas({ task, board, allTasks, boards, dispatch, onDragStart }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(task.name);
-  const [newSub, setNewSub] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [moveModal, setMoveModal] = useState(false);
-  const [parentModal, setParentModal] = useState(false);
-
-  const children = allTasks.filter((t) => t.parentId === task.id);
-  const otherBoards = Object.keys(boards).filter((k) => k !== board);
-  const candidateParents = allTasks.filter((t) => t.id !== task.id && t.parentId !== task.id);
-
-  return (
-    <div
-      className="absolute w-60 animate-[popIn_160ms_ease-out] border"
-      style={{
-        left: task.x || 0,
-        top: task.y || 0,
-        background: "var(--surface-solid)",
-        borderColor: "var(--border)",
-        borderRadius: "8px 14px 9px 15px",
-        boxShadow: "3px 5px 0 rgba(0,0,0,0.08)",
-      }}
-    >
-      <div
-        className="relative flex cursor-grab items-center gap-1.5 border-b px-2.5 py-2"
-        style={{ borderColor: "var(--border)", background: "var(--accent-soft)", borderRadius: "6px 12px 0 0" }}
-        data-cursor-drag
-        onMouseDown={(e) => onDragStart("task", task.id, task.x || 0, task.y || 0, e)}
-      >
-        <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={() => dispatch({ type: "TOGGLE_TASK", board, taskId: task.id, done: !task.done })}
-          className="grid h-4 w-4 shrink-0 place-items-center border transition-transform active:scale-90"
-          style={{
-            borderColor: task.done ? "var(--accent)" : "var(--border-strong)",
-            background: task.done ? "var(--accent)" : "transparent",
-            color: "var(--accent-contrast)",
-            borderRadius: "4px 7px 4px 7px",
-          }}
-        >
-          {task.done && <Check size={11} strokeWidth={3} />}
-        </button>
-
-        {editing ? (
-          <input
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onMouseDown={(e) => e.stopPropagation()}
-            onBlur={() => {
-              setEditing(false);
-              if (draft.trim()) dispatch({ type: "RENAME_TASK", board, taskId: task.id, name: draft });
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") e.currentTarget.blur();
-            }}
-            className="flex-1 rounded border px-1 text-xs outline-none"
-            style={{ borderColor: "var(--border-strong)", background: "var(--surface-solid)", color: "var(--text)" }}
-          />
-        ) : (
-          <span
-            onMouseDown={(e) => e.stopPropagation()}
-            onDoubleClick={() => setEditing(true)}
-            className="flex-1 truncate text-xs font-medium"
-            style={{ color: task.done ? "var(--text-faint)" : "var(--text)", textDecoration: task.done ? "line-through" : "none" }}
-            title="Double-click to rename"
-          >
-            {task.name}
-          </span>
-        )}
-
-        <div className="relative">
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={() => setMenuOpen((o) => !o)}
-            className="grid h-5 w-5 place-items-center rounded transition-colors"
-            style={{ color: "var(--text-muted)" }}
-            title="Task actions"
-          >
-            <MoreVertical size={12} />
-          </button>
-          {menuOpen && (
-            <div
-              className="absolute right-0 top-6 z-[60] w-40 overflow-hidden border p-1 shadow-lg"
-              style={{ background: "var(--surface-solid)", borderColor: "var(--border-strong)", borderRadius: "8px 12px 8px 12px" }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onMouseLeave={() => setMenuOpen(false)}
-            >
-              <button
-                onClick={() => { setEditing(true); setMenuOpen(false); }}
-                className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-[11px]"
-                style={{ color: "var(--text)" }}
-              >
-                <Pencil size={11} /> Rename
-              </button>
-              {otherBoards.length > 0 && (
-                <button
-                  onClick={() => { setMoveModal(true); setMenuOpen(false); }}
-                  className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-[11px]"
-                  style={{ color: "var(--text)" }}
-                >
-                  <MoveRight size={11} /> Move to board…
-                </button>
-              )}
-              {candidateParents.length > 0 && (
-                <button
-                  onClick={() => { setParentModal(true); setMenuOpen(false); }}
-                  className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-[11px]"
-                  style={{ color: "var(--text)" }}
-                >
-                  <Layers size={11} /> Make subtask of…
-                </button>
-              )}
-              <button
-                onClick={() => { dispatch({ type: "DELETE_TASK", board, taskId: task.id }); setMenuOpen(false); }}
-                className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-[11px]"
-                style={{ color: "var(--danger)" }}
-              >
-                <Trash2 size={11} /> Delete task
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="max-h-44 space-y-1 overflow-auto p-2" onMouseDown={(e) => e.stopPropagation()}>
-        {children.map((c) => (
-          <div key={c.id} className="group/sub flex items-center gap-1.5 rounded px-1 py-0.5">
-            <button
-              onClick={() => dispatch({ type: "TOGGLE_TASK", board, taskId: c.id, done: !c.done })}
-              className="grid h-3.5 w-3.5 shrink-0 place-items-center rounded border"
-              style={{ borderColor: c.done ? "var(--accent)" : "var(--border-strong)", background: c.done ? "var(--accent)" : "transparent" }}
-            >
-              {c.done && <Check size={9} strokeWidth={3} style={{ color: "var(--accent-contrast)" }} />}
-            </button>
-            <span
-              className="flex-1 truncate text-[11px]"
-              style={{ color: c.done ? "var(--text-faint)" : "var(--text)", textDecoration: c.done ? "line-through" : "none" }}
-            >
-              {c.name}
-            </span>
-            <button
-              onClick={() => dispatch({ type: "SET_TASK_PARENT", board, taskId: c.id, parentId: null })}
-              title="Promote to top-level task"
-              className="opacity-0 transition-opacity group-hover/sub:opacity-100"
-              style={{ color: "var(--accent)" }}
-            >
-              <ArrowUp size={11} />
-            </button>
-            <button
-              onClick={() => dispatch({ type: "DELETE_TASK", board, taskId: c.id })}
-              className="opacity-0 transition-opacity group-hover/sub:opacity-100"
-              style={{ color: "var(--text-faint)" }}
-            >
-              <X size={10} />
-            </button>
-          </div>
-        ))}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (newSub.trim()) {
-              dispatch({ type: "ADD_TASK", board, name: newSub, parentId: task.id });
-              setNewSub("");
-            }
-          }}
-        >
-          <input
-            value={newSub}
-            onChange={(e) => setNewSub(e.target.value)}
-            placeholder="+ subtask"
-            className="w-full rounded border px-1.5 py-0.5 text-[11px] outline-none"
-            style={{ borderColor: "var(--border)", background: "var(--surface-muted)", color: "var(--text)" }}
-          />
-        </form>
-      </div>
-
-      {moveModal && (
-        <Modal title={`Move "${task.name}" to board`} onClose={() => setMoveModal(false)}>
-          <div className="space-y-1">
-            {otherBoards.map((bName) => (
-              <button
-                key={bName}
-                onClick={() => {
-                  dispatch({ type: "MOVE_TASK", fromBoard: board, toBoard: bName, taskId: task.id });
-                  setMoveModal(false);
-                }}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-black/5"
-                style={{ color: "var(--text)" }}
-              >
-                <Folder size={12} style={{ color: "var(--text-faint)" }} /> {bName}
-              </button>
-            ))}
-          </div>
-        </Modal>
-      )}
-
-      {parentModal && (
-        <Modal title={`Make "${task.name}" a subtask of`} onClose={() => setParentModal(false)}>
-          <div className="max-h-48 space-y-1 overflow-auto">
-            {candidateParents.map((pt) => (
-              <button
-                key={pt.id}
-                onClick={() => {
-                  dispatch({ type: "SET_TASK_PARENT", board, taskId: task.id, parentId: pt.id });
-                  setParentModal(false);
-                }}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-black/5"
-                style={{ color: "var(--text)" }}
-              >
-                <ListTree size={12} style={{ color: "var(--text-faint)" }} /> {pt.name}
-              </button>
-            ))}
-          </div>
-        </Modal>
-      )}
-    </div>
-  );
-}
-
-
-function NoteCardOnCanvas({ note, board, dispatch, onDragStart }) {
-  const [text, setText] = useState(note.text);
-  return (
-    <div
-      className="absolute animate-[popIn_160ms_ease-out] p-2"
-      style={{ left: note.x, top: note.y, width: 192, background: note.color || "#fff6c9", border: "1.5px solid rgba(0,0,0,0.15)", borderRadius: "3px 10px 4px 9px", boxShadow: "3px 5px 0 rgba(0,0,0,0.08)", transform: `rotate(${hashRotation(note.id, 2.4)}deg)` }}
-    >
-      <div className="mb-1 flex cursor-grab items-center justify-between" data-cursor-drag onMouseDown={(e) => onDragStart("note", note.id, note.x, note.y, e)}>
-        <GripVertical size={12} style={{ color: "rgba(0,0,0,0.35)" }} />
-        <button onMouseDown={(e) => e.stopPropagation()} onClick={() => dispatch({ type: "DELETE_NOTE", board, noteId: note.id })} style={{ color: "rgba(0,0,0,0.4)" }}>
-          <X size={12} />
-        </button>
-      </div>
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onMouseDown={(e) => e.stopPropagation()}
-        onBlur={() => dispatch({ type: "UPDATE_NOTE_TEXT", board, noteId: note.id, text })}
-        placeholder="Write something…"
-        className="w-full resize-none bg-transparent text-[12px] outline-none"
-        style={{ color: "#3a3320", minHeight: 60 }}
-      />
-    </div>
-  );
-}
-
-function FileCardOnCanvas({ note, board, dispatch, onDragStart, files }) {
-  const file = files.find((f) => f.id === note.fileId);
-  return (
-    <div
-      className="absolute w-40 animate-[popIn_160ms_ease-out] border p-2 text-center"
-      style={{ left: note.x, top: note.y, background: "var(--surface-solid)", borderColor: "var(--border)", borderRadius: "8px 14px 9px 15px", boxShadow: "3px 5px 0 rgba(0,0,0,0.08)" }}
-    >
-      <div className="mb-1 flex cursor-grab items-center justify-between" data-cursor-drag onMouseDown={(e) => onDragStart("note", note.id, note.x, note.y, e)}>
-        <GripVertical size={12} style={{ color: "var(--text-faint)" }} />
-        <button onMouseDown={(e) => e.stopPropagation()} onClick={() => dispatch({ type: "DELETE_NOTE", board, noteId: note.id })} style={{ color: "var(--text-faint)" }}>
-          <X size={12} />
-        </button>
-      </div>
-      {file && file.type?.startsWith("image/") ? (
-        <img src={file.dataUrl} alt={file.name} className="mx-auto h-20 w-full rounded object-cover" />
-      ) : (
-        <div className="mx-auto grid h-20 w-full place-items-center rounded text-[9px] font-semibold" style={{ background: "var(--surface-muted)", color: "var(--text-faint)" }}>
-          {(note.fileName || "file").split(".").pop()?.toUpperCase() || "FILE"}
-        </div>
-      )}
-      <div className="mt-1 line-clamp-1 text-[10px]" style={{ color: "var(--text)" }}>
-        {note.fileName}
-      </div>
-    </div>
-  );
-}
-
-function distToSegment(p, a, b) {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const lengthSq = dx * dx + dy * dy;
-  if (lengthSq === 0) return Math.hypot(p.x - a.x, p.y - a.y);
-  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSq;
-  t = clamp(t, 0, 1);
-  const projX = a.x + t * dx;
-  const projY = a.y + t * dy;
-  return Math.hypot(p.x - projX, p.y - projY);
-}
-
-function BoardApp({ boardName, boards, projects, dispatch, files, openWindow }) {
-  const board = boards[boardName];
-  const canvasRef = useRef(null);
-  const dragRef = useRef(null);
-  const panRef = useRef(null);
-  const erasingRef = useRef(false);
-  const [tool, setTool] = useState("select");
-  const [drawColor, setDrawColor] = useState(DRAW_COLORS[0]);
-  const [currentPath, setCurrentPath] = useState(null);
-  const [taskDraft, setTaskDraft] = useState("");
-  const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
-  const [isPanning, setIsPanning] = useState(false);
-  const [tagPickerOpen, setTagPickerOpen] = useState(false);
-  const [parentModalOpen, setParentModalOpen] = useState(false);
-  const viewRef = useRef(view);
-  const fileInputRef = useRef(null);
-
-  useEffect(() => { viewRef.current = view; }, [view]);
-
-  const screenToCanvas = useCallback((clientX, clientY) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const v = viewRef.current;
-    return {
-      x: (clientX - rect.left - v.x) / v.scale,
-      y: (clientY - rect.top - v.y) / v.scale,
-    };
-  }, []);
-
-  useEffect(() => {
-    function onMove(e) {
-      if (panRef.current) {
-        const p = panRef.current;
-        setView((v) => ({ ...v, x: p.startViewX + (e.clientX - p.startX), y: p.startViewY + (e.clientY - p.startY) }));
-        return;
-      }
-      const d = dragRef.current;
-      if (!d || !canvasRef.current) return;
-      const pt = screenToCanvas(e.clientX, e.clientY);
-      const cx = clamp(pt.x - d.offsetX, 0, CANVAS_W - 60);
-      const cy = clamp(pt.y - d.offsetY, 0, CANVAS_H - 40);
-      if (d.kind === "task") dispatch({ type: "MOVE_TASK_POS", board: boardName, taskId: d.id, x: cx, y: cy });
-      else dispatch({ type: "MOVE_NOTE_POS", board: boardName, noteId: d.id, x: cx, y: cy });
-    }
-    function onUp() {
-      dragRef.current = null;
-      erasingRef.current = false;
-      if (panRef.current) { panRef.current = null; setIsPanning(false); }
-    }
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [boardName, dispatch, screenToCanvas]);
-
-  if (!board) {
-    return (
-      <div className="grid h-full place-items-center text-sm" style={{ color: "var(--text-faint)" }}>
-        Board deleted.
-      </div>
-    );
-  }
-
-  const rootTasks = board.tasks.filter((t) => !t.parentId);
-  const notes = board.notes || [];
-  const drawings = board.drawings || [];
-  const stats = countStats(board);
-  const tags = board.tags || [];
-  const parent = board.parent;
-  const availableProjects = (projects || []).filter((p) => !tags.some((t) => norm(t) === norm(p)));
-  const otherBoards = Object.keys(boards).filter((k) => k !== boardName && !isAncestorBoard(boards, boardName, k));
-
-  function startDrag(kind, id, x, y, e) {
-    if (tool === "draw" || tool === "erase") return;
-    e.stopPropagation();
-    const pt = screenToCanvas(e.clientX, e.clientY);
-    dragRef.current = { kind, id, offsetX: pt.x - x, offsetY: pt.y - y };
-  }
-
-  function eraseAt(point) {
-    const threshold = 14 / view.scale;
-    for (const d of drawings) {
-      for (let i = 0; i < d.points.length - 1; i++) {
-        if (distToSegment(point, d.points[i], d.points[i + 1]) < threshold) {
-          dispatch({ type: "DELETE_DRAWING", board: boardName, id: d.id });
-          break;
-        }
-      }
-    }
-  }
-
-  function handleCanvasMouseDown(e) {
-    if (e.button === 2) {
-      e.preventDefault();
-      panRef.current = { startX: e.clientX, startY: e.clientY, startViewX: view.x, startViewY: view.y };
-      setIsPanning(true);
-      return;
-    }
-    if (tool === "draw") {
-      setCurrentPath({ id: uid("d"), color: drawColor, width: 3, points: [screenToCanvas(e.clientX, e.clientY)] });
-      return;
-    }
-    if (tool === "erase") {
-      erasingRef.current = true;
-      eraseAt(screenToCanvas(e.clientX, e.clientY));
-      return;
-    }
-    panRef.current = { startX: e.clientX, startY: e.clientY, startViewX: view.x, startViewY: view.y };
-    setIsPanning(true);
-  }
-  function handleCanvasMouseMove(e) {
-    if (currentPath) {
-      const p = screenToCanvas(e.clientX, e.clientY);
-      setCurrentPath((cp) => (cp ? { ...cp, points: [...cp.points, p] } : cp));
-      return;
-    }
-    if (erasingRef.current) eraseAt(screenToCanvas(e.clientX, e.clientY));
-  }
-  function handleCanvasMouseUp() {
-    if (currentPath && currentPath.points.length > 1) {
-      dispatch({ type: "ADD_DRAWING", board: boardName, path: currentPath });
-    }
-    setCurrentPath(null);
-    erasingRef.current = false;
-  }
-
-  function zoomBy(delta, anchor) {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const sx = anchor ? anchor.x - rect.left : rect.width / 2;
-    const sy = anchor ? anchor.y - rect.top : rect.height / 2;
-    setView((v) => {
-      const newScale = clamp(Number((v.scale + delta).toFixed(2)), 0.35, 2.5);
-      const factor = newScale / v.scale;
-      return { x: sx - (sx - v.x) * factor, y: sy - (sy - v.y) * factor, scale: newScale };
-    });
-  }
-  function handleWheel(e) {
-    e.preventDefault();
-    zoomBy(e.deltaY > 0 ? -0.1 : 0.1, { x: e.clientX, y: e.clientY });
-  }
-
-  function addTaskAtRandom(name) {
-    dispatch({ type: "ADD_TASK", board: boardName, name, parentId: null, x: 60 + Math.random() * 420, y: 60 + Math.random() * 260 });
-  }
-  function addNoteAtRandom() {
-    dispatch({
-      type: "ADD_NOTE",
-      board: boardName,
-      x: 60 + Math.random() * 420,
-      y: 60 + Math.random() * 260,
-      color: NOTE_COLORS[Math.floor(Math.random() * NOTE_COLORS.length)],
-    });
-  }
-  function handleFilePick(e) {
-    const f = e.target.files?.[0];
-    e.target.value = "";
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const fileId = uid("file");
-      dispatch({ type: "ADD_FILE", file: { id: fileId, name: f.name, type: f.type, size: f.size, dataUrl: reader.result, addedAt: Date.now() } });
-      dispatch({
-        type: "ADD_NOTE",
-        board: boardName,
-        x: 60 + Math.random() * 420,
-        y: 60 + Math.random() * 260,
-        noteType: "file",
-        fileId,
-        fileName: f.name,
-      });
-    };
-    reader.readAsDataURL(f);
-  }
-
-  return (
-    <div className="flex h-full flex-col" style={{ background: "var(--surface-muted)" }}>
-      <div className="flex flex-wrap items-center gap-2 border-b-2 px-3 py-2" style={{ borderColor: "var(--border)", borderBottomStyle: "dashed" }}>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[13px] font-semibold" style={{ color: "var(--text)" }}>{boardName}</span>
-          {parent ? (
-            <button
-              onClick={() => openWindow("board", { boardName: parent })}
-              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px]"
-              style={{ background: "var(--surface)", border: "1px dashed var(--border)", color: "var(--text-muted)" }}
-              title="Click to open parent board"
-            >
-              in <span className="font-medium underline">{parent}</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => setParentModalOpen(true)}
-              className="rounded px-1 text-[9px]"
-              style={{ color: "var(--text-faint)", border: "1px dashed var(--border)" }}
-              title="Nest under another board"
-            >
-              + parent
-            </button>
-          )}
-          <span className="text-[10px]" style={{ color: "var(--text-faint)" }}>({stats.done}/{stats.total})</span>
-        </div>
-
-        {/* Tags */}
-        <div className="flex items-center gap-1">
-          {tags.map((tag) => (
-            <span
-              key={tag}
-              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium"
-              style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-            >
-              @{tag}
-              <button
-                onClick={() => dispatch({ type: "UNTAG_BOARD", name: boardName, tag })}
-                title="Remove tag"
-                className="hover:opacity-75"
-              >
-                <X size={10} />
-              </button>
-            </span>
-          ))}
-          <div className="relative">
-            <button
-              onClick={() => setTagPickerOpen((o) => !o)}
-              className="grid h-5 w-5 place-items-center rounded border text-[10px]"
-              style={{ borderColor: "var(--border)", color: "var(--text-faint)" }}
-              title="Tag with project"
-            >
-              <Tag size={10} />
-            </button>
-            {tagPickerOpen && (
-              <div
-                className="absolute left-0 top-6 z-[60] w-36 overflow-hidden border p-1 shadow-lg"
-                style={{ background: "var(--surface-solid)", borderColor: "var(--border-strong)", borderRadius: "8px 12px 8px 12px" }}
-                onMouseLeave={() => setTagPickerOpen(false)}
-              >
-                {availableProjects.length === 0 ? (
-                  <div className="p-1.5 text-[10px]" style={{ color: "var(--text-faint)" }}>No other projects</div>
-                ) : (
-                  availableProjects.map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => {
-                        dispatch({ type: "TAG_BOARD", name: boardName, tag: p });
-                        setTagPickerOpen(false);
-                      }}
-                      className="flex w-full items-center gap-1 rounded px-2 py-1 text-left text-xs"
-                      style={{ color: "var(--text)" }}
-                    >
-                      <Rocket size={11} style={{ color: "var(--accent)" }} /> @{p}
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Task bulk controls */}
-        {board.tasks.length > 0 && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => dispatch({ type: "CHECK_ALL", board: boardName, mark: stats.done !== stats.total })}
-              title={stats.done === stats.total ? "Uncheck all tasks" : "Check all tasks"}
-              className="flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium transition-transform active:scale-95"
-              style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--text)" }}
-            >
-              <CheckCheck size={11} /> {stats.done === stats.total ? "Uncheck all" : "Check all"}
-            </button>
-            {stats.done > 0 && (
-              <button
-                onClick={() => dispatch({ type: "CLEAR_DONE", board: boardName })}
-                title="Clear all completed tasks"
-                className="flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium transition-transform active:scale-95"
-                style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--danger)" }}
-              >
-                <Trash2 size={11} /> Clear done ({stats.done})
-              </button>
-            )}
-          </div>
-        )}
-
-        <div className="ml-auto flex flex-wrap items-center gap-1.5">
-          <form
-            className="flex items-center gap-1"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (taskDraft.trim()) { addTaskAtRandom(taskDraft); setTaskDraft(""); }
-            }}
-          >
-            <input
-              value={taskDraft}
-              onChange={(e) => setTaskDraft(e.target.value)}
-              placeholder="New task…"
-              className="w-32 rounded-lg border-2 px-2 py-1 text-[11px] outline-none"
-              style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--text)" }}
-            />
-            <button
-              type="submit"
-              className="grid h-7 w-7 place-items-center rounded-lg"
-              style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
-              title="Add task"
-            >
-              <Plus size={13} />
-            </button>
-          </form>
-
-          <button onClick={addNoteAtRandom} title="Add sticky note" className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
-            <StickyNote size={13} />
-          </button>
-          <button onClick={() => fileInputRef.current?.click()} title="Attach file" className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
-            <Paperclip size={13} />
-          </button>
-          <input ref={fileInputRef} type="file" className="hidden" onChange={handleFilePick} />
-          <button
-            onClick={() => setTool((t) => (t === "draw" ? "select" : "draw"))}
-            title="Draw"
-            className="grid h-7 w-7 place-items-center rounded-lg"
-            style={{ background: tool === "draw" ? "var(--accent)" : "var(--accent-soft)", color: tool === "draw" ? "var(--accent-contrast)" : "var(--accent)" }}
-          >
-            <Palette size={13} />
-          </button>
-          <button
-            onClick={() => setTool((t) => (t === "erase" ? "select" : "erase"))}
-            title="Erase drawing"
-            className="grid h-7 w-7 place-items-center rounded-lg"
-            style={{ background: tool === "erase" ? "var(--accent)" : "var(--accent-soft)", color: tool === "erase" ? "var(--accent-contrast)" : "var(--accent)" }}
-          >
-            <Eraser size={13} />
-          </button>
-
-          {tool === "draw" && (
-            <div className="flex items-center gap-1">
-              {DRAW_COLORS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setDrawColor(c)}
-                  className="h-5 w-5 rounded-full border-2 transition-transform hover:scale-110"
-                  style={{ background: c, borderColor: drawColor === c ? "var(--text)" : "transparent" }}
-                />
-              ))}
-            </div>
-          )}
-          {drawings.length > 0 && (
-            <button onClick={() => dispatch({ type: "CLEAR_DRAWINGS", board: boardName })} title="Clear all drawings" className="grid h-7 w-7 place-items-center rounded-lg" style={{ color: "var(--text-faint)" }}>
-              <Trash2 size={13} />
-            </button>
-          )}
-
-          <div className="mx-1 h-5 w-px" style={{ borderLeft: "2px dashed var(--border)" }} />
-          <button onClick={() => zoomBy(-0.1)} className="grid h-7 w-7 place-items-center rounded-lg" style={{ color: "var(--text-muted)" }} title="Zoom out">
-            <Minus size={13} />
-          </button>
-          <button onClick={() => setView({ x: 0, y: 0, scale: 1 })} className="rounded-lg px-1.5 text-[10px] font-medium" style={{ color: "var(--text-muted)" }} title="Reset view">
-            {Math.round(view.scale * 100)}%
-          </button>
-          <button onClick={() => zoomBy(0.1)} className="grid h-7 w-7 place-items-center rounded-lg" style={{ color: "var(--text-muted)" }} title="Zoom in">
-            <Plus size={13} />
-          </button>
-        </div>
-      </div>
-
-      <div
-        ref={canvasRef}
-        data-cursor-drag={tool === "select" ? true : undefined}
-        className="canvas-surface relative flex-1 overflow-hidden"
-        style={{ background: "var(--surface-muted)" }}
-        onMouseDown={handleCanvasMouseDown}
-        onMouseMove={handleCanvasMouseMove}
-        onMouseUp={handleCanvasMouseUp}
-        onMouseLeave={handleCanvasMouseUp}
-        onWheel={handleWheel}
-        onContextMenu={(e) => e.preventDefault()}
-      >
-        <div
-          className="relative"
-          style={{
-            width: CANVAS_W,
-            height: CANVAS_H,
-            transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
-            transformOrigin: "0 0",
-            background: "var(--surface-solid)",
-            border: "2px solid var(--border-strong)",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.18)",
-            backgroundImage: "radial-gradient(circle, var(--border) 1px, transparent 1px)",
-            backgroundSize: "26px 26px",
-          }}
-        >
-          <svg className="pointer-events-none absolute inset-0" width={CANVAS_W} height={CANVAS_H}>
-            {drawings.map((d) => (
-              <polyline key={d.id} points={d.points.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={d.color} strokeWidth={d.width} strokeLinecap="round" strokeLinejoin="round" />
-            ))}
-            {currentPath && (
-              <polyline points={currentPath.points.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={currentPath.color} strokeWidth={currentPath.width} strokeLinecap="round" strokeLinejoin="round" />
-            )}
-          </svg>
-
-          {rootTasks.length === 0 && notes.length === 0 && (
-            <div className="absolute left-10 top-10 text-xs" style={{ color: "var(--text-faint)" }}>
-              Empty page — add a task, a sticky note, attach a file, or start sketching. Drag (or right-click drag) to pan, scroll to zoom.
-            </div>
-          )}
-
-          {rootTasks.map((t) => (
-            <TaskCardOnCanvas
-              key={t.id}
-              task={t}
-              board={boardName}
-              allTasks={board.tasks}
-              boards={boards}
-              dispatch={dispatch}
-              onDragStart={startDrag}
-            />
-          ))}
-          {notes.map((n) =>
-            n.noteType === "file" ? (
-              <FileCardOnCanvas key={n.id} note={n} board={boardName} dispatch={dispatch} onDragStart={startDrag} files={files} />
-            ) : (
-              <NoteCardOnCanvas key={n.id} note={n} board={boardName} dispatch={dispatch} onDragStart={startDrag} />
-            )
-          )}
-        </div>
-      </div>
-
-      {parentModalOpen && (
-        <Modal title="Nest this board under" onClose={() => setParentModalOpen(false)}>
-          <div className="space-y-1">
-            {parent && (
-              <button
-                onClick={() => {
-                  dispatch({ type: "UNSET_BOARD_PARENT", name: boardName });
-                  setParentModalOpen(false);
-                }}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs text-red-500 hover:bg-black/5"
-              >
-                <FolderUp size={12} /> Remove parent (make top-level)
-              </button>
-            )}
-            {otherBoards.map((bName) => (
-              <button
-                key={bName}
-                onClick={() => {
-                  dispatch({ type: "SET_BOARD_PARENT", child: boardName, parent: bName });
-                  setParentModalOpen(false);
-                }}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-black/5"
-                style={{ color: "var(--text)" }}
-              >
-                <Folder size={12} style={{ color: "var(--text-faint)" }} /> {bName}
-              </button>
-            ))}
-          </div>
-        </Modal>
-      )}
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Graph view                                                          */
-/* ------------------------------------------------------------------ */
-
-function GraphApp({ boards, openWindow }) {
-  const [ref, setRef] = useState(null);
-  const [size, setSize] = useState({ width: 600, height: 420 });
-  useEffect(() => {
-    if (!ref) return undefined;
-    const update = () => setSize({ width: ref.clientWidth || 600, height: ref.clientHeight || 420 });
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(ref);
-    return () => ro.disconnect();
-  }, [ref]);
-
-  const keys = Object.keys(boards);
-  const positions = keys.length ? layoutBoardForest(boards, size.width, size.height) : {};
-
-  return (
-    <div className="flex h-full flex-col p-3" style={{ background: "var(--surface-muted)" }}>
-      <div className="mb-1 text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>
-        Board relationship graph
-      </div>
-      <div ref={setRef} className="relative flex-1 overflow-hidden">
-        {keys.length === 0 && (
-          <div className="grid h-full place-items-center text-xs" style={{ color: "var(--text-faint)" }}>
-            No boards yet
-          </div>
-        )}
-        <svg width={size.width} height={size.height} className="absolute inset-0">
-          {keys.map((k) => {
-            const parent = boards[k].parent;
-            if (!parent || !positions[parent] || !positions[k]) return null;
-            const p1 = positions[parent];
-            const p2 = positions[k];
-            return <line key={`e-${k}`} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="var(--border-strong)" strokeWidth={1.5} />;
-          })}
-        </svg>
-        {keys.map((k, i) => {
-          const p = positions[k];
-          if (!p) return null;
-          const { total, done } = countStats(boards[k]);
-          const radius = 18 + Math.min(20, total * 3);
-          const complete = done === total && total > 0;
-          return (
-            <button
-              key={k}
-              style={{ left: p.x, top: p.y, width: radius * 2, height: radius * 2, transform: "translate(-50%, -50%)", animationDelay: `${i * 40}ms`, borderColor: "var(--accent)", background: complete ? "var(--accent)" : "var(--accent-soft)" }}
-              onClick={() => openWindow("board", { boardName: k })}
-              className="absolute flex flex-col items-center justify-center rounded-full border-2 text-center transition-transform animate-[popIn_200ms_ease-out_backwards] hover:scale-110"
-            >
-              <span className="w-full truncate px-1 text-[9px] font-semibold" style={{ color: complete ? "var(--accent-contrast)" : "var(--text)" }}>
-                {k}
-              </span>
-              <span className="text-[8px]" style={{ color: complete ? "var(--accent-contrast)" : "var(--text-muted)" }}>
-                {done}/{total}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Project view                                                        */
-/* ------------------------------------------------------------------ */
-
-function ProjectApp({ projectName, boards, dispatch, openWindow }) {
-  const [tagModal, setTagModal] = useState(false);
-  const [renameModal, setRenameModal] = useState(false);
-
-  const keys = Object.keys(boards).filter((k) => (boards[k].tags || []).some((t) => norm(t) === norm(projectName)));
-  const untaggedBoards = Object.keys(boards).filter((k) => !(boards[k].tags || []).some((t) => norm(t) === norm(projectName)));
-
-  return (
-    <div className="flex h-full flex-col gap-3 p-4" style={{ background: "var(--surface-muted)" }}>
-      <div className="flex items-center justify-between border-b pb-2.5" style={{ borderColor: "var(--border)" }}>
-        <div className="flex items-center gap-2">
-          <Rocket size={17} style={{ color: "var(--accent)" }} />
-          <div className="text-[14px] font-semibold" style={{ color: "var(--text)" }}>@{projectName}</div>
-          <span className="text-xs" style={{ color: "var(--text-faint)" }}>({keys.length} boards)</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {keys.length > 0 && (
-            <button
-              onClick={() => keys.forEach((b) => openWindow("board", { boardName: b }))}
-              className="flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium"
-              style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--accent)" }}
-              title="Open all boards in windows"
-            >
-              <ExternalLink size={11} /> Open all
-            </button>
-          )}
-          <button
-            onClick={() => setTagModal(true)}
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium"
-            style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
-          >
-            <Plus size={11} /> Tag board
-          </button>
-          <button
-            onClick={() => setRenameModal(true)}
-            className="grid h-7 w-7 place-items-center rounded-md border"
-            style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
-            title="Rename project"
-          >
-            <Pencil size={11} />
-          </button>
-        </div>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-auto rounded-lg p-3" style={{ background: "var(--surface)" }}>
-        <div className="mb-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-faint)" }}>
-          Tagged boards ({keys.length})
-        </div>
-        {keys.length === 0 && (
-          <div className="px-1 py-4 text-center text-xs" style={{ color: "var(--text-faint)" }}>
-            No boards tagged @{projectName} yet — click "+ Tag board" above to add one.
-          </div>
-        )}
-        <div className="space-y-1">
-          {keys.map((n) => {
-            const { done, total } = countStats(boards[n]);
-            return (
-              <div
-                key={n}
-                className="group flex items-center justify-between rounded-md px-2.5 py-1.5 transition-colors hover:bg-black/5"
-              >
-                <button
-                  onClick={() => openWindow("board", { boardName: n })}
-                  className="flex items-center gap-2 text-left text-xs font-medium"
-                  style={{ color: "var(--text)" }}
-                >
-                  <Folder size={13} style={{ color: "var(--text-faint)" }} /> {n}
-                </button>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px]" style={{ color: "var(--text-faint)" }}>{done}/{total}</span>
-                  <button
-                    onClick={() => dispatch({ type: "UNTAG_BOARD", name: n, tag: projectName })}
-                    className="opacity-0 transition-opacity group-hover:opacity-100"
-                    style={{ color: "var(--danger)" }}
-                    title="Remove from project"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {tagModal && (
-        <Modal title={`Add board to @${projectName}`} onClose={() => setTagModal(false)}>
-          <div className="max-h-48 space-y-1 overflow-auto">
-            {untaggedBoards.length === 0 ? (
-              <div className="p-2 text-center text-xs" style={{ color: "var(--text-faint)" }}>All existing boards are already tagged.</div>
-            ) : (
-              untaggedBoards.map((bName) => (
-                <button
-                  key={bName}
-                  onClick={() => {
-                    dispatch({ type: "TAG_BOARD", name: bName, tag: projectName });
-                    setTagModal(false);
-                  }}
-                  className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-left text-xs hover:bg-black/5"
-                  style={{ color: "var(--text)" }}
-                >
-                  <Folder size={12} style={{ color: "var(--text-faint)" }} /> {bName}
-                </button>
-              ))
-            )}
-          </div>
-        </Modal>
-      )}
-
-      {renameModal && (
-        <PromptModal
-          title={`Rename project "${projectName}"`}
-          initial={projectName}
-          confirmLabel="Rename"
-          onClose={() => setRenameModal(false)}
-          onSubmit={(val) => {
-            dispatch({ type: "RENAME_PROJECT", oldName: projectName, newName: val });
-            setRenameModal(false);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Projects Manager App (init, list, delete, open-all)                 */
-/* ------------------------------------------------------------------ */
-
-function ProjectsManagerApp({ projects, boards, dispatch, openWindow }) {
-  const [createModal, setCreateModal] = useState(false);
-  const [renameTarget, setRenameTarget] = useState(null);
-
-  return (
-    <div className="flex h-full flex-col" style={{ background: "var(--surface-muted)" }}>
-      <div className="flex items-center justify-between border-b px-4 py-2.5" style={{ borderColor: "var(--border)" }}>
-        <div className="text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>
-          Projects · {projects.length}
-        </div>
-        <button
-          onClick={() => setCreateModal(true)}
-          className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-transform active:scale-95"
-          style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}
-        >
-          <Plus size={13} /> New Project
-        </button>
-      </div>
-
-      <div className="flex-1 space-y-2 overflow-auto p-4">
-        {projects.length === 0 && (
-          <div className="mt-10 text-center text-sm" style={{ color: "var(--text-faint)" }}>
-            No projects yet — create one to organize boards into milestones or sprints.
-          </div>
-        )}
-        {projects.map((p) => {
-          const taggedBoards = Object.keys(boards).filter((k) =>
-            (boards[k].tags || []).some((t) => norm(t) === norm(p))
-          );
-          return (
-            <div
-              key={p}
-              className="flex items-center justify-between rounded-xl border p-3 shadow-sm transition-all"
-              style={{ background: "var(--surface-solid)", borderColor: "var(--border)" }}
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="grid h-8 w-8 place-items-center rounded-lg" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
-                  <Rocket size={15} />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold" style={{ color: "var(--text)" }}>@{p}</div>
-                  <div className="text-[10px]" style={{ color: "var(--text-faint)" }}>
-                    {taggedBoards.length} board{taggedBoards.length === 1 ? "" : "s"}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => openWindow("project", { projectName: p })}
-                  className="rounded-md border px-2 py-1 text-[11px] font-medium"
-                  style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--text)" }}
-                >
-                  View
-                </button>
-                {taggedBoards.length > 0 && (
-                  <button
-                    onClick={() => taggedBoards.forEach((b) => openWindow("board", { boardName: b }))}
-                    className="rounded-md border px-2 py-1 text-[11px] font-medium"
-                    style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--accent)" }}
-                    title="Open all tagged boards"
-                  >
-                    Open all
-                  </button>
-                )}
-                <button
-                  onClick={() => setRenameTarget(p)}
-                  className="grid h-7 w-7 place-items-center rounded-md border"
-                  style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}
-                  title="Rename"
-                >
-                  <Pencil size={11} />
-                </button>
-                <button
-                  onClick={() => dispatch({ type: "DELETE_PROJECT", name: p })}
-                  className="grid h-7 w-7 place-items-center rounded-md border"
-                  style={{ borderColor: "var(--border)", color: "var(--danger)" }}
-                  title="Delete project"
-                >
-                  <Trash2 size={11} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {createModal && (
-        <PromptModal
-          title="Create New Project Tag"
-          confirmLabel="Create"
-          onClose={() => setCreateModal(false)}
-          onSubmit={(val) => {
-            dispatch({ type: "ADD_PROJECT", name: val });
-            setCreateModal(false);
-          }}
-        />
-      )}
-
-      {renameTarget && (
-        <PromptModal
-          title={`Rename Project "@${renameTarget}"`}
-          initial={renameTarget}
-          confirmLabel="Rename"
-          onClose={() => setRenameTarget(null)}
-          onSubmit={(val) => {
-            dispatch({ type: "RENAME_PROJECT", oldName: renameTarget, newName: val });
-            setRenameTarget(null);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Global Search & System Stats                                       */
-/* ------------------------------------------------------------------ */
-
-function SearchAndStatsApp({ boards, windows, dispatch, openWindow }) {
-  const [query, setQuery] = useState("");
-  const [confirmReset, setConfirmReset] = useState(false);
-
-  const keys = Object.keys(boards);
-  let totalTasks = 0;
-  let doneTasks = 0;
-  keys.forEach((k) => {
-    const s = countStats(boards[k]);
-    totalTasks += s.total;
-    doneTasks += s.done;
+function chain(boardId,steps,desc){
+  const s=newScript(boardId,'');s.nodes=[];s.desc=desc;
+  let prev=null,dataPrev=null,y=70;
+  steps.forEach(([t,p],i)=>{
+    const d=NODES[t];const n={id:uid('n'),t,x:60+i*236,y:y+(i%2)*40,p:Object.assign({},p)};
+    s.nodes.push(n);
+    const hasExecIn=(d.ins||[]).some(x=>x.x);
+    if(prev&&hasExecIn)s.edges.push({id:uid('e'),from:{n:prev,port:'out'},to:{n:n.id,port:'in'}});
+    if(hasExecIn||d.ev)prev=n.id;
+    const dIn=(d.ins||[]).find(x=>!x.x&&(x.id==='list'||x.id==='task'||x.id==='text'||x.id==='a'));
+    if(dataPrev&&dIn)s.edges.push({id:uid('e'),from:{n:dataPrev.n,port:dataPrev.port},to:{n:n.id,port:dIn.id}});
+    const dOut=(d.outs||[]).find(x=>!x.x&&(x.id==='list'||x.id==='task'||x.id==='done'||x.id==='text'||x.id==='v'));
+    if(dOut)dataPrev={n:n.id,port:dOut.id};
   });
-  const pct = totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
-
-  const searchResults = useMemo(() => {
-    if (!query.trim()) return [];
-    const q = query.trim().toLowerCase();
-    const results = [];
-    keys.forEach((bName) => {
-      boards[bName].tasks.forEach((t) => {
-        if (t.name.toLowerCase().includes(q)) {
-          results.push({ ...t, board: bName });
-        }
-      });
-    });
-    return results;
-  }, [boards, query, keys]);
-
-  return (
-    <div className="flex h-full flex-col p-4" style={{ background: "var(--surface-muted)" }}>
-      {/* Stats Card */}
-      <div
-        className="mb-3 rounded-xl border p-3"
-        style={{ background: "var(--surface-solid)", borderColor: "var(--border)" }}
-      >
-        <div className="mb-2 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--text)" }}>
-            <BarChart3 size={14} style={{ color: "var(--accent)" }} /> System Overview
-          </div>
-          <button
-            onClick={() => setConfirmReset(true)}
-            className="flex items-center gap-1 text-[10px] text-red-500 hover:underline"
-          >
-            <RotateCcw size={10} /> Reset System
-          </button>
-        </div>
-        <div className="grid grid-cols-3 gap-2 text-center text-xs">
-          <div className="rounded-lg p-2" style={{ background: "var(--surface-muted)" }}>
-            <div className="text-[16px] font-bold" style={{ color: "var(--text)" }}>{keys.length}</div>
-            <div className="text-[10px]" style={{ color: "var(--text-faint)" }}>Boards</div>
-          </div>
-          <div className="rounded-lg p-2" style={{ background: "var(--surface-muted)" }}>
-            <div className="text-[16px] font-bold" style={{ color: "var(--accent)" }}>{doneTasks}/{totalTasks}</div>
-            <div className="text-[10px]" style={{ color: "var(--text-faint)" }}>Tasks Done ({pct}%)</div>
-          </div>
-          <div className="rounded-lg p-2" style={{ background: "var(--surface-muted)" }}>
-            <div className="text-[16px] font-bold" style={{ color: "var(--text)" }}>{windows.length}</div>
-            <div className="text-[10px]" style={{ color: "var(--text-faint)" }}>Windows Open</div>
-          </div>
-        </div>
-        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
-          <div className="h-full transition-all duration-500" style={{ width: `${pct}%`, background: "var(--accent)" }} />
-        </div>
-      </div>
-
-      {/* Search Input */}
-      <div className="relative mb-3">
-        <Search size={14} className="absolute left-3 top-2.5" style={{ color: "var(--text-faint)" }} />
-        <input
-          autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search all tasks across all boards…"
-          className="w-full rounded-xl border py-2 pl-9 pr-3 text-xs outline-none"
-          style={{ background: "var(--surface-solid)", borderColor: "var(--border)", color: "var(--text)" }}
-        />
-      </div>
-
-      {/* Search Results */}
-      <div className="flex-1 overflow-auto rounded-xl border p-2" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-        {!query.trim() && (
-          <div className="py-8 text-center text-xs" style={{ color: "var(--text-faint)" }}>
-            Type anything above to search through all tasks.
-          </div>
-        )}
-        {query.trim() && searchResults.length === 0 && (
-          <div className="py-8 text-center text-xs" style={{ color: "var(--text-faint)" }}>
-            No tasks match "{query}".
-          </div>
-        )}
-        <div className="space-y-1">
-          {searchResults.map((r) => (
-            <div
-              key={r.id}
-              className="flex items-center justify-between rounded-lg px-2.5 py-1.5 transition-colors hover:bg-black/5"
-            >
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => dispatch({ type: "TOGGLE_TASK", board: r.board, taskId: r.id, done: !r.done })}
-                  className="grid h-3.5 w-3.5 place-items-center rounded border"
-                  style={{ borderColor: r.done ? "var(--accent)" : "var(--border-strong)", background: r.done ? "var(--accent)" : "transparent" }}
-                >
-                  {r.done && <Check size={9} strokeWidth={3} style={{ color: "var(--accent-contrast)" }} />}
-                </button>
-                <span className="text-xs" style={{ color: r.done ? "var(--text-faint)" : "var(--text)", textDecoration: r.done ? "line-through" : "none" }}>
-                  {r.name}
-                </span>
-              </div>
-              <button
-                onClick={() => openWindow("board", { boardName: r.board })}
-                className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium"
-                style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-              >
-                <Folder size={10} /> {r.board}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {confirmReset && (
-        <ConfirmModal
-          title="Reset Artemis OS"
-          message="This will permanently delete all boards, tasks, notes, files, and project tags. Are you sure?"
-          danger
-          onClose={() => setConfirmReset(false)}
-          onConfirm={() => dispatch({ type: "RESET" })}
-        />
-      )}
-    </div>
-  );
+  save();return s;
 }
+function templateMenu(boardId){
+  menu(innerWidth/2-140,140,Object.keys(TEMPLATES).map(k=>[k,()=>{
+    const s=TEMPLATES[k](boardId);s.name=k;save();refresh();openScriptEditor(s.id);
+    toast('Template added. Check the preview, then enable it.');}]),'Script templates');
+}
+/* live editor hooks */
+const LIVE={};
+function liveFire(sid,nid){const f=LIVE[sid];f&&f.fire&&f.fire(nid)}
+function liveLog(sid,m,e){const f=LIVE[sid];f&&f.log&&f.log(m,e)}
+</script>
+<script>
+/* ============================ script editor ============================ */
+function openScriptEditor(id){
+  const s=S.scripts[id];if(!s)return toast('That script is gone.');
+  openWin({id:'script:'+id,title:s.name,icon:appIcon('scripts'),w:1040,h:660,render:(b,w)=>buildEditor(b,w,id),
+    onClose:()=>delete LIVE[id],refresh:w=>w.api&&w.api.light()});
+}
+function buildEditor(body,win,id){
+  const s=()=>S.scripts[id];
+  body.innerHTML=\`<div class="sedit">
+    <div class="stool"></div>
+    <div class="smain">
+      <div class="slib"></div>
+      <div class="sholder"><div class="scanvas"><svg class="wires" width="6000" height="4000"></svg></div></div>
+      <div class="sside"></div>
+    </div>
+    <div class="slog"></div></div>\`;
+  const tool=$('.stool',body),lib=$('.slib',body),holder=$('.sholder',body),canvas=$('.scanvas',body),
+        svg=$('.wires',body),side=$('.sside',body),logEl=$('.slog',body);
+  const st={sel:null,cam:s().cam||{x:0,y:0,z:1},link:null,filter:''};
+  s().cam=st.cam;
 
-/* ------------------------------------------------------------------ */
-/* Files app                                                            */
-/* ------------------------------------------------------------------ */
-
-function FilesApp({ files, dispatch }) {
-  const inputRef = useRef(null);
-
-  function handleFiles(fileList) {
-    Array.from(fileList).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        dispatch({
-          type: "ADD_FILE",
-          file: { id: uid("file"), name: file.name, type: file.type, size: file.size, dataUrl: reader.result, addedAt: Date.now() },
-        });
-      };
-      reader.readAsDataURL(file);
-    });
+  /* ---- toolbar ---- */
+  function renderTool(){
+    const sc=s();
+    tool.innerHTML=\`<button class="btn sm" data-a="run">▶ Run</button>
+      <button class="btn sm \${sc.enabled?'on':''}" data-a="toggle">\${sc.enabled?'Enabled':'Disabled'}</button>
+      <button class="btn sm" data-a="more">⋯</button>
+      <div style="flex:1"></div>
+      <span class="dim">\${esc(sc.name)} · \${sc.boardId?esc((A.board(sc.boardId)||{name:'?'}).name):'any board'} · \${sc.runs||0} runs</span>\`;
+    $$('[data-a]',tool).forEach(b=>b.onclick=e=>toolAct(b.dataset.a,e));
+  }
+  function toolAct(a,e){
+    const sc=s();
+    const r=e.currentTarget.getBoundingClientRect(),m={clientX:r.left,clientY:r.bottom+4};
+    if(a==='run')doRun();
+    else if(a==='toggle'){
+      if(!sc.enabled)previewScript(sc,()=>{sc.enabled=true;Bus.emit('script.enabled',{});changed();renderTool();toast('Script enabled.')});
+      else{sc.enabled=false;Bus.emit('script.disabled',{});changed();renderTool()}}
+    else if(a==='more')menu(m.clientX,m.clientY,[
+      ['Preview what it will do',()=>previewScript(sc)],
+      ['Rename…',()=>ask('Rename script','Name',sc.name,v=>{sc.name=v;win.setTitle(v);changed()})],
+      ['Attach to board…',()=>menu(m.clientX+20,m.clientY,[['Any board (global)',()=>{sc.boardId=null;changed();renderTool()}],
+        ...Object.values(S.boards).map(b=>[A.path(b.id).map(x=>x.name).join(' › '),()=>{sc.boardId=b.id;changed();renderTool()}])],'Attach to board')],
+      ['Permissions…',()=>permsDialog(sc,renderTool)],
+      ['Variables ('+(sc.vars||[]).length+')…',()=>varsDialog(sc)],
+      ['Tidy layout',()=>{tidy();render()}],
+      ['Export file',()=>{const blob=new Blob([JSON.stringify(sc,null,2)],{type:'application/json'});
+        const u=URL.createObjectURL(blob),a2=document.createElement('a');a2.href=u;a2.download=sc.name.replace(/\\W+/g,'-')+'.artemis.json';a2.click();
+        setTimeout(()=>URL.revokeObjectURL(u),2000)}],
+      '-',['Delete script',()=>confirmBox('Delete script',\`Delete “\${sc.name}”?\`,()=>{delete S.scripts[id];closeWin(win);changed()})],
+    ],'Script');
+  }
+  function tidy(){
+    const sc=s(),seen=new Set(),cols=[];
+    const starts=sc.nodes.filter(n=>NODES[n.t]&&NODES[n.t].ev);
+    let layer=starts.length?starts:sc.nodes.slice(0,1);
+    while(layer.length&&cols.length<20){
+      cols.push(layer);layer.forEach(n=>seen.add(n.id));
+      const nx=[];layer.forEach(n=>sc.edges.filter(e=>e.from.n===n.id).forEach(e=>{
+        const t=sc.nodes.find(x=>x.id===e.to.n);if(t&&!seen.has(t.id)&&!nx.includes(t))nx.push(t)}));
+      layer=nx;
+    }
+    sc.nodes.filter(n=>!seen.has(n.id)).forEach((n,i)=>{n.x=60;n.y=560+i*80});
+    cols.forEach((c,ci)=>c.forEach((n,ri)=>{n.x=60+ci*250;n.y=60+ri*190}));
+    save();
   }
 
-  return (
-    <div className="flex h-full flex-col" style={{ background: "var(--surface-muted)" }}>
-      <div className="flex items-center justify-between border-b px-4 py-2.5" style={{ borderColor: "var(--border)" }}>
-        <div className="text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>Files · {files.length}</div>
-        <button onClick={() => inputRef.current?.click()} className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-transform active:scale-95" style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}>
-          <Plus size={13} /> Add file
-        </button>
-        <input ref={inputRef} type="file" multiple className="hidden" onChange={(e) => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }} />
-      </div>
-      <div className="grid flex-1 auto-rows-min grid-cols-3 gap-3 overflow-auto p-4 sm:grid-cols-4">
-        {files.length === 0 && (
-          <div className="col-span-full mt-10 text-center text-sm" style={{ color: "var(--text-faint)" }}>
-            No files yet — add one from your computer, or attach one directly from a board.
-          </div>
-        )}
-        {files.map((f) => (
-          <div key={f.id} className="group flex flex-col items-center gap-1.5 rounded-lg p-2 text-center">
-            {f.type?.startsWith("image/") ? (
-              <img src={f.dataUrl} alt={f.name} className="h-14 w-14 rounded-lg border object-cover" style={{ borderColor: "var(--border)" }} />
-            ) : (
-              <div className="grid h-14 w-14 place-items-center rounded-lg border text-[9px] font-semibold" style={{ borderColor: "var(--border)", color: "var(--text-faint)" }}>
-                {(f.name.split(".").pop() || "file").slice(0, 4).toUpperCase()}
-              </div>
-            )}
-            <span className="line-clamp-1 max-w-[92px] text-[10px] font-medium" style={{ color: "var(--text)" }}>{f.name}</span>
-            <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-              <a href={f.dataUrl} download={f.name} className="rounded p-1" style={{ color: "var(--text-faint)" }}><FolderOpen size={11} /></a>
-              <button onClick={() => dispatch({ type: "DELETE_FILE", id: f.id })} className="rounded p-1" style={{ color: "var(--danger)" }}><Trash2 size={11} /></button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+  /* ---- library ---- */
+  function renderLib(){
+    // built once; the search input is never recreated, so typing keeps its cursor position.
+    if(!$('#_q',lib)){
+      lib.innerHTML=\`<input type="text" placeholder="Find a node…" id="_q" style="margin-bottom:6px"><div id="_nl"></div>\`;
+      const q=$('#_q',lib);q.value=st.filter;
+      q.oninput=e=>{st.filter=e.target.value;renderNodeList()};
+    }
+    renderNodeList();
+  }
+  function renderNodeList(){
+    $('#_nl',lib).innerHTML=CATS.map(c=>{
+        const list=Object.values(NODES).filter(n=>n.cat===c&&(!st.filter||n.title.toLowerCase().includes(st.filter.toLowerCase())));
+        if(!list.length)return '';
+        return \`<div class="cat">\${c}</div>\`+list.map(n=>\`<button class="nbtn" data-t="\${n.t}">\${esc(n.title)}</button>\`).join('');
+      }).join('')||'<p class="dim" style="padding:4px 7px">No matches.</p>';
+    $$('.nbtn',lib).forEach(b=>b.onclick=()=>addNode(b.dataset.t));
+  }
+  function addNode(t,at){
+    const c=st.cam,r=holder.getBoundingClientRect();
+    const x=at?at.x:(holder.clientWidth/2-c.x)/c.z-90,y=at?at.y:(holder.clientHeight/2-c.y)/c.z-40;
+    const n={id:uid('n'),t,x:Math.round(x),y:Math.round(y),p:{}};
+    s().nodes.push(n);st.sel=n.id;save();render();
+  }
 
-/* ------------------------------------------------------------------ */
-/* Calendar — with project tags + upcoming reminders                   */
-/* ------------------------------------------------------------------ */
-
-const WEEKDAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-
-function CalendarApp({ events, projects, dispatch }) {
-  const [cursor, setCursor] = useState(() => {
-    const n = new Date();
-    return new Date(n.getFullYear(), n.getMonth(), 1);
+  /* ---- camera ---- */
+  function applyCam(){canvas.style.transform=\`translate(\${st.cam.x}px,\${st.cam.y}px) scale(\${st.cam.z})\`}
+  holder.addEventListener('wheel',e=>{e.preventDefault();const r=holder.getBoundingClientRect();
+    const px=e.clientX-r.left,py=e.clientY-r.top,f=e.deltaY<0?1.1:1/1.1,z=clamp(st.cam.z*f,.3,2);
+    st.cam.x=px-(px-st.cam.x)*(z/st.cam.z);st.cam.y=py-(py-st.cam.y)*(z/st.cam.z);st.cam.z=z;applyCam();drawWires();},{passive:false});
+  let pan=null;
+  holder.addEventListener('contextmenu',e=>{
+    if(e.target.closest('.node'))return;e.preventDefault();
+    const r=holder.getBoundingClientRect();
+    const at={x:(e.clientX-r.left-st.cam.x)/st.cam.z,y:(e.clientY-r.top-st.cam.y)/st.cam.z};
+    menu(e.clientX,e.clientY,[['Add node ▸',()=>catMenu(e,at)],['Tidy layout',()=>{tidy();render()}],
+      ['Run now',doRun],['Fit view',()=>{st.cam={x:20,y:20,z:.8};s().cam=st.cam;applyCam();drawWires()}]],'Script canvas');
   });
-  const [selected, setSelected] = useState(() => dateKey(new Date()));
-  const [draft, setDraft] = useState("");
-  const [draftProject, setDraftProject] = useState("");
-  const [draftTime, setDraftTime] = useState("");
+  function catMenu(e,at){menu(e.clientX+30,e.clientY,CATS.map(c=>[c+' ▸',()=>
+    menu(e.clientX+60,e.clientY,Object.values(NODES).filter(n=>n.cat===c).map(n=>[n.title,()=>addNode(n.t,at)]),c)]),'Add node')}
+  holder.addEventListener('mousedown',e=>{
+    if(e.target.closest('.node')||e.target.classList.contains('dot'))return;
+    if(e.button===0&&!st.link){st.sel=null;renderSide();$$('.node',canvas).forEach(n=>n.classList.remove('sel'))}
+    pan={sx:e.clientX,sy:e.clientY,cx:st.cam.x,cy:st.cam.y};
+  });
+  addEventListener('mousemove',e=>{
+    if(pan){st.cam.x=pan.cx+(e.clientX-pan.sx);st.cam.y=pan.cy+(e.clientY-pan.sy);applyCam();}
+    if(st.link){const p=canvasPt(e);st.link.to=p;drawWires();}
+  });
+  addEventListener('mouseup',e=>{if(pan){pan=null;save()}
+    if(st.link){const dot=e.target.closest&&e.target.closest('.dot');
+      if(dot)finishLink(dot);st.link=null;drawWires();}});
+  function canvasPt(e){const r=holder.getBoundingClientRect();
+    return{x:(e.clientX-r.left-st.cam.x)/st.cam.z,y:(e.clientY-r.top-st.cam.y)/st.cam.z}}
 
-  const today = dateKey(new Date());
-  const cells = useMemo(() => getMonthCells(cursor.getFullYear(), cursor.getMonth()), [cursor]);
-  const monthLabel = cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
-  const dayEvents = events[selected] || [];
-
-  const upcoming = useMemo(() => {
-    const out = [];
-    Object.keys(events).forEach((date) => {
-      if (date < today) return;
-      (events[date] || []).forEach((ev) => out.push({ ...ev, date }));
+  /* ---- nodes ---- */
+  function render(){
+    const sc=s();if(!sc)return;win.setTitle(sc.name);
+    $$('.node',canvas).forEach(e=>e.remove());
+    sc.nodes.forEach(n=>canvas.appendChild(nodeEl(n)));
+    applyCam();drawWires();renderTool();renderSide();renderLog();
+  }
+  function nodeEl(n){
+    const d=NODES[n.t]||{title:n.t,ins:[],outs:[],params:[]};
+    const el=document.createElement('div');el.className='node'+(st.sel===n.id?' sel':'');
+    el.dataset.n=n.id;el.style.left=n.x+'px';el.style.top=n.y+'px';
+    const pv=(d.params||[]).map(q=>{const v=n.p&&n.p[q.id]!==undefined?n.p[q.id]:q.d;
+      return v===''||v===undefined?'':\`<div class="dim">\${esc(q.l)}: \${esc(q.k==='check'?(v?'yes':'no'):String(v))}</div>\`}).join('');
+    el.innerHTML=\`<div class="nh"><span class="nh-t">\${d.ev?'⚡ ':''}\${esc(d.title)}</span><span class="cnt"></span></div>
+      <div class="nb">
+        \${(d.ins||[]).map(i=>\`<div class="port"><span class="dot \${i.x?'ex':''}" data-dir="in" data-port="\${i.id}"></span><span class="pl">\${esc(i.l||i.id)}</span></div>\`).join('')}
+        \${pv}
+        \${(d.outs||[]).map(o=>\`<div class="port out"><span class="pl">\${esc(o.l||o.id)}</span><span class="dot \${o.x?'ex':''}" data-dir="out" data-port="\${o.id}"></span></div>\`).join('')}
+      </div>\`;
+    drag($('.nh',el),(dx,dy)=>{el.style.left=(el._x+dx/st.cam.z)+'px';el.style.top=(el._y+dy/st.cam.z)+'px';drawWires();},
+      ()=>{el._x=n.x;el._y=n.y;st.sel=n.id;$$('.node',canvas).forEach(x=>x.classList.toggle('sel',x===el));renderSide();},
+      m=>{n.x=Math.round(parseFloat(el.style.left));n.y=Math.round(parseFloat(el.style.top));save();drawWires()});
+    el.addEventListener('mousedown',e=>{if(e.target.classList.contains('dot'))return;
+      st.sel=n.id;$$('.node',canvas).forEach(x=>x.classList.toggle('sel',x===el));renderSide()});
+    $$('.dot',el).forEach(dot=>{
+      dot.addEventListener('mousedown',e=>{e.stopPropagation();e.preventDefault();
+        st.link={from:{n:n.id,port:dot.dataset.port,dir:dot.dataset.dir},to:canvasPt(e)};});
+      dot.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();
+        const sc=s();const before=sc.edges.length;
+        sc.edges=sc.edges.filter(x=>!(x.from.n===n.id&&x.from.port===dot.dataset.port)&&!(x.to.n===n.id&&x.to.port===dot.dataset.port));
+        if(sc.edges.length!==before){save();drawWires()}});
     });
-    out.sort((a, b) => (a.date + (a.time || "99:99")).localeCompare(b.date + (b.time || "99:99")));
-    return out.slice(0, 8);
-  }, [events, today]);
-
-  function jumpTo(date) {
-    const d = new Date(date + "T00:00:00");
-    setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
-    setSelected(date);
+    el.oncontextmenu=e=>{if(e.target.classList.contains('dot'))return;
+      e.preventDefault();e.stopPropagation();
+      menu(e.clientX,e.clientY,[['Duplicate',()=>{const c=JSON.parse(JSON.stringify(n));c.id=uid('n');c.x+=30;c.y+=30;s().nodes.push(c);save();render()}],
+        ['Disconnect all',()=>{s().edges=s().edges.filter(x=>x.from.n!==n.id&&x.to.n!==n.id);save();render()}],
+        ['Delete node',()=>{s().edges=s().edges.filter(x=>x.from.n!==n.id&&x.to.n!==n.id);
+          s().nodes=s().nodes.filter(x=>x.id!==n.id);st.sel=null;save();render()}]],d.title)};
+    return el;
+  }
+  function finishLink(dot){
+    const a=st.link.from,b={n:dot.closest('.node').dataset.n,port:dot.dataset.port,dir:dot.dataset.dir};
+    if(a.dir===b.dir||a.n===b.n)return;
+    const from=a.dir==='out'?a:b,to=a.dir==='out'?b:a;
+    const dOut=(NODES[s().nodes.find(n=>n.id===from.n).t].outs||[]).find(o=>o.id===from.port);
+    const dIn=(NODES[s().nodes.find(n=>n.id===to.n).t].ins||[]).find(o=>o.id===to.port);
+    if(!dOut||!dIn||!!dOut.x!==!!dIn.x)return toast('Those two plugs don’t match.');
+    const sc=s();
+    sc.edges=sc.edges.filter(e=>!(e.to.n===to.n&&e.to.port===to.port));
+    if(dOut.x)sc.edges=sc.edges.filter(e=>!(e.from.n===from.n&&e.from.port===from.port));
+    sc.edges.push({id:uid('e'),from:{n:from.n,port:from.port},to:{n:to.n,port:to.port}});
+    save();drawWires();
+  }
+  function dotPos(nid,port,dir){
+    const nEl=canvas.querySelector(\`.node[data-n="\${nid}"]\`);if(!nEl)return null;
+    const d=nEl.querySelector(\`.dot[data-port="\${port}"][data-dir="\${dir}"]\`);if(!d)return null;
+    const cr=canvas.getBoundingClientRect(),dr=d.getBoundingClientRect();
+    return{x:(dr.left+dr.width/2-cr.left)/st.cam.z,y:(dr.top+dr.height/2-cr.top)/st.cam.z};
+  }
+  function drawWires(){
+    const sc=s();if(!sc)return;
+    const segs=sc.edges.map(e=>{
+      const a=dotPos(e.from.n,e.from.port,'out'),b=dotPos(e.to.n,e.to.port,'in');
+      if(!a||!b)return '';
+      const dx=Math.max(40,Math.abs(b.x-a.x)*.5);
+      const ex=sc.nodes.find(n=>n.id===e.from.n);
+      const isExec=(NODES[ex.t].outs||[]).find(o=>o.id===e.from.port&&o.x);
+      return \`<path d="M\${a.x},\${a.y} C\${a.x+dx},\${a.y} \${b.x-dx},\${b.y} \${b.x},\${b.y}" fill="none"
+        stroke="\${isExec?'var(--ink)':'var(--accent2)'}" stroke-width="\${isExec?3:2.4}"
+        \${isExec?'':'stroke-dasharray="7 5"'} stroke-linecap="round"/>\`;
+    }).join('');
+    let tmp='';
+    if(st.link){const a=dotPos(st.link.from.n,st.link.from.port,st.link.from.dir);
+      if(a)tmp=\`<path d="M\${a.x},\${a.y} L\${st.link.to.x},\${st.link.to.y}" stroke="var(--accent)" stroke-width="2.6" fill="none" stroke-dasharray="5 5"/>\`}
+    svg.innerHTML=segs+tmp;
   }
 
-  return (
-    <div className="flex h-full" style={{ background: "var(--surface-muted)" }}>
-      <div className="flex min-w-0 flex-1 flex-col p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="grid h-6 w-6 place-items-center rounded-md text-xs transition-colors" style={{ color: "var(--text-muted)" }}>‹</button>
-          <div className="flex items-center gap-2">
-            <div className="text-[12px] font-semibold" style={{ color: "var(--text)" }}>{monthLabel}</div>
-            <button onClick={() => { const n = new Date(); setCursor(new Date(n.getFullYear(), n.getMonth(), 1)); setSelected(dateKey(n)); }} className="rounded-md px-1.5 py-0.5 text-[9px] font-medium" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>Today</button>
-          </div>
-          <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="grid h-6 w-6 place-items-center rounded-md text-xs transition-colors" style={{ color: "var(--text-muted)" }}>›</button>
-        </div>
-        <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[9px] font-medium uppercase" style={{ color: "var(--text-faint)" }}>
-          {WEEKDAY_LABELS.map((d) => <div key={d}>{d}</div>)}
-        </div>
-        <div className="grid flex-1 grid-cols-7 gap-1">
-          {cells.map((d, i) => {
-            const key = dateKey(d);
-            const inMonth = d.getMonth() === cursor.getMonth();
-            const dayList = events[key] || [];
-            const has = dayList.length > 0;
-            const dotColor = has && dayList[0].project ? projectColorFor(projects, dayList[0].project) : "var(--accent)";
-            const isToday = key === today;
-            const isSel = key === selected;
-            return (
-              <button
-                key={i}
-                onClick={() => setSelected(key)}
-                className="relative flex flex-col items-center justify-center rounded-md text-[11px] transition-colors"
-                style={{
-                  background: isSel ? "var(--accent)" : isToday ? "var(--accent-soft)" : "transparent",
-                  color: isSel ? "var(--accent-contrast)" : inMonth ? "var(--text)" : "var(--text-faint)",
-                  fontWeight: isToday && !isSel ? 700 : 500,
-                }}
-              >
-                {d.getDate()}
-                {has && <span className="absolute bottom-1 h-1 w-1 rounded-full" style={{ background: isSel ? "var(--accent-contrast)" : dotColor }} />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+  /* ---- inspector ---- */
+  function renderSide(){
+    const sc=s(),n=sc.nodes.find(x=>x.id===st.sel);
+    if(!n){side.innerHTML=\`<div class="cat">Script</div><p class="dim">\${esc(sc.desc||'Pick a node to edit it. Drag from a plug to wire nodes together; right-click a plug to unplug it.')}</p>
+      <div class="cat">Trigger</div><p class="dim">\${sc.nodes.filter(x=>NODES[x.t]&&NODES[x.t].ev).map(x=>NODES[x.t].title).join(', ')||'None yet — add one from Events.'}</p>
+      <div class="cat">Nodes</div><p class="dim">\${sc.nodes.length} nodes, \${sc.edges.length} connections</p>\`;return}
+    const d=NODES[n.t];
+    side.innerHTML=\`<div class="cat">\${esc(d.title)}</div>
+      <div id="_pp"></div>
+      <div class="cat">Debug</div>
+      <p class="dim">Ran \${(win.api&&win.api.counts[n.id])||0} time(s) in the last run.<br>
+      Inputs: \${(d.ins||[]).filter(i=>!i.x).map(i=>i.l).join(', ')||'—'}<br>
+      Outputs: \${(d.outs||[]).filter(i=>!i.x).map(i=>i.l).join(', ')||'—'}</p>
+      <button class="btn sm" id="_del">Delete node</button>\`;
+    const pp=$('#_pp',side);
+    (d.params||[]).forEach(q=>{
+      const v=n.p[q.id]!==undefined?n.p[q.id]:q.d;
+      const w=document.createElement('div');
+      if(q.k==='check'){w.innerHTML=\`<label class="fld">\${esc(q.l)}</label>
+        <button class="btn sm \${v?'on':''}" id="c_\${q.id}">\${v?'Yes':'No'}</button>\`;
+        w.querySelector('button').onclick=e=>{n.p[q.id]=!v;save();render()};}
+      else if(q.k==='sel'||q.k==='proj'){
+        const opts=q.k==='proj'?S.projects.map(p=>p.name):q.o;
+        w.innerHTML=\`<label class="fld">\${esc(q.l)}</label><select>\${(opts||[]).map(o=>
+          \`<option \${String(v)===String(o)?'selected':''}>\${esc(o)}</option>\`).join('')}</select>\`;
+        w.querySelector('select').onchange=e=>{n.p[q.id]=e.target.value;save();render()};}
+      else{const type=q.k==='num'?'number':q.k==='date'?'date':q.k==='time'?'time':'text';
+        w.innerHTML=\`<label class="fld">\${esc(q.l)}</label><input type="\${type}" value="\${esc(v??'')}">\`;
+        w.querySelector('input').onchange=e=>{n.p[q.id]=q.k==='num'?num(e.target.value):e.target.value;save();render()};}
+      pp.appendChild(w);
+    });
+    $('#_del',side).onclick=()=>{s().edges=s().edges.filter(x=>x.from.n!==n.id&&x.to.n!==n.id);
+      s().nodes=s().nodes.filter(x=>x.id!==n.id);st.sel=null;save();render()};
+  }
 
-      <div className="flex w-56 shrink-0 flex-col border-l p-3" style={{ borderColor: "var(--border)" }}>
-        <div className="mb-2 text-[11px] font-semibold" style={{ color: "var(--text)" }}>
-          {new Date(selected + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
-        </div>
-        <form
-          className="mb-2 flex flex-col gap-1"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (draft.trim()) {
-              dispatch({ type: "ADD_EVENT", date: selected, text: draft, project: draftProject || null, time: draftTime || null });
-              setDraft("");
-              setDraftTime("");
-            }
-          }}
-        >
-          <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Add event…" className="rounded-md border px-2 py-1 text-[11px] outline-none" style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--text)" }} />
-          <div className="flex gap-1">
-            <input type="time" value={draftTime} onChange={(e) => setDraftTime(e.target.value)} className="flex-1 rounded-md border px-1 py-1 text-[10px] outline-none" style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--text)" }} />
-            <select value={draftProject} onChange={(e) => setDraftProject(e.target.value)} className="flex-1 rounded-md border px-1 py-1 text-[10px] outline-none" style={{ borderColor: "var(--border)", background: "var(--surface-solid)", color: "var(--text)" }}>
-              <option value="">No project</option>
-              {projects.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-            <button type="submit" className="rounded-md px-2 text-[11px]" style={{ background: "var(--accent)", color: "var(--accent-contrast)" }}><Plus size={12} /></button>
-          </div>
-        </form>
-        <div className="mb-2 max-h-32 space-y-1 overflow-auto">
-          {dayEvents.length === 0 && <div className="text-[11px]" style={{ color: "var(--text-faint)" }}>No events</div>}
-          {dayEvents.map((ev) => (
-            <div key={ev.id} className="group flex items-center gap-1.5 rounded-md px-2 py-1" style={{ background: "var(--surface)" }}>
-              {ev.project && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: projectColorFor(projects, ev.project) }} />}
-              {ev.time && <span className="text-[9px]" style={{ color: "var(--text-faint)" }}>{ev.time}</span>}
-              <span className="flex-1 truncate text-[11px]" style={{ color: "var(--text)" }}>{ev.text}</span>
-              <button onClick={() => dispatch({ type: "DELETE_EVENT", date: selected, id: ev.id })} className="opacity-0 transition-opacity group-hover:opacity-100" style={{ color: "var(--text-faint)" }}><X size={11} /></button>
-            </div>
-          ))}
-        </div>
-        <div className="mt-1 border-t pt-2" style={{ borderColor: "var(--border)" }}>
-          <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-faint)" }}>Upcoming reminders</div>
-          <div className="max-h-40 space-y-1 overflow-auto">
-            {upcoming.length === 0 && <div className="text-[11px]" style={{ color: "var(--text-faint)" }}>Nothing coming up</div>}
-            {upcoming.map((ev) => (
-              <button key={ev.id} onClick={() => jumpTo(ev.date)} className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left" style={{ background: "var(--surface)" }}>
-                {ev.project && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: projectColorFor(projects, ev.project) }} />}
-                <span className="flex-1 truncate text-[10px]" style={{ color: "var(--text)" }}>{ev.text}</span>
-                <span className="text-[9px]" style={{ color: "var(--text-faint)" }}>{ev.date.slice(5)}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  /* ---- run + log ---- */
+  let lines=[];
+  function renderLog(){
+    logEl.innerHTML=(lines.length?lines:[['Press “Run now” to watch it work. Nodes light up as they fire.',false]])
+      .map(([m,e])=>\`<div class="\${e?'er':''}">\${esc(m)}</div>\`).join('');
+    logEl.scrollTop=logEl.scrollHeight;
+  }
+  function doRun(){
+    lines=[];renderLog();
+    win.api.counts={};
+    runScript(s(),{onFire:nid=>{
+        win.api.counts[nid]=(win.api.counts[nid]||0)+1;
+        const el=canvas.querySelector(\`.node[data-n="\${nid}"]\`);
+        if(el){el.classList.add('fire');const c=$('.cnt',el);if(c)c.textContent='×'+win.api.counts[nid];
+          setTimeout(()=>el.classList.remove('fire'),420)}},
+      onLog:(m,e)=>{lines.push([m,e]);renderLog()},
+      onErr:nid=>{const el=canvas.querySelector(\`.node[data-n="\${nid}"]\`);el&&el.classList.add('err')}})
+    .then(C=>{lines.push([\`Finished in \${C.ms}ms · \${C.steps} steps\${C.errs?\` · \${C.errs} error(s)\`:''}\`,C.errs>0]);
+      renderLog();renderTool();refresh();});
+  }
+  win.api={counts:{},light(){renderTool()},render};
+  LIVE[id]={fire:nid=>{const el=canvas.querySelector(\`.node[data-n="\${nid}"]\`);
+      if(el){el.classList.add('fire');setTimeout(()=>el.classList.remove('fire'),420)}},
+    log:(m,e)=>{lines.push([m,e]);renderLog()}};
+  renderLib();render();
+}
+function permsDialog(sc,after){
+  const P=sc.perms||(sc.perms={tasks:true,boards:true,notes:true,files:true,delete:false});
+  modal('What this script may change',
+    ['tasks','boards','notes','files','delete'].map(k=>
+      \`<div class="row" style="margin:6px 0"><button class="btn sm \${P[k]?'on':''}" data-k="\${k}">\${P[k]?'Allowed':'Blocked'}</button>
+       <span>\${k==='delete'?'Delete things (tasks, notes, boards, files)':'Change '+k}</span></div>\`).join(''),
+    [['Done',()=>after&&after(),1]],
+    b=>$$('[data-k]',b).forEach(x=>x.onclick=()=>{P[x.dataset.k]=!P[x.dataset.k];
+      x.classList.toggle('on',P[x.dataset.k]);x.textContent=P[x.dataset.k]?'Allowed':'Blocked';save()}));
+}
+function varsDialog(sc){
+  sc.vars||=[];
+  const draw=b=>{$('#_vl',b).innerHTML=sc.vars.map((v,i)=>
+    \`<div class="row" style="margin:5px 0"><input type="text" value="\${esc(v.name)}" data-i="\${i}" data-f="name" style="flex:1">
+     <input type="text" value="\${esc(v.value??'')}" data-i="\${i}" data-f="value" style="flex:1">
+     <button class="btn sm" data-x="\${i}">✕</button></div>\`).join('')||'<p class="dim">No variables yet.</p>';
+    $$('[data-f]',b).forEach(inp=>inp.onchange=()=>{sc.vars[+inp.dataset.i][inp.dataset.f]=inp.value;save()});
+    $$('[data-x]',b).forEach(x=>x.onclick=()=>{sc.vars.splice(+x.dataset.x,1);save();draw(b)});};
+  modal('Variables',\`<div id="_vl"></div><button class="btn sm" id="_add" style="margin-top:8px">+ Add variable</button>
+    <p class="dim" style="margin-top:8px">Read them with “Get Variable”, write them with “Set Variable”.</p>\`,
+    [['Done',null,1]],b=>{draw(b);$('#_add',b).onclick=()=>{sc.vars.push({name:'value'+(sc.vars.length+1),value:''});save();draw(b)}});
+}
+</script>
+<script>
+/* ============================ scripts manager ============================ */
+function openScripts(){
+  openWin({id:'scripts',title:'Scripts',icon:appIcon('scripts'),w:700,h:520,render:drawScripts,refresh:w=>drawScripts(w.body,w)});
+}
+function drawScripts(body,win){
+  const list=Object.values(S.scripts);
+  body.innerHTML=\`<div class="pad">
+    <div class="row"><button class="btn sm" id="_new">+ New script</button>
+      <button class="btn sm" id="_tpl">Start from a template</button>
+      <button class="btn sm" id="_imp">Import script</button></div>
+    <h4 class="sec">All automations</h4>
+    <div class="list" id="_l"></div></div>\`;
+  $('#_new',body).onclick=()=>{const s=newScript(null);openScriptEditor(s.id)};
+  $('#_tpl',body).onclick=()=>templateMenu(null);
+  $('#_imp',body).onclick=()=>{
+    const i=document.createElement('input');i.type='file';i.accept='.json';
+    i.onchange=()=>{const r=new FileReader();r.onload=()=>{
+      try{const o=JSON.parse(r.result);o.id=uid('sc');o.enabled=false;S.scripts[o.id]=o;changed();toast('Script imported (disabled until you enable it).')}
+      catch(e){toast('That file isn’t a script Artemis can read.')}};r.readAsText(i.files[0])};
+    i.click()};
+  $('#_l',body).innerHTML=list.length?list.map(s=>\`<div class="item" data-s="\${s.id}">
+      <span style="width:88px">\${scriptStateLabel(s)}</span>
+      <div style="flex:1"><div>\${esc(s.name)}</div>
+        <div class="dim">\${s.boardId?esc((A.board(s.boardId)||{name:'missing board'}).name):'any board'} · \${s.nodes.length} nodes · \${s.runs||0} runs\${s.lastRun?' · last '+new Date(s.lastRun).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):''}</div></div>
+      <button class="btn sm" data-a="run">▶</button>
+      <button class="btn sm" data-a="edit">Edit</button>
+      <button class="btn sm" data-a="more">…</button></div>\`).join('')
+    :\`<p class="dim">No scripts yet. A script watches a board and does the tidying for you — build the behaviour once, then use the board normally.</p>\`;
+  $$('#_l .item',body).forEach(it=>{
+    const s=S.scripts[it.dataset.s];
+    $('[data-a="edit"]',it).onclick=()=>openScriptEditor(s.id);
+    $('[data-a="run"]',it).onclick=()=>runScript(s).then(C=>toast(\`“\${s.name}” ran \${C.steps} steps\${C.errs?\` with \${C.errs} error(s)\`:''}.\`));
+    $('[data-a="more"]',it).onclick=e=>menu(e.clientX,e.clientY,[
+      [s.enabled?'Disable':'Enable',()=>{if(s.enabled){s.enabled=false;changed()}else previewScript(s,()=>{s.enabled=true;changed()})}],
+      ['Preview actions',()=>previewScript(s)],
+      ['Rename…',()=>ask('Rename script','Name',s.name,v=>{s.name=v;changed()})],
+      ['Duplicate',()=>{const c=JSON.parse(JSON.stringify(s));c.id=uid('sc');c.name=s.name+' copy';c.enabled=false;S.scripts[c.id]=c;changed()}],
+      ['Reuse on another board…',()=>pickBoard('Attach a copy to…',bid=>{
+        const c=JSON.parse(JSON.stringify(s));c.id=uid('sc');c.name=s.name+' ('+A.board(bid).name+')';c.boardId=bid;c.enabled=false;
+        S.scripts[c.id]=c;changed();toast('Copied. Enable it when you’re ready.')})],
+      ['Execution history',()=>modal('History — '+s.name,(s.log||[]).length?
+        \`<div class="list">\${s.log.slice(-25).reverse().map(l=>\`<div class="item"><span class="dim" style="width:70px">\${new Date(l.t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span><span>\${esc(l.m)}</span></div>\`).join('')}</div>\`
+        :'<p class="dim">This script hasn’t run yet.</p>',[['Close',null]])],
+      '-',['Delete',()=>confirmBox('Delete script',\`Delete “\${s.name}”?\`,()=>{delete S.scripts[s.id];changed()})],
+    ],s.name);
+  });
 }
 
-/* ------------------------------------------------------------------ */
-/* Terminal — rich command engine                                      */
-/* ------------------------------------------------------------------ */
+/* ============================ file manager ============================ */
+function openFileManager(){
+  openWin({id:'files-mgr',title:'File Manager',icon:appIcon('files-mgr'),w:720,h:520,render:drawFM,refresh:w=>drawFM(w.body,w)});
+}
+function drawFM(body,win){
+  const boards=Object.values(S.boards);
+  body.innerHTML=\`<div class="pad">
+    <div class="row"><button class="btn sm" id="_new">+ New board</button><span class="dim">\${boards.length} boards</span></div>
+    <h4 class="sec">Boards</h4><div class="grid" id="_g"></div></div>\`;
+  $('#_new',body).onclick=()=>newBoardDialog(null);
+  $('#_g',body).innerHTML=boards.map(b=>{const s=A.stats(b.id),kids=A.children(b.id).length;
+    return \`<button class="tile" data-b="\${b.id}"><div class="gl">\${appIcon('boards',30)}</div>
+      <div class="nm">\${esc(b.name)}</div>
+      <div class="bar"><i style="width:\${s.pct}%"></i></div>
+      <div class="dim">\${s.done}/\${s.total}\${kids?\` · \${kids} inside\`:''}</div>
+      <div class="dim">\${b.projects.map(p=>'#'+esc(A.projName(p))).join(' ')}</div></button>\`}).join('');
+  $$('#_g .tile',body).forEach(t=>{
+    const b=A.board(t.dataset.b);
+    t.onclick=()=>openBoard(b.id);
+    t.oncontextmenu=e=>{e.preventDefault();menu(e.clientX,e.clientY,[
+      ['Open',()=>openBoard(b.id)],
+      ['Rename…',()=>ask('Rename board','Name',b.name,v=>{b.name=v;changed()})],
+      ['Move inside…',()=>pickBoard('Move inside…',id=>{b.parent=id;changed()},b.id)],
+      ['Move to top level',()=>{b.parent=null;changed()}],
+      ['Tag project ▸',()=>menu(e.clientX+30,e.clientY,S.projects.map(p=>[(b.projects.includes(p.id)?'● ':'○ ')+p.name,
+        ()=>{b.projects.includes(p.id)?b.projects=b.projects.filter(x=>x!==p.id):b.projects.push(p.id);changed('project.changed',{boardId:b.id})}]))],
+      ['Duplicate',()=>{A.dupBoard(b.id);changed()}],
+      '-',['Delete',()=>b.id==='b_home'?toast('The Home board stays.'):
+        confirmBox('Delete board',\`Delete “\${b.name}” and everything on it?\`,()=>{A.deleteBoard(b.id);changed()})],
+    ],b.name)};
+  });
+}
 
-const THEMES = {
-  amber: { text: "#ffb200", dim: "#a97a1f", faint: "#6b4c17", glow: "rgba(255,178,0,0.45)" },
-  green: { text: "#33ff66", dim: "#1f9e42", faint: "#155c29", glow: "rgba(51,255,102,0.45)" },
-  cyan: { text: "#4ee7ff", dim: "#2b93a8", faint: "#1a5866", glow: "rgba(78,231,255,0.45)" },
-  paper: { text: "#f2ead8", dim: "#a89d84", faint: "#5f5748", glow: "rgba(242,234,216,0.35)" },
+/* ============================ projects ============================ */
+function openProjects(){
+  openWin({id:'projects',title:'Projects',icon:appIcon('projects'),w:620,h:480,render:drawProjects,refresh:w=>drawProjects(w.body,w)});
+}
+function drawProjects(body){
+  body.innerHTML=\`<div class="pad"><div class="row"><button class="btn sm" id="_new">+ New project</button></div>
+    <h4 class="sec">Project tags</h4><div class="list" id="_l"></div></div>\`;
+  $('#_new',body).onclick=()=>ask('New project','Name','',v=>{S.projects.push({id:uid('p'),name:v});changed('project.changed',{})});
+  $('#_l',body).innerHTML=S.projects.length?S.projects.map(p=>{
+    const bs=Object.values(S.boards).filter(b=>b.projects.includes(p.id));
+    const tasks=bs.flatMap(b=>b.tasks),done=tasks.filter(t=>t.done).length;
+    return \`<div class="item" data-p="\${p.id}"><div style="flex:1"><div>\${esc(p.name)}</div>
+      <div class="dim">\${bs.length} board(s) · \${done}/\${tasks.length} tasks done</div></div>
+      <button class="btn sm" data-a="view">View</button><button class="btn sm" data-a="open">Open all</button>
+      <button class="btn sm" data-a="ren">✎</button><button class="btn sm" data-a="del">🗑</button></div>\`}).join('')
+    :'<p class="dim">No projects yet. A project is a label you can put on any board, however deeply nested.</p>';
+  $$('#_l .item',body).forEach(it=>{
+    const p=A.project(it.dataset.p);
+    $('[data-a="view"]',it).onclick=()=>openProjectView(p.id);
+    $('[data-a="open"]',it).onclick=()=>Object.values(S.boards).filter(b=>b.projects.includes(p.id)).forEach(b=>openBoard(b.id));
+    $('[data-a="ren"]',it).onclick=()=>ask('Rename project','Name',p.name,v=>{p.name=v;changed('project.changed',{})});
+    $('[data-a="del"]',it).onclick=()=>confirmBox('Delete project',\`Remove the “\${p.name}” tag from every board?\`,()=>{
+      S.projects=S.projects.filter(x=>x.id!==p.id);
+      Object.values(S.boards).forEach(b=>b.projects=b.projects.filter(x=>x!==p.id));changed('project.changed',{})});
+  });
+}
+function openProjectView(pid){
+  const p=A.project(pid);if(!p)return;
+  openWin({id:'proj:'+pid,title:p.name,icon:appIcon('projects'),w:600,h:460,render:draw,refresh:w=>draw(w.body,w)});
+  function draw(body){
+    const bs=Object.values(S.boards).filter(b=>b.projects.includes(pid));
+    const tasks=bs.flatMap(b=>b.tasks),done=tasks.filter(t=>t.done).length;
+    body.innerHTML=\`<div class="pad"><div class="row"><div class="bar" style="flex:1"><i style="width:\${tasks.length?done/tasks.length*100:0}%"></i></div>
+      <span class="dim">\${done}/\${tasks.length}</span></div>
+      <h4 class="sec">Boards in this project</h4><div class="grid">\${bs.map(b=>{const s=A.stats(b.id);
+        return \`<button class="tile" data-b="\${b.id}"><div class="gl">\${appIcon('boards',30)}</div><div class="nm">\${esc(b.name)}</div>
+          <div class="bar"><i style="width:\${s.pct}%"></i></div><div class="dim">\${s.done}/\${s.total}</div></button>\`}).join('')
+        ||'<p class="dim">Tag a board with this project to see it here.</p>'}</div></div>\`;
+    $$('.tile',body).forEach(t=>t.onclick=()=>openBoard(t.dataset.b));
+  }
+}
+
+/* ============================ graph view ============================ */
+function openGraph(){
+  openWin({id:'graph',title:'Graph View',icon:appIcon('graph'),w:680,h:600,render:drawGraph,refresh:w=>drawGraph(w.body,w),onResize:()=>{const w=WINS.get('graph');w&&drawGraph(w.body,w)}});
+}
+function drawGraph(body){
+  const W=body.clientWidth||620,H=body.clientHeight||540,cx=W/2,cy=H/2;
+  const roots=Object.values(S.boards).filter(b=>!b.parent);
+  const pos={},levels=[];
+  (function walk(list,depth,a0,a1){
+    if(!list.length)return;(levels[depth]||=[]).push(...list);
+    const span=(a1-a0)/list.length;
+    list.forEach((b,i)=>{const a=a0+span*(i+.5),r=depth*Math.min(W,H)*.18;
+      pos[b.id]={x:cx+Math.cos(a-Math.PI/2)*r,y:cy+Math.sin(a-Math.PI/2)*r,a};
+      walk(A.children(b.id),depth+1,a0+span*i,a0+span*(i+1));});
+  })(roots,0,0,Math.PI*2);
+  const links=Object.values(S.boards).filter(b=>b.parent&&pos[b.parent]&&pos[b.id])
+    .map(b=>\`<line x1="\${pos[b.parent].x}" y1="\${pos[b.parent].y}" x2="\${pos[b.id].x}" y2="\${pos[b.id].y}"
+      stroke="var(--line)" stroke-width="2" stroke-dasharray="6 5"/>\`).join('');
+  const nodes=Object.values(S.boards).filter(b=>pos[b.id]).map(b=>{
+    const s=A.stats(b.id),r=16+Math.min(26,s.total*2.4),p=pos[b.id];
+    return \`<g data-b="\${b.id}" style="cursor:none">
+      <circle cx="\${p.x}" cy="\${p.y}" r="\${r}" fill="var(--panel)" stroke="var(--ink)" stroke-width="2.5"/>
+      <circle cx="\${p.x}" cy="\${p.y}" r="\${Math.max(3,r*(s.pct/100))}" fill="var(--accent2)" opacity=".85"/>
+      <text x="\${p.x}" y="\${p.y+r+16}" text-anchor="middle" font-family="var(--scrawl)" font-size="17" fill="var(--ink)">\${esc(b.name)}</text>
+      <text x="\${p.x}" y="\${p.y+5}" text-anchor="middle" font-size="13" fill="var(--ink)">\${s.done}/\${s.total}</text></g>\`}).join('');
+  body.innerHTML=\`<div class="graphwrap"><svg width="\${W}" height="\${H}">\${links}\${nodes}</svg>
+    <div class="dim" style="position:absolute;left:12px;bottom:10px">Circle size = tasks · fill = finished</div></div>\`;
+  $$('g[data-b]',body).forEach(g=>g.onclick=()=>openBoard(g.dataset.b));
+}
+
+/* ============================ calendar ============================ */
+function openCalendar(){
+  const st={m:new Date().getMonth(),y:new Date().getFullYear(),sel:todayISO()};
+  openWin({id:'calendar',title:'Calendar',icon:appIcon('calendar'),w:820,h:580,render:(b,w)=>draw(b),refresh:w=>draw(w.body)});
+  function draw(body){
+    const first=new Date(st.y,st.m,1),start=new Date(first);start.setDate(1-first.getDay());
+    const cells=[...Array(42)].map((_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return d});
+    const iso=d=>d.toISOString().slice(0,10);
+    const dayEv=st.sel?S.events.filter(e=>e.date===st.sel):[];
+    const upcoming=S.events.filter(e=>e.date>=todayISO()).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,8);
+    body.innerHTML=\`<div class="pad" style="display:flex;gap:16px;height:100%;box-sizing:border-box">
+      <div style="flex:1;min-width:0">
+        <div class="row"><button class="btn sm" id="_p">‹</button>
+          <strong style="font-family:var(--scrawl);font-size:23px">\${first.toLocaleString([],{month:'long'})} \${st.y}</strong>
+          <button class="btn sm" id="_n">›</button><button class="btn sm" id="_t">Today</button>
+          <div style="flex:1"></div><button class="btn sm" id="_add">+ Event</button></div>
+        <div class="cal" style="margin-top:10px">\${['S','M','T','W','T','F','S'].map(d=>\`<div class="dim" style="text-align:center">\${d}</div>\`).join('')}
+        \${cells.map(d=>{const k=iso(d),evs=S.events.filter(e=>e.date===k);
+          return \`<div class="cell \${d.getMonth()!==st.m?'oth':''} \${k===todayISO()?'tod':''} \${k===st.sel?'sel':''}" data-d="\${k}">
+            <div class="dn">\${d.getDate()}</div>\${evs.slice(0,3).map(e=>{const p=e.project&&A.project(e.project);
+              return \`<div class="ev" \${p?\`style="background:var(--accent)"\`:''}>\${esc(e.time||'')} \${esc(e.title)}</div>\`}).join('')}
+            \${evs.length>3?\`<div class="dim">+\${evs.length-3}</div>\`:''}</div>\`}).join('')}</div></div>
+      <div style="width:240px;flex:0 0 auto;overflow:auto">
+        <h4 class="sec">\${st.sel||'—'}</h4>
+        <div class="list">\${dayEv.length?dayEv.map(e=>\`<div class="item" data-e="\${e.id}"><div style="flex:1">
+          <div>\${esc(e.title)}</div><div class="dim">\${esc(e.time||'all day')}\${e.project?' · '+esc(A.projName(e.project)):''}</div></div>
+          <button class="btn sm" data-x="\${e.id}">🗑</button></div>\`).join('')
+          :'<p class="dim">Nothing on this day.</p>'}</div>
+        <h4 class="sec">Coming up</h4>
+        <div class="list">\${upcoming.length?upcoming.map(e=>\`<div class="item"><div style="flex:1">
+          <div>\${esc(e.title)}</div><div class="dim">\${e.date} \${esc(e.time||'')}</div></div></div>\`).join('')
+          :'<p class="dim">No reminders ahead.</p>'}</div></div></div>\`;
+    $('#_p',body).onclick=()=>{st.m--;if(st.m<0){st.m=11;st.y--}draw(body)};
+    $('#_n',body).onclick=()=>{st.m++;if(st.m>11){st.m=0;st.y++}draw(body)};
+    $('#_t',body).onclick=()=>{const d=new Date();st.m=d.getMonth();st.y=d.getFullYear();st.sel=todayISO();draw(body)};
+    $('#_add',body).onclick=()=>addEvent(st.sel,()=>draw(body));
+    $$('.cell',body).forEach(c=>{c.onclick=()=>{st.sel=c.dataset.d;draw(body)};
+      c.ondblclick=()=>addEvent(c.dataset.d,()=>draw(body))});
+    $$('[data-x]',body).forEach(b=>b.onclick=()=>{S.events=S.events.filter(e=>e.id!==b.dataset.x);changed();draw(body)});
+  }
+  function addEvent(date,after){
+    modal('New event',\`<label class="fld">Title</label><input type="text" id="_t" value="">
+      <div class="row"><div style="flex:1"><label class="fld">Date</label><input type="date" id="_d" value="\${date||todayISO()}"></div>
+      <div style="flex:1"><label class="fld">Time</label><input type="time" id="_h" value="09:00"></div></div>
+      <label class="fld">Project</label><select id="_p"><option value="">— none —</option>
+        \${S.projects.map(p=>\`<option value="\${p.id}">\${esc(p.name)}</option>\`).join('')}</select>\`,
+      [['Cancel',null],['Add event',b=>{const t=$('#_t',b).value.trim();if(!t)return false;
+        S.events.push({id:uid('e'),title:t,date:$('#_d',b).value,time:$('#_h',b).value,project:$('#_p',b).value||null});
+        changed('cal.created',{});after&&after();},1]]);
+  }
+}
+
+/* ============================ files library ============================ */
+function openFiles(){
+  openWin({id:'files',title:'Files',icon:appIcon('files'),w:640,h:500,render:draw,refresh:w=>draw(w.body)});
+  function draw(body){
+    body.innerHTML=\`<div class="pad"><div class="row"><button class="btn sm" id="_u">+ Upload files</button>
+      <span class="dim">\${S.files.length} file(s)</span></div>
+      <h4 class="sec">Everything you’ve attached</h4><div class="grid" id="_g"></div></div>\`;
+    $('#_u',body).onclick=()=>pickFiles(()=>{changed();draw(body)});
+    $('#_g',body).innerHTML=S.files.length?S.files.map(f=>\`<div class="tile" data-f="\${f.id}">
+      \${f.type.startsWith('image/')?\`<img src="\${f.data}" style="width:100%;height:78px;object-fit:cover;border-radius:6px">\`
+        :\`<div class="gl">📄</div>\`}
+      <div class="nm">\${esc(f.name)}</div><div class="dim">\${Math.round(f.size/1024)} KB</div>
+      <div class="row" style="justify-content:center;margin-top:4px">
+        <button class="btn sm" data-a="open">Open</button><button class="btn sm" data-a="del">🗑</button></div></div>\`).join('')
+      :'<p class="dim">Nothing here yet. Attach a file from any board, or upload one now.</p>';
+    $$('#_g .tile',body).forEach(t=>{const f=A.file(t.dataset.f);
+      $('[data-a="open"]',t).onclick=()=>window.open(f.data,'_blank');
+      $('[data-a="del"]',t).onclick=()=>confirmBox('Delete file',\`Delete “\${f.name}” and remove its cards from every board?\`,()=>{
+        S.files=S.files.filter(x=>x.id!==f.id);
+        Object.values(S.boards).forEach(b=>b.files=b.files.filter(c=>c.fileId!==f.id));changed();draw(body)});});
+  }
+}
+
+/* ============================ search & stats ============================ */
+function openSearch(){
+  const st={q:''};
+  openWin({id:'search',title:'Search & Stats',icon:appIcon('search'),w:660,h:520,render:draw,refresh:w=>draw(w.body)});
+  function draw(body){
+    const boards=Object.values(S.boards),tasks=boards.flatMap(b=>b.tasks.map(t=>({t,b})));
+    const done=tasks.filter(x=>x.t.done).length,pct=tasks.length?Math.round(done/tasks.length*100):0;
+    const hits=st.q?tasks.filter(x=>x.t.title.toLowerCase().includes(st.q.toLowerCase())).slice(0,40):[];
+    body.innerHTML=\`<div class="pad">
+      <input type="text" id="_q" placeholder="Find any task, anywhere…" value="\${esc(st.q)}">
+      \${st.q?\`<h4 class="sec">\${hits.length} match\${hits.length===1?'':'es'}</h4>
+        <div class="list">\${hits.map(h=>\`<div class="item"><button class="chk" data-t="\${h.t.id}">\${h.t.done?'✓':''}</button>
+          <div style="flex:1"><div>\${esc(h.t.title)}</div><div class="dim">\${esc(A.path(h.b.id).map(x=>x.name).join(' › '))}</div></div>
+          <button class="btn sm" data-o="\${h.b.id}">Open</button></div>\`).join('')||'<p class="dim">No task by that name.</p>'}</div>\`
+        :\`<h4 class="sec">System</h4>
+        <div class="list">
+          <div class="item"><span style="flex:1">Boards</span><strong>\${boards.length}</strong></div>
+          <div class="item"><span style="flex:1">Tasks finished</span><div class="bar" style="width:120px"><i style="width:\${pct}%"></i></div><strong>\${done}/\${tasks.length}</strong></div>
+          <div class="item"><span style="flex:1">Sticky notes</span><strong>\${boards.reduce((a,b)=>a+b.notes.length,0)}</strong></div>
+          <div class="item"><span style="flex:1">Attached files</span><strong>\${S.files.length}</strong></div>
+          <div class="item"><span style="flex:1">Projects</span><strong>\${S.projects.length}</strong></div>
+          <div class="item"><span style="flex:1">Scripts (enabled)</span><strong>\${Object.values(S.scripts).filter(s=>s.enabled).length}/\${Object.keys(S.scripts).length}</strong></div>
+          <div class="item"><span style="flex:1">Open windows</span><strong>\${WINS.size}</strong></div>
+        </div>
+        <h4 class="sec">Start over</h4>
+        <p class="dim">Wipes every board, note, file, project and script on this device.</p>
+        <button class="btn" id="_reset">Reset Artemis OS</button>\`}</div>\`;
+    const q=$('#_q',body);q.oninput=e=>{st.q=e.target.value;draw(body);const n=$('#_q',body);n.focus();n.setSelectionRange(n.value.length,n.value.length)};
+    $$('[data-t]',body).forEach(b=>b.onclick=()=>{A.setDone(b.dataset.t,!A.findTask(b.dataset.t).task.done);
+      changed('board.changed',{});draw(body)});
+    $$('[data-o]',body).forEach(b=>b.onclick=()=>openBoard(b.dataset.o));
+    const r=$('#_reset',body);
+    if(r)r.onclick=()=>confirmBox('Reset everything',
+      'This clears all boards, tasks, notes, files, projects and scripts stored in this browser.',()=>{
+        localStorage.removeItem(KEY);S=blankState();[...WINS.values()].forEach(closeWin);
+        document.documentElement.dataset.theme=S.theme;save();refresh();toast('Fresh desk.');openBoard('b_home');},'Reset');
+  }
+}
+
+/* ============================ boot ============================ */
+load();setCursorGlyph(S.cursor);renderDesktop();deskMenu();renderDock();
+Bus.on('board.opened',()=>{});
+(function first(){
+  if(!S.seenIntro){
+    S.seenIntro=true;
+    const b=A.board('b_home');
+    if(!b.tasks.length){
+      const t1=A.addTask('b_home','Drag me anywhere on the board',{x:80,y:90,priority:'normal'});
+      const t2=A.addTask('b_home','Right-click the canvas for everything',{x:80,y:250,priority:'high'});
+      A.addSub(t2.id,'Try the pen and the eraser');
+      A.addTask('b_home','Open Scripts and add a template',{x:340,y:90,deadline:todayISO(),priority:'urgent'});
+      A.addNote('b_home','Double-click a card to rename it.\\nScroll to zoom, drag empty space to pan.',NOTE_COLORS[0]);
+    }
+    save();
+  }
+  openBoard('b_home');
+  Bus.emit('board.opened',{boardId:'b_home'});
+})();
+addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeMenu();const sc=$('#scrim');if(sc)sc.remove()}
+});
+</script>`;
+
+// ============================================================
+// Original Artemis application JavaScript
+// ============================================================
+
+const ARTEMIS_SCRIPT = String.raw`/* ============================ core ============================ */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const uid=p=>(p||'i')+Math.random().toString(36).slice(2,9);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function localISO(d=new Date()){
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return '${y}-${m}-${day}';
+}
+const todayISO=()=>localISO();
+const TILT=['tiltA','tiltB','tiltC','tiltD'];
+const tiltOf=id=>TILT[[...String(id)].reduce((a,c)=>a+c.charCodeAt(0),0)%4];
+const THEMES=[['parchment','Parchment'],['kraft','Kraft'],['cotton','Cotton'],['sage','Sage'],['chalkboard','Chalkboard'],['blueprint','Blueprint'],['charcoal','Charcoal'],['inkwell','Inkwell']];
+const NOTE_COLORS=['#ffe397','#ffc2cf','#b7ecd2','#c2ddff','#e6c8fb','#ffd8ac'];
+const KEY='artemis-os-v1';
+const ICON_BOW=\`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.6 C3.4 8 3.4 16 8 21.4"/><path d="M8 2.6 L8 21.4"/><line x1="3.5" y1="12" x2="21" y2="12" stroke="var(--accent)"/><path d="M21 12 L17 10.2 M21 12 L17 13.8" stroke="var(--accent)"/><path d="M3.5 12 L6.4 10.4 M3.5 12 L6.4 13.6" stroke-width="1.3"/></svg>\`;
+const ICON_PALETTE=\`<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="var(--ink)" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.3c-5 0-9 3.5-9 7.9 0 3 2 4.9 4.4 4.9.9 0 1.5-.5 1.5-1.3 0-.6-.4-1-.4-1.6 0-1 1-1.5 2-1.5h3.4c3 0 5.9-2.1 5.9-5.4 0-2.6-3.6-4.4-7.8-4.4Z"/><circle cx="8.3" cy="9.4" r="1.05" fill="var(--accent)" stroke="none"/><circle cx="12" cy="7.3" r="1.05" fill="var(--accent2)" stroke="none"/><circle cx="15.5" cy="9.4" r="1.05" fill="var(--line)" stroke="none"/></svg>\`;
+const ICON_CURSOR=\`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--ink)" stroke-width="1.6" stroke-linejoin="round"><path d="M5 3.5 L5 18 L9 14.3 L11.6 20.4 L14.3 19.2 L11.6 13.1 L17 12.7 Z" fill="var(--paper)"/></svg>\`;
+
+/* ---------- one consistent line-art icon set for every app ---------- */
+const APP_ICON_PATHS={
+  boards:'<rect x="3.6" y="4.2" width="16.8" height="15.6" rx="2.3"/><line x1="9" y1="4.2" x2="9" y2="19.8"/><line x1="15" y1="4.2" x2="15" y2="19.8"/>',
+  'files-mgr':'<path d="M3.5 7.2 L3.5 18.4 L20.5 18.4 L20.5 9.2 L11.2 9.2 L9.4 7.2 Z"/>',
+  projects:'<path d="M4 12.2 L12 4.2 L19 4.2 L19 11.2 L11 19.2 Z"/><circle cx="15.6" cy="7.6" r="1.25" fill="var(--ink)" stroke="none"/>',
+  graph:'<circle cx="6.2" cy="7" r="2.15"/><circle cx="17.8" cy="7" r="2.15"/><circle cx="12" cy="18" r="2.15"/><line x1="7.9" y1="8.3" x2="10.4" y2="16.1"/><line x1="16.1" y1="8.3" x2="13.6" y2="16.1"/><line x1="8.3" y1="7" x2="15.7" y2="7"/>',
+  calendar:'<rect x="3.6" y="5.6" width="16.8" height="14.6" rx="2"/><line x1="3.6" y1="9.8" x2="20.4" y2="9.8"/><line x1="7.6" y1="3.4" x2="7.6" y2="7.4"/><line x1="16.4" y1="3.4" x2="16.4" y2="7.4"/>',
+  files:'<rect x="6.2" y="4.6" width="12" height="14.6" rx="1.6" transform="rotate(-7 12.2 12)"/><rect x="5.8" y="5.2" width="12" height="14.6" rx="1.6" fill="var(--panel)"/>',
+  search:'<circle cx="10.4" cy="10.4" r="6.1"/><line x1="14.9" y1="14.9" x2="20.2" y2="20.2"/>',
+  scripts:'<circle cx="12" cy="12" r="4.1"/><circle cx="12" cy="12" r="1.3" fill="var(--ink)" stroke="none"/><line x1="12" y1="3.6" x2="12" y2="6.3"/><line x1="12" y1="17.7" x2="12" y2="20.4"/><line x1="3.6" y1="12" x2="6.3" y2="12"/><line x1="17.7" y1="12" x2="20.4" y2="12"/><line x1="6.3" y1="6.3" x2="8.1" y2="8.1"/><line x1="15.9" y1="15.9" x2="17.7" y2="17.7"/><line x1="17.7" y1="6.3" x2="15.9" y2="8.1"/><line x1="8.1" y1="15.9" x2="6.3" y2="17.7"/>',
 };
+function appIcon(id,size){
+  const p=APP_ICON_PATHS[id];if(!p)return '';
+  const s=size||19;
+  return \`<svg viewBox="0 0 24 24" width="\${s}" height="\${s}" fill="none" stroke="var(--ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto">\${p}</svg>\`;
+}
 
-const HELP_LINES = [
-  "commands:",
-  "  board -add <name>                create a new board",
-  "  board -add <name> | <parent>     create it as a subboard",
-  "  board -parent <board> | <parent> move a board under a parent",
-  "  board -unparent <board>          make a board top-level again",
-  "  board -del <name>                delete a board",
-  "  board -rename <old> -> <new>     rename a board",
-  "  board -tag <board> @<project>    tag an existing board",
-  "  board -untag <board> @<project>  remove a tag from a board",
-  "  board <name> -show               show tasks in any board",
-  "  ls                               list boards, or tasks if inside one",
-  "  cd <name> | cd ..                enter / leave a board",
-  "  pwd                              show where you are",
-  "",
-  "  task -add <name>                 add a task to the current board",
-  "  task -add <name> | <parent task> add it as a subtask",
-  "  task -parent <task> | <parent>   move a task under a parent task",
-  "  task -unparent <task>            make a task top-level again",
-  "  task -check / -uncheck <name>    mark a task (+ subtasks) done/undone",
-  "  task -check-all / -uncheck-all   mark every task in the board",
-  "  task -del <name>                 delete a task (subtasks move up)",
-  "  task -clear                      delete all completed tasks",
-  "  task -rename <old> -> <new>      rename a task",
-  "  task -move <task> -> <board>     move a task (+ subtasks) to another board",
-  "",
-  "  init <project>                   create a project tag",
-  "  init -rename <old> -> <new>      rename a project",
-  "  init -del <project>              remove a project (untags its boards)",
-  "  projects                         list projects and their board counts",
-  "  open -project <name>             open every board tagged with a project",
-  "  graph                            open the board relationship graph",
-  "  cal                              open the calendar",
-  "  files                            open the Files app",
-  "",
-  "  boards are now free-form canvases — drag tasks & sticky notes anywhere,",
-  "  attach local files, and draw directly on the board.",
-  "",
-  "  find <text>                      search task names across all boards",
-  "  stats                            show overall progress",
-  "  history                          show recently run commands",
-  "  theme <amber|green|cyan|paper>   change terminal theme",
-  "  date · whoami · clear · help",
-  "  reset -yes                       erase every board & task",
-  "",
-  "  aliases: mkdir = board -add   touch = task -add",
-  "           rmdir = board -del   rm = task -del / board -del",
+/* ---------- cursor glyph system ---------- */
+const CURSOR_DEFS={
+  arrow:{name:'Arrow',vb:'0 0 16 19',w:15,h:18,svg:'<path d="M2 1 L2 15 L5.4 12 L7.8 17 L10.2 15.8 L7.8 11 L12.8 10.6 Z" fill="var(--panel)" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/>'},
+  pencil:{name:'Pencil',vb:'0 0 17 19',w:15,h:18,svg:'<path d="M3 16 L3 13 L11 5 L14 8 L6 16 Z" fill="var(--panel)" stroke="var(--ink)" stroke-width="1.5" stroke-linejoin="round"/><path d="M11 5 L14 8" stroke="var(--accent)" stroke-width="1.5"/><path d="M2.2 17 L3.4 13.6 L5.4 15.6 Z" fill="var(--ink)"/>'},
+  dot:{name:'Dot',vb:'0 0 16 16',w:14,h:14,svg:'<circle cx="8" cy="8" r="4.3" fill="var(--accent)" stroke="var(--ink)" stroke-width="1.5"/>'},
+  star:{name:'Star',vb:'0 0 18 18',w:16,h:16,svg:'<path d="M9 1.4 L10.6 6.4 L15.8 6.7 L11.7 9.9 L13.1 14.8 L9 11.9 L4.9 14.8 L6.3 9.9 L2.2 6.7 L7.4 6.4 Z" fill="var(--accent)" stroke="var(--ink)" stroke-width="1.2" stroke-linejoin="round"/>'},
+};
+function setCursorGlyph(id){
+  const d=CURSOR_DEFS[id]||CURSOR_DEFS.arrow;const cur=$('#cur');if(!cur)return;
+  cur.setAttribute('viewBox',d.vb);cur.style.width=d.w+'px';cur.style.height=d.h+'px';cur.innerHTML=d.svg;
+}
+function cursorMenu(x,y){
+  menu(x,y,Object.entries(CURSOR_DEFS).map(([id,d])=>[(S.cursor===id?'● ':'○ ')+d.name,()=>{
+    S.cursor=id;setCursorGlyph(id);save();}]),'Cursor');
+}
+
+let S=null, saveT=null;
+function blankState(){
+  const home={id:'b_home',name:'Home',parent:null,projects:[],tasks:[],notes:[],files:[],strokes:[],cam:{x:0,y:0,z:1},created:Date.now()};
+  return {v:1,theme:'parchment',boards:{b_home:home},projects:[],events:[],files:[],scripts:{},
+    desktop:['boards','scripts','calendar'],cursor:'arrow',seenIntro:false};
+}
+function load(){
+  try{const raw=localStorage.getItem(KEY); S=raw?JSON.parse(raw):blankState();}catch(e){S=blankState();}
+  if(!S||!S.boards)S=blankState();
+  for(const b of Object.values(S.boards)){b.tasks||=[];b.notes||=[];b.files||=[];b.strokes||=[];b.projects||=[];b.cam||={x:0,y:0,z:1};}
+  S.scripts||={};S.projects||=[];S.events||=[];S.files||=[];S.desktop||=['boards','scripts','calendar'];S.cursor||='arrow';
+  document.documentElement.dataset.theme=S.theme||'parchment';
+}
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{
+  try{localStorage.setItem(KEY,JSON.stringify(S));}
+  catch(e){toast('Out of storage. Delete a few attached files to keep saving.');}
+},220);}
+
+/* ---------- event bus (scripts listen here) ---------- */
+const Bus={h:{},on(t,f){(this.h[t]||=[]).push(f)},emit(t,p){(this.h[t]||[]).forEach(f=>{try{f(p)}catch(e){console.warn(e)}});(this.h['*']||[]).forEach(f=>f(t,p))}};
+const dirty=new Set();
+function changed(kind,payload){ if(kind)Bus.emit(kind,payload||{}); save(); refresh(); }
+const refreshers=new Map();
+function refresh(){refreshers.forEach(f=>{try{f()}catch(e){}});}
+
+/* ---------- toasts ---------- */
+function toast(msg,ms=3200){
+  const d=document.createElement('div');d.className='toast';d.textContent=msg;
+  d.style.transform=\`rotate(\${(Math.random()*3-1.5).toFixed(2)}deg)\`;
+  $('#toasts').appendChild(d);setTimeout(()=>d.remove(),ms);
+}
+
+/* ---------- cursor ---------- */
+(function(){
+  const cur=$('#cur'),ring=$('#ring');let rx=0,ry=0,mx=0,my=0;
+  addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.transform=\`translate(\${mx}px,\${my}px)\`;
+    const t=e.target,cs=t&&t.closest?t.closest('input,textarea,[contenteditable="true"]'):null;
+    const dg=t&&t.closest?t.closest('.card,.note,.fcard,.node,.wbar,.bcard,.chip'):null;
+    const ck=t&&t.closest?t.closest('button,.dicon,.tile,.mi,.item,.dot,.cell'):null;
+    document.body.classList.toggle('c-text',!!cs);
+    document.body.classList.toggle('c-drag',!cs&&!!dg);
+    document.body.classList.toggle('c-click',!cs&&!dg&&!!ck);
+  },{passive:true});
+  (function loop(){rx+=(mx-rx)*.22;ry+=(my-ry)*.22;ring.style.transform=\`translate(\${rx}px,\${ry}px)\`;requestAnimationFrame(loop)})();
+})();
+
+/* ---------- drag helper ---------- */
+function drag(handle,onMove,onStart,onEnd){
+  handle.addEventListener('mousedown',e=>{
+    if(e.button!==0)return;
+    if(e.target.closest('input,textarea,button,select,[contenteditable="true"],.dot'))return;
+    e.preventDefault();const sx=e.clientX,sy=e.clientY;let moved=false;
+    onStart&&onStart(e);
+    const mv=ev=>{if(Math.abs(ev.clientX-sx)+Math.abs(ev.clientY-sy)>2)moved=true;onMove(ev.clientX-sx,ev.clientY-sy,ev)};
+    const up=ev=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);onEnd&&onEnd(moved,ev)};
+    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+  });
+}
+
+/* ---------- context menu ---------- */
+let openMenu=null;
+function menu(x,y,items,head){
+  closeMenu();const m=document.createElement('div');m.className='menu';
+  if(head)m.insertAdjacentHTML('beforeend',\`<div class="mh">\${esc(head)}</div>\`);
+  items.forEach(it=>{
+    if(it==='-'){m.insertAdjacentHTML('beforeend','<hr>');return;}
+    const b=document.createElement('button');b.className='mi';b.textContent=it[0];
+    b.onclick=()=>{closeMenu();it[1]()};m.appendChild(b);
+  });
+  document.body.appendChild(m);
+  const r=m.getBoundingClientRect();
+  m.style.left=Math.min(x,innerWidth-r.width-8)+'px';
+  m.style.top=Math.min(y,innerHeight-r.height-8)+'px';
+  openMenu=m;setTimeout(()=>document.addEventListener('mousedown',closeOnOut),0);
+}
+function closeOnOut(e){if(openMenu&&!openMenu.contains(e.target))closeMenu()}
+function closeMenu(){if(openMenu){openMenu.remove();openMenu=null;document.removeEventListener('mousedown',closeOnOut)}}
+
+/* ---------- modal ---------- */
+function modal(title,bodyHTML,buttons,onMount){
+  const sc=document.createElement('div');sc.id='scrim';
+  sc.innerHTML=\`<div class="modal"><h3>\${esc(title)}</h3><div class="mbody">\${bodyHTML}</div>
+    <div class="row" style="margin-top:16px;justify-content:flex-end"></div></div>\`;
+  const row=$('.row:last-child',sc);
+  (buttons||[['Close',null]]).forEach(([lb,fn,pri])=>{
+    const b=document.createElement('button');b.className='btn'+(pri?' pri':'');b.textContent=lb;
+    b.onclick=()=>{if(!fn||fn($('.mbody',sc))!==false)sc.remove()};row.appendChild(b);
+  });
+  sc.addEventListener('mousedown',e=>{if(e.target===sc)sc.remove()});
+  document.body.appendChild(sc);onMount&&onMount($('.mbody',sc),sc);
+  const f=$('input,textarea,select',sc);f&&f.focus();
+  return sc;
+}
+function ask(title,label,val,cb){
+  modal(title,\`<label class="fld">\${esc(label)}</label><input type="text" id="_v" value="\${esc(val||'')}">\`,
+    [['Cancel',null],['Save',b=>{const v=$('#_v',b).value.trim();if(v)cb(v)},1]],
+    b=>{$('#_v',b).onkeydown=e=>{if(e.key==='Enter')$('.btn.pri',b.parentElement).click()}});
+}
+function confirmBox(title,msg,cb,label){
+  modal(title,\`<p>\${esc(msg)}</p>\`,[['Cancel',null],[label||'Delete',()=>cb(),1]]);
+}
+
+/* ============================ windows ============================ */
+let zTop=100;const WINS=new Map();
+function openWin(opt){
+  if(opt.id&&WINS.has(opt.id)){const w=WINS.get(opt.id);focusWin(w);if(opt.onReopen)opt.onReopen(w);return w;}
+  const id=opt.id||uid('w');
+  const el=document.createElement('div');el.className='win';
+  const w=Math.min(opt.w||760,innerWidth-40),h=Math.min(opt.h||520,innerHeight-130);
+  el.style.width=w+'px';el.style.height=h+'px';
+  el.style.left=clamp((innerWidth-w)/2+(WINS.size%5)*24-48,8,innerWidth-w-8)+'px';
+  el.style.top=clamp(58+(WINS.size%5)*22,8,Math.max(8,innerHeight-h-100))+'px';
+  el.innerHTML=\`<div class="wbar"><span style="font-size:19px">\${opt.icon||'📄'}</span>
+    <div class="wtitle"></div>
+    <button class="wbtn" data-a="min" title="Minimize">–</button>
+    <button class="wbtn" data-a="max" title="Maximize">▢</button>
+    <button class="wbtn" data-a="close" title="Close">✕</button></div>
+    <div class="wbody"></div><div class="wgrip"></div>\`;
+  $('.wtitle',el).textContent=opt.title||'Window';
+  $('#desk').appendChild(el);
+  const win={id,el,body:$('.wbody',el),opt,min:false,max:false,
+    setTitle(t){$('.wtitle',el).textContent=t;opt.title=t;renderChips();}};
+  WINS.set(id,win);
+  drag($('.wbar',el),(dx,dy)=>{if(win.max)return;
+    el.style.left=clamp(win._l+dx,-w+90,innerWidth-70)+'px';el.style.top=clamp(win._t+dy,0,innerHeight-60)+'px';},
+    ()=>{win._l=parseFloat(el.style.left);win._t=parseFloat(el.style.top);focusWin(win)});
+  drag($('.wgrip',el),(dx,dy)=>{el.style.width=Math.max(300,win._w+dx)+'px';el.style.height=Math.max(200,win._h+dy)+'px';
+    win.opt.onResize&&win.opt.onResize();},
+    ()=>{win._w=el.offsetWidth;win._h=el.offsetHeight});
+  el.addEventListener('mousedown',()=>focusWin(win));
+  $$('.wbtn',el).forEach(b=>b.onclick=e=>{e.stopPropagation();
+    const a=b.dataset.a;
+    if(a==='close')closeWin(win);
+    else if(a==='min'){win.min=true;el.style.display='none';renderChips();}
+    else{win.max=!win.max;el.classList.toggle('max',win.max);
+      if(win.max){win._r={l:el.style.left,t:el.style.top,w:el.style.width,h:el.style.height};
+        Object.assign(el.style,{left:'6px',top:'6px',width:'calc(100vw - 12px)',height:'calc(100vh - 104px)'});}
+      else Object.assign(el.style,{left:win._r.l,top:win._r.t,width:win._r.w,height:win._r.h});
+      win.opt.onResize&&win.opt.onResize();}
+  });
+  focusWin(win);
+  if(opt.render)opt.render(win.body,win);
+  if(opt.refresh)refreshers.set(id,()=>opt.refresh(win));
+  renderChips();
+  return win;
+}
+function focusWin(w){
+  if(w.min){w.min=false;w.el.style.display='';}
+  zTop++;w.el.style.zIndex=zTop;
+  WINS.forEach(x=>x.el.classList.toggle('on',x===w));
+  renderChips();
+}
+function closeWin(w){
+  if(w.opt.onClose)w.opt.onClose();
+  refreshers.delete(w.id);WINS.delete(w.id);w.el.remove();renderChips();
+}
+
+/* ============================ desktop + dock ============================ */
+const APPS=[
+  {id:'boards',icon:appIcon('boards'),name:'Boards',run:()=>openBoard('b_home')},
+  {id:'files-mgr',icon:appIcon('files-mgr'),name:'File Manager',run:()=>openFileManager()},
+  {id:'projects',icon:appIcon('projects'),name:'Projects',run:()=>openProjects()},
+  {id:'graph',icon:appIcon('graph'),name:'Graph View',run:()=>openGraph()},
+  {id:'calendar',icon:appIcon('calendar'),name:'Calendar',run:()=>openCalendar()},
+  {id:'files',icon:appIcon('files'),name:'Files',run:()=>openFiles()},
+  {id:'search',icon:appIcon('search'),name:'Search & Stats',run:()=>openSearch()},
+  {id:'scripts',icon:appIcon('scripts'),name:'Scripts',run:()=>openScripts()},
 ];
-
-const COMMAND_WORDS = [
-  "board", "task", "graph", "cal", "files", "open", "init", "projects", "ls", "cd", "pwd",
-  "whoami", "clear", "help", "find", "stats", "history", "theme", "date",
-  "reset", "mkdir", "touch", "rm", "rmdir",
-];
-
-function getPromptStr(cwd) {
-  return cwd ? `guest:~/${cwd}$` : "guest:~$";
+function renderDesktop(){
+  const shown=(S.desktop||[]).map(id=>APPS.find(a=>a.id===id)).filter(Boolean);
+  $('#icons').innerHTML=shown.map(a=>\`<button class="dicon" data-a="\${a.id}"><div class="gl">\${a.icon}</div><div class="lb">\${a.name}</div></button>\`).join('');
+  $$('#icons .dicon').forEach(b=>{
+    b.onclick=()=>APPS.find(a=>a.id===b.dataset.a).run();
+    b.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();
+      menu(e.clientX,e.clientY,[['Open',()=>APPS.find(a=>a.id===b.dataset.a).run()],
+        ['Remove from desk',()=>{S.desktop=S.desktop.filter(x=>x!==b.dataset.a);save();renderDesktop()}]],
+        APPS.find(a=>a.id===b.dataset.a).name)};
+  });
+}
+function addIconMenu(x,y){
+  const missing=APPS.filter(a=>!(S.desktop||[]).includes(a.id));
+  if(!missing.length)return menu(x,y,[['Everything is already on the desk',()=>{}]],'Add an icon');
+  menu(x,y,missing.map(a=>[a.name,()=>{S.desktop.push(a.id);save();renderDesktop()}]),'Add an icon');
 }
 
-function TerminalApp({ boards, projects, dispatch, openWindow, windows, theme, setTheme }) {
-  const [cwd, setCwd] = useState(null);
-  const [lines, setLines] = useState([{ id: uid("l"), kind: "sys", text: "Artemis Terminal — type 'help' for commands." }]);
-  const [input, setInput] = useState("");
-  const [cmdLog, setCmdLog] = useState([]);
-  const [cmdPtr, setCmdPtr] = useState(-1);
-  const [suggestIndex, setSuggestIndex] = useState(0);
-  const [suggestOpen, setSuggestOpen] = useState(true);
-  const bottomRef = useRef(null);
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [lines]);
-
-  useEffect(() => {
-    if (cwd && !boards[cwd]) setCwd(null);
-  }, [boards, cwd]);
-
-  const print = useCallback((text, kind = "out") => {
-    setLines((L) => [...L, { id: uid("l"), kind, text }]);
-  }, []);
-
-  const th = THEMES[theme] || THEMES.amber;
-
-  const printBoardList = useCallback(() => {
-    const allKeys = Object.keys(boards);
-    const rootKeys = allKeys.filter((k) => !boards[k].parent);
-    if (allKeys.length === 0) return print("no boards yet — try board -add <name>");
-    if (rootKeys.length === 0) return print("no top-level boards — every board is nested somewhere");
-    const width = Math.max(...rootKeys.map((k) => k.length)) + 2;
-    const lines = [
-      `${rootKeys.length} board${rootKeys.length === 1 ? "" : "s"}` +
-        (allKeys.length !== rootKeys.length ? ` (+${allKeys.length - rootKeys.length} nested)` : "") + ":",
-    ];
-    rootKeys.forEach((k) => {
-      const { total, done } = countStats(boards[k]);
-      const kids = boardChildren(boards, k).length;
-      const tags = boards[k].tags || [];
-      const tagBits = tags.length ? ` ${tags.map((t) => `@${t}`).join(" ")}` : "";
-      lines.push(`  ${k.padEnd(width)}${done}/${total} done${kids ? ` (${kids} sub)` : ""}${tagBits}`);
-    });
-    print(lines.join("\n"));
-  }, [boards, print]);
-
-  const printBoardTasks = useCallback(
-    (key) => {
-      const board = boards[key];
-      const { total, done } = countStats(board);
-      const out = [`board: ${key} — ${done}/${total} done`];
-      if (total === 0) {
-        out.push(" (no tasks yet — try task -add <name>)");
-      } else {
-        const flat = flattenWithDepth(buildTaskTree(board.tasks));
-        flat.forEach((t) => out.push(`  ${"  ".repeat(t.depth)}[${t.done ? "x" : " "}] ${t.name}`));
-      }
-      const kids = boardChildren(boards, key);
-      if (kids.length) out.push(`subboards: ${kids.join(", ")}`);
-      if (board.tags?.length) out.push(`tags: ${board.tags.map((t) => `@${t}`).join(", ")}`);
-      print(out.join("\n"));
-    },
-    [boards, print]
-  );
-
-  function doCreateBoard(name, parentName, tagKey) {
-    if (!name) return print("usage: board -add <name> [| <parent>] [@<project>]", "err");
-    if (findBoardKey(boards, name)) return print(`board '${name}' already exists`, "err");
-    let parentKey = null;
-    if (parentName) {
-      parentKey = findBoardKey(boards, parentName);
-      if (!parentKey) return print(`no board named '${parentName}'`, "err");
-    }
-    dispatch({ type: "ADD_BOARD", name, parent: parentKey, tags: tagKey ? [tagKey] : [] });
-    openWindow("board", { boardName: name });
-    const bits = [];
-    if (parentKey) bits.push(`under '${parentKey}'`);
-    if (tagKey) bits.push(`tagged @${tagKey}`);
-    print(`created board '${name}'${bits.length ? " " + bits.join(" ") : ""}`, "ok");
+function deskMenu(){
+  $('#desk').addEventListener('contextmenu',e=>{
+    if(e.target.closest('.win'))return;e.preventDefault();
+    menu(e.clientX,e.clientY,[['New board',()=>newBoardDialog(null)],
+      ['Add an icon…',()=>addIconMenu(e.clientX,e.clientY)],
+      ['All apps…',()=>appMenu(e.clientX,e.clientY)],
+      ['Change theme…',()=>themeMenu(e.clientX,e.clientY)]],'Desk');
+  });
+}
+function appMenu(x,y){menu(x,y,APPS.map(a=>[a.name,a.run]),'Apps')}
+const DOCK_QUICK=['boards','scripts','calendar','search'];
+let dockInitialized=false;
+let dockClockTimer=null;
+function renderDock(){
+  if(dockInitialized){
+    renderChips();
+    return;
   }
+  dockInitialized=true;
 
-  function handleBoardCommand(tokens) {
-    const sub = tokens[1];
-    if (!sub) return print("usage: board -add|-del|-parent|-unparent|-tag <name>   board <name> -show", "err");
-
-    if (sub === "-add") {
-      const argTokens = tokens.slice(2);
-      let tagKey = null;
-      const tagIdx = argTokens.findIndex((t) => t.startsWith("@") && t.length > 1);
-      if (tagIdx !== -1) {
-        const tagName = argTokens[tagIdx].slice(1);
-        const found = findProjectKey(projects, tagName);
-        if (!found) return print(`no project named '${tagName}' — try 'init ${tagName}' first`, "err");
-        tagKey = found;
-        argTokens.splice(tagIdx, 1);
-      }
-      const rest = argTokens.join(" ");
-      const pipeIdx = rest.indexOf(" | ");
-      const name = (pipeIdx === -1 ? rest : rest.slice(0, pipeIdx)).trim();
-      const parentName = pipeIdx === -1 ? "" : rest.slice(pipeIdx + 3).trim();
-      return doCreateBoard(name, parentName, tagKey);
-    }
-    if (sub === "-tag" || sub === "-untag") {
-      const argTokens = tokens.slice(2);
-      const tagIdx = argTokens.findIndex((t) => t.startsWith("@") && t.length > 1);
-      if (tagIdx === -1) return print(`usage: board ${sub} <board> @<project>`, "err");
-      const tagName = argTokens[tagIdx].slice(1);
-      argTokens.splice(tagIdx, 1);
-      const boardName = argTokens.join(" ").trim();
-      const key = findBoardKey(boards, boardName);
-      if (!key) return print(`no board named '${boardName}'`, "err");
-      const projKey = findProjectKey(projects, tagName);
-      if (!projKey) return print(`no project named '${tagName}' — try 'init ${tagName}' first`, "err");
-      dispatch({ type: sub === "-tag" ? "TAG_BOARD" : "UNTAG_BOARD", name: key, tag: projKey });
-      print(sub === "-tag" ? `tagged '${key}' @${projKey}` : `untagged '${key}' from @${projKey}`, "ok");
-      return;
-    }
-    if (sub === "-del") {
-      const name = tokens.slice(2).join(" ");
-      const key = findBoardKey(boards, name);
-      if (!key) return print(`no board named '${name}'`, "err");
-      dispatch({ type: "DELETE_BOARD", name: key });
-      print(`deleted board '${key}'`, "ok");
-      return;
-    }
-    if (sub === "-parent") {
-      const rest = tokens.slice(2).join(" ");
-      const pipeIdx = rest.indexOf(" | ");
-      if (pipeIdx === -1) return print("usage: board -parent <board> | <parent board>", "err");
-      const childName = rest.slice(0, pipeIdx).trim();
-      const parentName = rest.slice(pipeIdx + 3).trim();
-      const childKey = findBoardKey(boards, childName);
-      const parentKey = findBoardKey(boards, parentName);
-      if (!childKey) return print(`no board named '${childName}'`, "err");
-      if (!parentKey) return print(`no board named '${parentName}'`, "err");
-      if (norm(childKey) === norm(parentKey)) return print("a board can't be its own parent", "err");
-      if (isAncestorBoard(boards, childKey, parentKey)) return print(`can't link — '${parentKey}' is already inside '${childKey}'`, "err");
-      dispatch({ type: "SET_BOARD_PARENT", child: childKey, parent: parentKey });
-      print(`'${childKey}' is now a subboard of '${parentKey}'`, "ok");
-      return;
-    }
-    if (sub === "-unparent") {
-      const name = tokens.slice(2).join(" ");
-      const key = findBoardKey(boards, name);
-      if (!key) return print(`no board named '${name}'`, "err");
-      if (!boards[key].parent) return print(`'${key}' is already top-level`, "err");
-      dispatch({ type: "UNSET_BOARD_PARENT", name: key });
-      print(`'${key}' is now top-level`, "ok");
-      return;
-    }
-    if (sub === "-rename") {
-      const rest = tokens.slice(2).join(" ");
-      const arrowIdx = rest.indexOf(" -> ");
-      if (arrowIdx === -1) return print("usage: board -rename <old> -> <new>", "err");
-      const oldName = rest.slice(0, arrowIdx).trim();
-      const newName = rest.slice(arrowIdx + 4).trim();
-      const key = findBoardKey(boards, oldName);
-      if (!key) return print(`no board named '${oldName}'`, "err");
-      if (!newName) return print("usage: board -rename <old> -> <new>", "err");
-      if (findBoardKey(boards, newName)) return print(`board '${newName}' already exists`, "err");
-      dispatch({ type: "RENAME_BOARD", oldName: key, newName });
-      if (cwd && norm(cwd) === norm(key)) setCwd(newName);
-      print(`renamed '${key}' to '${newName}'`, "ok");
-      return;
-    }
-    if (tokens[tokens.length - 1] === "-show") {
-      const name = tokens.slice(1, -1).join(" ");
-      const key = findBoardKey(boards, name);
-      if (!key) return print(`no board named '${name}'`, "err");
-      printBoardTasks(key);
-      return;
-    }
-    print(`unknown board command: '${sub}' — try 'help'`, "err");
-  }
-
-  function handleTaskCommand(tokens) {
-    if (!cwd) return print("you're not inside a board — try cd <board> first", "err");
-    const sub = tokens[1];
-    const name = tokens.slice(2).join(" ");
-    const board = boards[cwd];
-
-    if (sub === "-add") {
-      const pipeIdx = name.indexOf(" | ");
-      const taskName = (pipeIdx === -1 ? name : name.slice(0, pipeIdx)).trim();
-      const parentName = pipeIdx === -1 ? "" : name.slice(pipeIdx + 3).trim();
-      if (!taskName) return print("usage: task -add <name> [| <parent task>]", "err");
-      if (findTaskByName(board.tasks, taskName)) return print(`task '${taskName}' already exists`, "err");
-      let parentId = null;
-      if (parentName) {
-        const p = findTaskByName(board.tasks, parentName);
-        if (!p) return print(`no task named '${parentName}'`, "err");
-        parentId = p.id;
-      }
-      dispatch({ type: "ADD_TASK", board: cwd, name: taskName, parentId });
-      print(parentId ? `added subtask '${taskName}' under '${parentName}'` : `added task '${taskName}'`, "ok");
-      return;
-    }
-    if (sub === "-parent") {
-      const pipeIdx = name.indexOf(" | ");
-      if (pipeIdx === -1) return print("usage: task -parent <task> | <parent task>", "err");
-      const childName = name.slice(0, pipeIdx).trim();
-      const parentName = name.slice(pipeIdx + 3).trim();
-      const childTask = findTaskByName(board.tasks, childName);
-      const parentTask = findTaskByName(board.tasks, parentName);
-      if (!childTask) return print(`no task named '${childName}'`, "err");
-      if (!parentTask) return print(`no task named '${parentName}'`, "err");
-      if (childTask.id === parentTask.id) return print("a task can't be its own parent", "err");
-      dispatch({ type: "SET_TASK_PARENT", board: cwd, taskId: childTask.id, parentId: parentTask.id });
-      print(`'${childName}' is now a subtask of '${parentName}'`, "ok");
-      return;
-    }
-    if (sub === "-unparent") {
-      const t = findTaskByName(board.tasks, name);
-      if (!t) return print(`no task named '${name}'`, "err");
-      dispatch({ type: "SET_TASK_PARENT", board: cwd, taskId: t.id, parentId: null });
-      print(`'${name}' is now top-level`, "ok");
-      return;
-    }
-    if (sub === "-check" || sub === "-uncheck") {
-      const t = findTaskByName(board.tasks, name);
-      if (!t) return print(`no task named '${name}'`, "err");
-      dispatch({ type: "TOGGLE_TASK", board: cwd, taskId: t.id, done: sub === "-check" });
-      print(sub === "-check" ? `checked '${name}'` : `unchecked '${name}'`, "ok");
-      return;
-    }
-    if (sub === "-check-all" || sub === "-uncheck-all") {
-      dispatch({ type: "CHECK_ALL", board: cwd, mark: sub === "-check-all" });
-      print(sub === "-check-all" ? "checked every task" : "unchecked every task", "ok");
-      return;
-    }
-    if (sub === "-del") {
-      const t = findTaskByName(board.tasks, name);
-      if (!t) return print(`no task named '${name}'`, "err");
-      dispatch({ type: "DELETE_TASK", board: cwd, taskId: t.id });
-      print(`deleted task '${name}'`, "ok");
-      return;
-    }
-    if (sub === "-clear") {
-      const removed = board.tasks.filter((t) => t.done).length;
-      dispatch({ type: "CLEAR_DONE", board: cwd });
-      print(`cleared ${removed} completed task${removed === 1 ? "" : "s"}`, "ok");
-      return;
-    }
-    if (sub === "-rename") {
-      const arrowIdx = name.indexOf(" -> ");
-      if (arrowIdx === -1) return print("usage: task -rename <old> -> <new>", "err");
-      const oldName = name.slice(0, arrowIdx).trim();
-      const newName = name.slice(arrowIdx + 4).trim();
-      const t = findTaskByName(board.tasks, oldName);
-      if (!t) return print(`no task named '${oldName}'`, "err");
-      if (!newName) return print("usage: task -rename <old> -> <new>", "err");
-      dispatch({ type: "RENAME_TASK", board: cwd, taskId: t.id, name: newName });
-      print(`renamed '${oldName}' to '${newName}'`, "ok");
-      return;
-    }
-    if (sub === "-move") {
-      const arrowIdx = name.indexOf(" -> ");
-      if (arrowIdx === -1) return print("usage: task -move <task> -> <board>", "err");
-      const taskName = name.slice(0, arrowIdx).trim();
-      const targetName = name.slice(arrowIdx + 4).trim();
-      const t = findTaskByName(board.tasks, taskName);
-      if (!t) return print(`no task named '${taskName}'`, "err");
-      const targetKey = findBoardKey(boards, targetName);
-      if (!targetKey) return print(`no board named '${targetName}'`, "err");
-      if (norm(targetKey) === norm(cwd)) return print(`'${taskName}' is already in '${cwd}'`, "err");
-      if (findTaskByName(boards[targetKey].tasks, t.name)) return print(`'${targetKey}' already has a task named '${t.name}'`, "err");
-      dispatch({ type: "MOVE_TASK", fromBoard: cwd, toBoard: targetKey, taskId: t.id });
-      print(`moved '${t.name}' to '${targetKey}'`, "ok");
-      return;
-    }
-    print(`unknown task command: '${sub}' — try 'help'`, "err");
-  }
-
-  const run = useCallback(
-    (raw) => {
-      const cmdStr = raw.trim();
-      print(`${getPromptStr(cwd)} ${raw}`, "cmd");
-      if (!cmdStr) return;
-      setCmdLog((h) => [...h, cmdStr]);
-      setCmdPtr(-1);
-
-      const tokens = cmdStr.split(/\s+/);
-      const head = tokens[0].toLowerCase();
-
-      switch (head) {
-        case "help":
-          return print(HELP_LINES.join("\n"));
-        case "clear":
-          return setLines([]);
-        case "pwd":
-          return print(cwd ? `/${cwd}` : "/");
-        case "whoami":
-          return print("guest@artemis-os");
-        case "ls":
-          return cwd ? printBoardTasks(cwd) : printBoardList();
-        case "cd": {
-          const arg = tokens.slice(1).join(" ");
-          if (!arg || arg === "." || arg === "..") {
-            setCwd(null);
-            return print("back at root");
-          }
-          const key = findBoardKey(boards, arg);
-          if (!key) return print(`no board named '${arg}'`, "err");
-          setCwd(key);
-          dispatch({ type: "SET_ACTIVE_BOARD", name: key });
-          openWindow("board", { boardName: key });
-          return print(`now in '${key}'`, "ok");
-        }
-        case "board":
-          return handleBoardCommand(tokens);
-        case "task":
-          return handleTaskCommand(tokens);
-        case "graph":
-          openWindow("graph");
-          return print("opened board graph", "ok");
-        case "cal":
-          openWindow("calendar");
-          return print("opened calendar", "ok");
-        case "files":
-          openWindow("files");
-          return print("opened files", "ok");
-        case "find": {
-          const query = tokens.slice(1).join(" ");
-          if (!query) return print("usage: find <text>", "err");
-          const q = query.toLowerCase();
-          const out = [`results for '${query}':`];
-          let matches = 0;
-          Object.keys(boards).forEach((k) => {
-            const hits = boards[k].tasks.filter((t) => t.name.toLowerCase().includes(q));
-            if (hits.length) {
-              out.push(`  ${k}:`);
-              hits.forEach((t) => {
-                out.push(`    [${t.done ? "x" : " "}] ${t.name}`);
-                matches += 1;
-              });
-            }
-          });
-          return print(matches ? out.join("\n") : `no tasks match '${query}'`);
-        }
-        case "stats": {
-          const keys = Object.keys(boards);
-          let total = 0;
-          let done = 0;
-          keys.forEach((k) => {
-            const s = countStats(boards[k]);
-            total += s.total;
-            done += s.done;
-          });
-          const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-          return print([`boards: ${keys.length}`, `tasks:  ${done}/${total} done (${pct}%)`, `open windows: ${windows.length}`].join("\n"));
-        }
-        case "history":
-          return print(cmdLog.length ? cmdLog.map((c, i) => `  ${i + 1}  ${c}`).join("\n") : "no commands yet");
-        case "theme": {
-          const arg = (tokens[1] || "").toLowerCase();
-          const names = Object.keys(THEMES);
-          if (!arg) return print(`current theme: ${theme}\navailable: ${names.join(", ")}`);
-          if (!names.includes(arg)) return print(`unknown theme '${arg}' — try: ${names.join(", ")}`, "err");
-          setTheme(arg);
-          return print(`theme set to '${arg}'`, "ok");
-        }
-        case "init": {
-          if (tokens[1] === "-del") {
-            const name = tokens.slice(2).join(" ");
-            const key = findProjectKey(projects, name);
-            if (!key) return print(`no project named '${name}'`, "err");
-            dispatch({ type: "DELETE_PROJECT", name: key });
-            return print(`removed project '${key}'`, "ok");
-          }
-          if (tokens[1] === "-rename") {
-            const rest = tokens.slice(2).join(" ");
-            const arrowIdx = rest.indexOf(" -> ");
-            if (arrowIdx === -1) return print("usage: init -rename <old> -> <new>", "err");
-            const oldName = rest.slice(0, arrowIdx).trim();
-            const newName = rest.slice(arrowIdx + 4).trim();
-            const key = findProjectKey(projects, oldName);
-            if (!key) return print(`no project named '${oldName}'`, "err");
-            if (!newName || findProjectKey(projects, newName)) return print(`invalid new name '${newName}'`, "err");
-            dispatch({ type: "RENAME_PROJECT", oldName: key, newName });
-            return print(`renamed project '${key}' to '${newName}'`, "ok");
-          }
-          const name = tokens.slice(1).join(" ");
-          if (!name) return print("usage: init <project name>", "err");
-          if (findProjectKey(projects, name)) return print(`project '${name}' already exists`, "err");
-          dispatch({ type: "ADD_PROJECT", name });
-          return print(`initialized project '${name}' — try 'board -add <name> @${name}'`, "ok");
-        }
-        case "projects": {
-          if (projects.length === 0) return print("no projects yet — try `init <project name>`");
-          const width = Math.max(...projects.map((p) => p.length)) + 2;
-          const out = [`${projects.length} project${projects.length === 1 ? "" : "s"}:`];
-          projects.forEach((p) => {
-            const count = Object.keys(boards).filter((k) => (boards[k].tags || []).some((t) => norm(t) === norm(p))).length;
-            out.push(`  ${p.padEnd(width)}${count} board${count === 1 ? "" : "s"}`);
-          });
-          return print(out.join("\n"));
-        }
-        case "open": {
-          if (tokens[1] === "-project") {
-            const name = tokens.slice(2).join(" ");
-            const key = findProjectKey(projects, name);
-            if (!key) return print(`no project named '${name}' — try 'init ${name}' first`, "err");
-            openWindow("project", { projectName: key });
-            return print(`opened project '${key}'`, "ok");
-          }
-          return print("usage: open -project <name>", "err");
-        }
-        case "date":
-          return print(new Date().toString());
-        case "reset": {
-          if (tokens[1] !== "-yes") return print("this deletes every board & task — type `reset -yes` to confirm", "err");
-          dispatch({ type: "RESET" });
-          setCwd(null);
-          return print("everything cleared", "ok");
-        }
-        case "mkdir": {
-          const name = tokens.slice(1).join(" ");
-          if (!name) return print("usage: mkdir <board name>", "err");
-          if (findBoardKey(boards, name)) return print(`board '${name}' already exists`, "err");
-          dispatch({ type: "ADD_BOARD", name });
-          openWindow("board", { boardName: name });
-          return print(`created board '${name}'`, "ok");
-        }
-        case "rmdir": {
-          const name = tokens.slice(1).join(" ");
-          const key = findBoardKey(boards, name);
-          if (!key) return print(`no board named '${name}'`, "err");
-          dispatch({ type: "DELETE_BOARD", name: key });
-          return print(`deleted board '${key}'`, "ok");
-        }
-        case "touch": {
-          if (!cwd) return print("you're not inside a board — try `cd <board>` first", "err");
-          const name = tokens.slice(1).join(" ");
-          if (!name) return print("usage: touch <task name>", "err");
-          if (findTaskByName(boards[cwd].tasks, name)) return print(`task '${name}' already exists`, "err");
-          dispatch({ type: "ADD_TASK", board: cwd, name, parentId: null });
-          return print(`added task '${name}'`, "ok");
-        }
-        case "rm": {
-          const name = tokens.slice(1).join(" ");
-          if (!name) return print("usage: rm <name>", "err");
-          if (cwd) {
-            const t = findTaskByName(boards[cwd].tasks, name);
-            if (!t) return print(`no task named '${name}'`, "err");
-            dispatch({ type: "DELETE_TASK", board: cwd, taskId: t.id });
-            return print(`deleted task '${name}'`, "ok");
-          }
-          const key = findBoardKey(boards, name);
-          if (!key) return print(`no board named '${name}'`, "err");
-          dispatch({ type: "DELETE_BOARD", name: key });
-          return print(`deleted board '${key}'`, "ok");
-        }
-        default: {
-          const projKey = findProjectKey(projects, tokens[0]);
-          if (projKey && tokens[1] === "-add") {
-            const rest = tokens.slice(2).join(" ");
-            const pipeIdx = rest.indexOf(" | ");
-            const name = (pipeIdx === -1 ? rest : rest.slice(0, pipeIdx)).trim();
-            const parentName = pipeIdx === -1 ? "" : rest.slice(pipeIdx + 3).trim();
-            return doCreateBoard(name, parentName, projKey);
-          }
-          return print(`unknown command: '${tokens[0]}' — try 'help'`, "err");
-        }
-      }
-    },
-    [boards, projects, cwd, cmdLog, dispatch, openWindow, print, printBoardList, printBoardTasks, setTheme, theme, windows]
-  );
-
-  function splitInputContext(val) {
-    const trailingSpace = /\s$/.test(val);
-    const rawTokens = val.split(/\s+/).filter(Boolean);
-    const currentToken = trailingSpace ? "" : rawTokens[rawTokens.length - 1] || "";
-    const ctx = trailingSpace ? rawTokens : rawTokens.slice(0, -1);
-    const basePrefix = ctx.length ? ctx.join(" ") + " " : "";
-    return { ctx, currentToken, basePrefix };
-  }
-
-  function getCompletionCandidates(ctx) {
-    const boardNames = Object.keys(boards);
-    const taskNames = cwd ? boards[cwd].tasks.map((t) => t.name) : [];
-    if (ctx.length === 0) return [...COMMAND_WORDS, ...projects];
-    const last = ctx[ctx.length - 1];
-    const head = (ctx[0] || "").toLowerCase();
-    const headIsProject = findProjectKey(projects, ctx[0]) !== null;
-
-    if (last === "|") {
-      if (head === "board" || headIsProject) return boardNames;
-      if (head === "task") return taskNames;
-      return [];
-    }
-    if (last === "->") {
-      if (head === "task" && ctx[1] === "-move") return boardNames;
-      return [];
-    }
-    if (head === "cd") return boardNames;
-    if (head === "theme") return Object.keys(THEMES);
-    if (head === "open") {
-      if (ctx.length === 1) return ["-project"];
-      if (ctx[1] === "-project") return projects;
-      return [];
-    }
-    if (head === "init") {
-      if (ctx.length === 1) return ["-del", "-rename"];
-      if (ctx[1] === "-del" || ctx[1] === "-rename") return projects;
-      return [];
-    }
-    if (head === "board" || headIsProject) {
-      const sub = ctx[1];
-      if (ctx.length === 1) {
-        return headIsProject && head !== "board" ? ["-add"] : ["-add", "-del", "-parent", "-unparent", "-rename", "-tag", "-untag", "-show"];
-      }
-      if (["-del", "-unparent", "-parent", "-rename", "-tag", "-untag"].includes(sub)) return boardNames;
-      return [];
-    }
-    if (head === "task") {
-      const sub = ctx[1];
-      if (ctx.length === 1) return ["-add", "-check", "-uncheck", "-check-all", "-uncheck-all", "-del", "-clear", "-rename", "-move", "-parent", "-unparent"];
-      if (["-check", "-uncheck", "-del", "-rename", "-move", "-parent", "-unparent"].includes(sub)) return taskNames;
-      return [];
-    }
-    return [];
-  }
-
-  const { ctx: suggestCtx, currentToken: suggestToken, basePrefix: suggestBase } = splitInputContext(input);
-  const suggestPool = suggestToken.startsWith("@") ? projects.map((p) => `@${p}`) : getCompletionCandidates(suggestCtx);
-  const suggestions = suggestPool.filter((c) => c.toLowerCase().startsWith(suggestToken.toLowerCase()));
-  const activeIndex = suggestions.length ? Math.min(suggestIndex, suggestions.length - 1) : 0;
-  const showSuggestions = suggestOpen && input.length > 0 && suggestions.length > 0;
-
-  const acceptSuggestion = (choice) => {
-    if (!choice) return;
-    setInput(suggestBase + choice + " ");
-    setSuggestIndex(0);
-    setSuggestOpen(true);
-    inputRef.current?.focus();
+  const quick=DOCK_QUICK.map(id=>APPS.find(a=>a.id===id)).filter(Boolean);
+  $('#dock').innerHTML=
+    \`<button class="dk" id="startb" title="Artemis OS">\${ICON_BOW}</button>
+     <span class="sep"></span>
+     \${quick.map(a=>\`<button class="dk" data-a="\${a.id}" title="\${a.name}">\${a.icon}<span class="lb">\${a.name}</span></button>\`).join('')}
+     <span class="sep"></span>
+     <div id="chips"></div>
+     <span class="sep"></span>
+     <button class="dk" id="cursorb" title="Cursor">\${ICON_CURSOR}</button>
+     <button class="dk" id="themeb" title="Theme">\${ICON_PALETTE}</button>
+     <div id="clock"></div>\`;
+  $$('#dock .dk[data-a]').forEach(b=>b.onclick=()=>APPS.find(a=>a.id===b.dataset.a).run());
+  $('#themeb').onclick=e=>themeMenu(e.clientX,e.clientY-320);
+  $('#cursorb').onclick=e=>cursorMenu(e.clientX,e.clientY-260);
+  $('#startb').onclick=e=>{const r=e.currentTarget.getBoundingClientRect();
+    menu(r.left,Math.max(20,r.top-30-APPS.length*30),[...APPS.map(a=>[a.name,a.run]),'-',
+      ['Add a desk icon…',()=>addIconMenu(r.left,r.top-300)],
+      ['Change theme…',()=>themeMenu(r.left,r.top-320)],
+      ['Change cursor…',()=>cursorMenu(r.left,r.top-260)],
+      ['Close all windows',()=>[...WINS.values()].forEach(closeWin)]],'Artemis OS');
   };
-
-  const onKeyDown = (e) => {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      if (showSuggestions) acceptSuggestion(suggestions[activeIndex]);
-      return;
-    }
-    if (e.key === "Escape") {
-      if (showSuggestions) { e.preventDefault(); setSuggestOpen(false); }
-      return;
-    }
-    if (e.key === "Enter") {
-      run(input);
-      setInput("");
-      setSuggestIndex(0);
-      setSuggestOpen(true);
-      return;
-    }
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      if (showSuggestions) return setSuggestIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
-      if (cmdLog.length === 0) return;
-      const idx = cmdPtr === -1 ? cmdLog.length - 1 : Math.max(0, cmdPtr - 1);
-      setCmdPtr(idx);
-      setInput(cmdLog[idx]);
-      return;
-    }
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      if (showSuggestions) return setSuggestIndex((i) => (i + 1) % suggestions.length);
-      if (cmdPtr === -1) return;
-      const idx = cmdPtr + 1;
-      if (idx >= cmdLog.length) { setCmdPtr(-1); setInput(""); } else { setCmdPtr(idx); setInput(cmdLog[idx]); }
-    }
-  };
-
-  const promptStr = getPromptStr(cwd);
-
-  return (
-    <div className="relative flex h-full flex-col overflow-hidden font-mono" style={{ background: "#0b0906", color: th.text }} onMouseDown={() => inputRef.current?.focus()}>
-      <div className="pointer-events-none absolute inset-0 z-10 opacity-[0.15]" style={{ backgroundImage: "repeating-linear-gradient(0deg, #000 0px, transparent 1px, transparent 2px, #000 3px)" }} />
-      <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(0,0,0,0.55)_100%)]" />
-      <div className="relative z-0 flex-1 overflow-auto px-3 py-2 text-[12.5px] leading-[1.5]" style={{ textShadow: `0 0 6px ${th.glow}` }}>
-        {lines.map((l) => (
-          <pre key={l.id} className="animate-[lineIn_140ms_ease-out] whitespace-pre-wrap break-words" style={{ color: l.kind === "err" ? "#ff5c5c" : l.kind === "ok" ? "#8dffb0" : l.kind === "sys" ? th.dim : th.text, opacity: l.kind === "cmd" ? 0.85 : 1 }}>
-            {l.text}
-          </pre>
-        ))}
-        <div ref={bottomRef} />
-      </div>
-      <form className="relative z-0 flex items-center gap-1.5 border-t px-3 py-2 text-[12.5px]" style={{ borderColor: th.dim }} onSubmit={(e) => { e.preventDefault(); run(input); setInput(""); }}>
-        <span style={{ color: th.text, textShadow: `0 0 6px ${th.glow}` }}>{promptStr}</span>
-        <div className="relative flex-1">
-          <input
-            ref={inputRef}
-            autoFocus
-            value={input}
-            onChange={(e) => { setInput(e.target.value); setSuggestIndex(0); setSuggestOpen(true); }}
-            onKeyDown={onKeyDown}
-            className="w-full bg-transparent outline-none caret-current"
-            style={{ color: th.text, textShadow: `0 0 6px ${th.glow}` }}
-            spellCheck={false}
-            autoComplete="off"
-          />
-          {showSuggestions && (
-            <div className="absolute left-0 z-[500] max-h-48 min-w-[220px] max-w-[360px] animate-[fadeIn_120ms_ease-out] overflow-y-auto border" style={{ bottom: "calc(100% + 6px)", background: "#1e1509", borderColor: th.dim, boxShadow: "0 10px 28px rgba(0,0,0,0.55)" }}>
-              {suggestions.map((s, i) => {
-                const active = i === activeIndex;
-                return (
-                  <button key={s} onMouseDown={(e) => { e.preventDefault(); acceptSuggestion(s); }} onMouseEnter={() => setSuggestIndex(i)} className="flex w-full items-center px-2.5 py-1 text-left text-xs" style={{ background: active ? th.text : "transparent", color: active ? "#0b0906" : th.text }}>
-                    {s}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </form>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Dock / Taskbar                                                       */
-/* ------------------------------------------------------------------ */
-
-function Clock24() {
-  const [now, setNow] = useState(new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000 * 15);
-    return () => clearInterval(id);
-  }, []);
-  return (
-    <div className="flex items-center gap-1.5 text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>
-      <Clock size={12} />
-      {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-    </div>
-  );
-}
-
-function ThemeSwitcher({ osTheme, setOsTheme }) {
-  const [open, setOpen] = useState(false);
-  const lightThemes = OS_THEME_ORDER.filter((k) => OS_THEMES[k].mode === "light");
-  const darkThemes = OS_THEME_ORDER.filter((k) => OS_THEMES[k].mode === "dark");
-
-  const renderRow = (key) => {
-    const t = OS_THEMES[key];
-    const active = key === osTheme;
-    return (
-      <button
-        key={key}
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={(e) => { e.stopPropagation(); setOsTheme(key); setOpen(false); }}
-        className="flex w-full items-center gap-2 px-3 py-2 text-xs"
-        style={{ color: "var(--text)", background: active ? "var(--accent-soft)" : "transparent" }}
-      >
-        {t.mode === "dark" ? <Moon size={12} /> : <Sun size={12} />}
-        {t.label}
-        {active && <Check size={11} className="ml-auto" style={{ color: "var(--accent)" }} />}
-      </button>
-    );
-  };
-
-  return (
-    <div className="relative">
-      <button onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }} className="grid h-8 w-8 place-items-center rounded-lg transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)" }} title="Theme">
-        <Palette size={15} />
-      </button>
-      {open && (
-        <div className="absolute bottom-11 right-0 w-44 origin-bottom-right animate-[popIn_120ms_ease-out] overflow-hidden rounded-xl border shadow-2xl" style={{ background: "var(--surface-solid)", borderColor: "var(--border)" }} onMouseLeave={() => setOpen(false)}>
-          <div className="px-3 pb-1 pt-2 text-[9px] font-semibold uppercase tracking-wide" style={{ color: "var(--text-faint)" }}>Light</div>
-          {lightThemes.map(renderRow)}
-          <div className="mt-1 border-t px-3 pb-1 pt-2 text-[9px] font-semibold uppercase tracking-wide" style={{ borderColor: "var(--border)", color: "var(--text-faint)" }}>Dark</div>
-          {darkThemes.map(renderRow)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Dock({ windows, openWindow, focusWindow, restoreWindow, minimizeWindow, osTheme, setOsTheme }) {
-  const [startOpen, setStartOpen] = useState(false);
-
-  const label = (w) => {
-    if (w.kind === "terminal") return "Terminal";
-    if (w.kind === "file-manager") return "Boards";
-    if (w.kind === "graph") return "Graph";
-    if (w.kind === "calendar") return "Calendar";
-    if (w.kind === "files") return "Files";
-    if (w.kind === "projects") return "Projects";
-    if (w.kind === "search") return "Search & Stats";
-    if (w.kind === "board") return w.boardName;
-    if (w.kind === "project") return w.projectName;
-    return w.kind;
-  };
-
-  const iconFor = (kind) =>
-    kind === "terminal" ? <TerminalIcon size={13} /> :
-    kind === "file-manager" ? <Kanban size={13} /> :
-    kind === "graph" ? <Network size={13} /> :
-    kind === "calendar" ? <CalendarIcon size={13} /> :
-    kind === "files" ? <Paperclip size={13} /> :
-    kind === "projects" || kind === "project" ? <Rocket size={13} /> :
-    kind === "search" ? <Search size={13} /> : <Folder size={13} />;
-
-  const topZ = windows.reduce((m, w) => Math.max(m, w.z), 0);
-
-  return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-3 z-[9000] flex justify-center">
-      <div
-        className="pointer-events-auto flex animate-[slideUp_220ms_cubic-bezier(0.16,1,0.3,1)] items-center gap-1 px-2 py-1.5"
-        style={{ background: "var(--dock-bg)", border: "2px solid var(--border-strong)", borderRadius: "18px 22px 18px 24px", boxShadow: "4px 8px 0 rgba(0,0,0,0.08), 0 14px 30px rgba(0,0,0,0.12)" }}
-      >
-        <div className="relative">
-          <button onClick={() => setStartOpen((s) => !s)} className="grid h-9 w-9 place-items-center transition-transform hover:scale-110 active:scale-95" style={{ background: "var(--accent)", color: "var(--accent-contrast)", borderRadius: "10px 14px 11px 15px" }} title="Artemis">
-            <Sparkles size={16} />
-          </button>
-          {startOpen && (
-            <div className="absolute bottom-12 left-0 w-48 origin-bottom-left animate-[popIn_130ms_ease-out] overflow-hidden" style={{ background: "var(--surface-solid)", border: "2px solid var(--border-strong)", borderRadius: "12px 16px 12px 16px" }} onMouseLeave={() => setStartOpen(false)}>
-              <button onClick={() => { openWindow("file-manager"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><Kanban size={13} /> Boards</button>
-              <button onClick={() => { openWindow("projects"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><Rocket size={13} /> Projects</button>
-              <button onClick={() => { openWindow("search"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><Search size={13} /> Search & Stats</button>
-              <button onClick={() => { openWindow("calendar"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><CalendarIcon size={13} /> Calendar</button>
-              <button onClick={() => { openWindow("files"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><Paperclip size={13} /> Files</button>
-              <button onClick={() => { openWindow("graph"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><Network size={13} /> Graph View</button>
-              <button onClick={() => { openWindow("terminal"); setStartOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-xs" style={{ color: "var(--text)" }}><TerminalIcon size={13} /> Terminal</button>
-            </div>
-          )}
-        </div>
-
-        <button onClick={() => openWindow("file-manager")} className="grid h-9 w-9 place-items-center transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)", borderRadius: "10px 14px 11px 15px" }} title="Boards"><Kanban size={17} /></button>
-        <button onClick={() => openWindow("projects")} className="grid h-9 w-9 place-items-center transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)", borderRadius: "10px 14px 11px 15px" }} title="Projects"><Rocket size={17} /></button>
-        <button onClick={() => openWindow("search")} className="grid h-9 w-9 place-items-center transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)", borderRadius: "10px 14px 11px 15px" }} title="Search & Stats"><Search size={17} /></button>
-        <button onClick={() => openWindow("calendar")} className="grid h-9 w-9 place-items-center transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)", borderRadius: "10px 14px 11px 15px" }} title="Calendar"><CalendarIcon size={17} /></button>
-        <button onClick={() => openWindow("files")} className="grid h-9 w-9 place-items-center transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)", borderRadius: "10px 14px 11px 15px" }} title="Files"><Paperclip size={17} /></button>
-        <button onClick={() => openWindow("terminal")} className="grid h-9 w-9 place-items-center transition-transform hover:scale-110 active:scale-95" style={{ color: "var(--text-muted)", borderRadius: "10px 14px 11px 15px" }} title="Terminal (Shift+T)"><TerminalIcon size={17} /></button>
-
-        {windows.length > 0 && <div style={{ width: 0, height: 24, borderLeft: "2px dashed var(--border)", margin: "0 4px" }} />}
-
-        {windows.map((w) => {
-          const active = !w.minimized && w.z === topZ;
-          return (
-            <button
-              key={w.id}
-              onClick={() => (w.minimized ? restoreWindow(w.id) : active ? minimizeWindow(w.id) : focusWindow(w.id))}
-              className="flex max-w-[120px] animate-[popIn_160ms_ease-out] items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium transition-transform hover:scale-105 active:scale-95"
-              style={{ background: active ? "var(--accent)" : "var(--accent-soft)", color: active ? "var(--accent-contrast)" : "var(--text-muted)", borderRadius: "9px 13px 10px 14px" }}
-            >
-              {iconFor(w.kind)}
-              <span className="truncate">{label(w)}</span>
-            </button>
-          );
-        })}
-
-        <div style={{ width: 0, height: 24, borderLeft: "2px dashed var(--border)", margin: "0 4px" }} />
-        <div className="flex items-center gap-1 px-1">
-          <ThemeSwitcher osTheme={osTheme} setOsTheme={setOsTheme} />
-          <div className="px-1"><Clock24 /></div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DesktopIcon({ icon, label, onOpen }) {
-  return (
-    <button onClick={onOpen} className="flex w-20 flex-col items-center gap-1 p-2 text-center transition-transform hover:-translate-y-0.5 hover:rotate-1 active:scale-95">
-      <div className="grid h-10 w-10 place-items-center shadow" style={{ background: "var(--surface-solid)", border: "2px solid var(--border)", color: "var(--accent)", borderRadius: "10px 14px 11px 15px" }}>
-        {icon}
-      </div>
-      <span className="text-[10px] font-medium" style={{ color: "var(--text)" }}>{label}</span>
-    </button>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Root App                                                             */
-/* ------------------------------------------------------------------ */
-
-export default function ArtemisOS() {
-  const [state, dispatch] = useReducer(osReducer, undefined, makeInitialState);
-  const [theme, setTheme] = useState("amber");
-  const [osTheme, setOsTheme] = useState("parchment");
-  const desktopRef = useRef(null);
-  const dragRef = useRef(null);
-  const [loaded, setLoaded] = useState(false);
-  const backendRef = useRef(null);
-  if (backendRef.current === null) backendRef.current = resolvePersistBackend() || false;
-  const backend = backendRef.current || null;
-
-  const getRect = () => desktopRef.current?.getBoundingClientRect() || { width: 1200, height: 700 };
-
-  const openWindow = useCallback((kind, extra = {}) => {
-    dispatch({ type: "OPEN_WINDOW", kind, rect: getRect(), ...extra });
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!backend) { setLoaded(true); return undefined; }
-    (async () => {
-      try {
-        const result = await backend.get(STORAGE_KEY);
-        if (!cancelled && result?.value) {
-          const data = JSON.parse(result.value);
-          dispatch({
-            type: "HYDRATE",
-            payload: {
-              boards: data.boards || {},
-              projects: Array.isArray(data.projects) ? data.projects : [],
-              windows: Array.isArray(data.windows) ? data.windows : [],
-              activeBoard: data.activeBoard ?? null,
-              calendarEvents: data.calendarEvents || {},
-              files: Array.isArray(data.files) ? data.files : [],
-            },
-          });
-          if (data.theme) setTheme(data.theme);
-          if (data.osTheme && OS_THEMES[data.osTheme]) setOsTheme(data.osTheme);
-        }
-      } catch (e) {
-        /* nothing saved yet, or corrupt — start fresh */
-      } finally {
-        if (!cancelled) setLoaded(true);
+  renderChips();
+  if(!dockClockTimer){
+    dockClockTimer=setInterval(()=>{
+      const clock=$('#clock');
+      if(clock){
+        const d=new Date();
+        clock.textContent=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
       }
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    },1000);
+  }
+  $('#clock').textContent=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+}
+function renderChips(){
+  const c=$('#chips');if(!c)return;
 
-  useEffect(() => {
-    if (!loaded) return;
-    if (state.windows.length === 0) openWindow("file-manager");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded]);
+  // Keep existing chips alive. Rebuilding them on every board change caused
+  // their entrance animation to replay and made the dock look like it refreshed.
+  const wanted=new Set();
 
-  useEffect(() => {
-    if (!loaded || !backend) return undefined;
-    const t = setTimeout(async () => {
-      try {
-        await backend.set(
-          STORAGE_KEY,
-          JSON.stringify({
-            boards: state.boards,
-            projects: state.projects,
-            windows: state.windows,
-            activeBoard: state.activeBoard,
-            calendarEvents: state.calendarEvents,
-            files: state.files,
-            theme,
-            osTheme,
-          })
-        );
-      } catch (e) {
-        /* best-effort — a failed save doesn't interrupt the session */
-      }
-    }, 400);
-    return () => clearTimeout(t);
-  }, [state.boards, state.projects, state.windows, state.activeBoard, state.calendarEvents, state.files, theme, osTheme, loaded, backend]);
+  WINS.forEach(w=>{
+    const key=w.id;
+    wanted.add(key);
 
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.shiftKey && (e.key === "T" || e.key === "t")) {
-        const active = e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA";
-        if (active) return;
+    let b=c.querySelector('[data-win-id="${CSS.escape(key)}"]');
+    if(!b){
+      b=document.createElement('button');
+      b.className='chip';
+      b.dataset.winId=key;
+      b.onclick=()=>{w.min||!w.el.classList.contains('on')
+        ?focusWin(w)
+        :(w.min=true,w.el.style.display='none',renderChips())};
+      b.oncontextmenu=e=>{
         e.preventDefault();
-        openWindow("terminal");
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [openWindow]);
+        menu(e.clientX,e.clientY,[['Close',()=>closeWin(w)]]);
+      };
+      c.appendChild(b);
+    }
 
-  const startDrag = (win, e) => {
-    dragRef.current = { id: win.id, offsetX: e.clientX - win.x, offsetY: e.clientY - win.y };
-  };
+    b.classList.toggle('on',w.el.classList.contains('on')&&!w.min);
+    b.textContent=w.opt.title||'';
+  });
+
+  [...c.children].forEach(b=>{
+    if(!wanted.has(b.dataset.winId))b.remove();
+  });
+}
+function themeMenu(x,y){
+  menu(x,y,THEMES.map(([id,nm])=>[(S.theme===id?'● ':'○ ')+nm,()=>{S.theme=id;document.documentElement.dataset.theme=id;save();}]),'Themes');
+}
+
+/* ============================ data API ============================ */
+const A={
+  board:id=>S.boards[id],
+  allBoards:()=>Object.values(S.boards),
+  children:id=>Object.values(S.boards).filter(b=>b.parent===id),
+  parent:id=>{const b=S.boards[id];return b&&b.parent?S.boards[b.parent]:null},
+  path(id){const out=[];let b=S.boards[id];while(b){out.unshift(b);b=b.parent?S.boards[b.parent]:null}return out},
+  createBoard(name,parent,projects){
+    const b={id:uid('b'),name:name||'New board',parent:parent||null,projects:projects||[],
+      tasks:[],notes:[],files:[],strokes:[],cam:{x:0,y:0,z:1},created:Date.now()};
+    S.boards[b.id]=b;Bus.emit('board.created',{board:b});return b;},
+  deleteBoard(id){ if(id==='b_home')return false;
+    A.children(id).forEach(c=>c.parent=S.boards[id].parent);
+    Object.values(S.scripts).filter(s=>s.boardId===id).forEach(s=>s.boardId=null);
+    delete S.boards[id];[...WINS.values()].filter(w=>w.id==='board:'+id).forEach(closeWin);return true;},
+  dupBoard(id){const src=S.boards[id];if(!src)return null;
+    const b=JSON.parse(JSON.stringify(src));b.id=uid('b');b.name=src.name+' copy';b.created=Date.now();
+    b.tasks.forEach(t=>t.id=uid('t'));b.notes.forEach(n=>n.id=uid('n'));b.files.forEach(f=>f.id=uid('fc'));
+    S.boards[b.id]=b;Bus.emit('board.created',{board:b});return b;},
+  stats(id){const b=S.boards[id];if(!b)return{done:0,total:0,pct:0};
+    const total=b.tasks.length,done=b.tasks.filter(t=>t.done).length;
+    return{done,total,pct:total?Math.round(done/total*100):0};},
+  freeSpot(b,w=230,h=130){
+    let x=40,y=40;const items=[...b.tasks,...b.notes,...b.files];
+    for(let r=0;r<400;r++){const ok=!items.some(i=>Math.abs(i.x-x)<w&&Math.abs(i.y-y)<h);
+      if(ok)return{x,y};x+=w;if(x>40+w*4){x=40;y+=h}}
+    return{x:40+Math.random()*400,y:40+Math.random()*300};},
+  addTask(boardId,title,opts){
+    const b=S.boards[boardId];if(!b)return null;
+    const p=A.freeSpot(b);
+    const t=Object.assign({id:uid('t'),title:title||'New task',done:false,x:p.x,y:p.y,priority:'normal',
+      status:'todo',desc:'',deadline:'',tags:[],subtasks:[],created:Date.now()},opts||{});
+    b.tasks.push(t);Bus.emit('task.created',{boardId,task:t});return t;},
+  findTask(id){for(const b of Object.values(S.boards)){const t=b.tasks.find(x=>x.id===id);if(t)return{board:b,task:t}}return null},
+  delTask(id){const f=A.findTask(id);if(!f)return false;
+    f.board.tasks=f.board.tasks.filter(t=>t.id!==id);Bus.emit('task.deleted',{boardId:f.board.id,task:f.task});return true;},
+  moveTaskToBoard(id,boardId){const f=A.findTask(id),to=S.boards[boardId];if(!f||!to||f.board.id===boardId)return false;
+    f.board.tasks=f.board.tasks.filter(t=>t.id!==id);const p=A.freeSpot(to);f.task.x=p.x;f.task.y=p.y;to.tasks.push(f.task);
+    Bus.emit('task.moved',{from:f.board.id,boardId,task:f.task});return true;},
+  setDone(id,v){const f=A.findTask(id);if(!f)return false;const was=f.task.done;f.task.done=!!v;
+    if(was!==!!v)Bus.emit(v?'task.completed':'task.uncompleted',{boardId:f.board.id,task:f.task});return true;},
+  rename(id,name){const f=A.findTask(id);if(!f)return false;const old=f.task.title;f.task.title=name;
+    Bus.emit('task.renamed',{boardId:f.board.id,task:f.task,old});return true;},
+  addSub(taskId,title){const f=A.findTask(taskId);if(!f)return null;
+    const s={id:uid('s'),title:title||'Subtask',done:false};f.task.subtasks.push(s);
+    Bus.emit('subtask.created',{boardId:f.board.id,task:f.task,subtask:s});return s;},
+  addNote(boardId,text,color){const b=S.boards[boardId];if(!b)return null;const p=A.freeSpot(b,200,120);
+    const n={id:uid('n'),text:text||'',x:p.x,y:p.y,w:180,h:110,color:color||NOTE_COLORS[Math.floor(Math.random()*NOTE_COLORS.length)]};
+    b.notes.push(n);Bus.emit('note.created',{boardId,note:n});return n;},
+  addFileCard(boardId,fileId){const b=S.boards[boardId];if(!b)return null;const p=A.freeSpot(b,170,140);
+    const c={id:uid('fc'),fileId,x:p.x,y:p.y};b.files.push(c);Bus.emit('file.attached',{boardId,card:c});return c;},
+  file:id=>S.files.find(f=>f.id===id),
+  project:id=>S.projects.find(p=>p.id===id),
+  projName:id=>{const p=A.project(id);return p?p.name:'?'},
+  isOverdue:t=>!!t.deadline&&!t.done&&t.deadline<todayISO(),
+  objects(b){return[...b.tasks.map(o=>({o,k:'task'})),...b.notes.map(o=>({o,k:'note'})),...b.files.map(o=>({o,k:'file'}))]},
+};
+const PRIOS=['low','normal','high','urgent'],STATUSES=['todo','doing','blocked','done'];
+
+/* ---------- layout engine (shared with scripts) ---------- */
+function sizeOf(k){return k==='task'?[212,120]:k==='note'?[180,110]:[150,140]}
+const Layout={
+  grid(items,opt={}){const cols=opt.cols||Math.ceil(Math.sqrt(items.length))||1;
+    const gx=opt.gx||240,gy=opt.gy||150,ox=opt.x??60,oy=opt.y??60;
+    items.forEach((it,i)=>{it.o.x=ox+(i%cols)*gx;it.o.y=oy+Math.floor(i/cols)*gy});},
+  rows(items,o={}){Layout.grid(items,{cols:o.cols||Math.ceil(items.length/Math.max(1,o.rows||2)),...o})},
+  columns(items,o={}){Layout.grid(items,{cols:o.cols||3,...o})},
+  vertical(items,o={}){const x=o.x??80,y=o.y??60,g=o.gap||140;items.forEach((it,i)=>{it.o.x=x;it.o.y=y+i*g})},
+  horizontal(items,o={}){const x=o.x??60,y=o.y??80,g=o.gap||240;items.forEach((it,i)=>{it.o.x=x+i*g;it.o.y=y})},
+  circle(items,o={}){const cx=o.x??520,cy=o.y??380,r=o.r||Math.max(190,items.length*34);
+    items.forEach((it,i)=>{const a=i/items.length*Math.PI*2-Math.PI/2;it.o.x=cx+Math.cos(a)*r;it.o.y=cy+Math.sin(a)*r});},
+  spiral(items,o={}){const cx=o.x??520,cy=o.y??380;items.forEach((it,i)=>{const a=i*.6,r=60+i*26;
+    it.o.x=cx+Math.cos(a)*r;it.o.y=cy+Math.sin(a)*r});},
+  stack(items,o={}){const x=o.x??90,y=o.y??90;items.forEach((it,i)=>{it.o.x=x+i*11;it.o.y=y+i*13})},
+  align(items,o={}){const how=o.how||'left';
+    if(!items.length)return;
+    if(how==='left'){const m=Math.min(...items.map(i=>i.o.x));items.forEach(i=>i.o.x=m)}
+    else if(how==='right'){const m=Math.max(...items.map(i=>i.o.x));items.forEach(i=>i.o.x=m)}
+    else if(how==='top'){const m=Math.min(...items.map(i=>i.o.y));items.forEach(i=>i.o.y=m)}
+    else if(how==='bottom'){const m=Math.max(...items.map(i=>i.o.y));items.forEach(i=>i.o.y=m)}
+    else{const m=items.reduce((a,i)=>a+i.o.y,0)/items.length;items.forEach(i=>i.o.y=m)}},
+  distribute(items,o={}){if(items.length<3)return;const axis=o.axis||'x';
+    const s=[...items].sort((a,b)=>a.o[axis]-b.o[axis]),lo=s[0].o[axis],hi=s[s.length-1].o[axis],st=(hi-lo)/(s.length-1);
+    s.forEach((it,i)=>it.o[axis]=lo+st*i);},
+  pack(items,o={}){let x=o.x??50,y=o.y??50,rowH=0;const maxW=o.w||960;
+    items.forEach(it=>{const[w,h]=sizeOf(it.k);if(x+w>maxW+(o.x??50)){x=o.x??50;y+=rowH+22;rowH=0}
+      it.o.x=x;it.o.y=y;x+=w+22;rowH=Math.max(rowH,h)});},
+};
+
+/* ============================ board app ============================ */
+function openBoard(id){
+  const b=A.board(id);if(!b){toast('That board is gone.');return}
+  const win=openWin({id:'board:'+id,title:b.name,icon:appIcon('boards'),w:900,h:600,
+    render:(body,w)=>buildBoard(body,w,id),refresh:w=>w.api&&w.api.render(),
+    onResize:()=>{}});
+  return win;
+}
+function buildBoard(body,win,id){
+  body.innerHTML=\`<div class="bwrap">
+    <div class="btool"></div>
+    <div class="bcanvasholder"><div class="bcanvas">
+      <svg class="drawlayer" width="4000" height="3000"></svg>
+    </div></div></div>\`;
+  const holder=$('.bcanvasholder',body),canvas=$('.bcanvas',body),svg=$('.drawlayer',body),tool=$('.btool',body);
+  const st={tool:'select',pen:'#2c2620',penW:3,sel:new Set()};
+  const B=()=>A.board(id);
+  const cam=()=>B().cam;
+
+  function applyCam(){const c=cam();canvas.style.transform=\`translate(\${c.x}px,\${c.y}px) scale(\${c.z})\`}
+  function toBoard(ev){const r=holder.getBoundingClientRect(),c=cam();
+    return{x:(ev.clientX-r.left-c.x)/c.z,y:(ev.clientY-r.top-c.y)/c.z}}
+
+  /* ---------- toolbar ---------- */
+  function renderTool(){
+    const bd=B(),s=A.stats(id);
+    tool.innerHTML=\`
+      <button class="btn sm" data-a="add">+ Add</button>
+      <button class="btn sm \${st.tool!=='select'?'on':''}" data-a="draw">\${st.tool==='pen'?'✏ Pen':st.tool==='erase'?'🧽 Eraser':'✏ Draw'}</button>
+      <button class="btn sm" data-a="view">\${Math.round(cam().z*100)}%</button>
+      <button class="btn sm" data-a="more">⋯</button>
+      <div style="flex:1;min-width:20px"></div>
+      <span class="dim">\${s.done}/\${s.total}</span>
+      <div class="bar" style="width:76px"><i style="width:\${s.pct}%"></i></div>\`;
+    $$('[data-a]',tool).forEach(el=>el.onclick=e=>act(el.dataset.a,e));
+  }
+  function mpos(e){const r=e.currentTarget?e.currentTarget.getBoundingClientRect():null;
+    return r?{x:r.left,y:r.bottom+4}:{x:e.clientX,y:e.clientY}}
+  function act(a,e){
+    const bd=B(),m=mpos(e);
+    if(a==='add')menu(m.x,m.y,[
+      ['Task',()=>{A.addTask(id,'New task');changed('board.changed',{boardId:id})}],
+      ['Sticky note',()=>{A.addNote(id,'');changed('board.changed',{boardId:id})}],
+      ['Sub-board',()=>newBoardDialog(id)],
+      ['File attachment…',()=>pickFiles(fs=>{fs.forEach(f=>A.addFileCard(id,f.id));changed('board.changed',{boardId:id})})],
+    ],'Add to board');
+    else if(a==='draw')menu(m.x,m.y,[
+      [(st.tool==='select'?'● ':'○ ')+'Move & pan',()=>{st.tool='select';renderTool()}],
+      [(st.tool==='erase'?'● ':'○ ')+'Eraser',()=>{st.tool='erase';renderTool()}],
+      '-',
+      ...[['Ink','#2c2620'],['Coral','#ff6f61'],['Azure','#4d96ff'],['Meadow','#37b874'],['Violet','#8c6bff']]
+        .map(([nm,c])=>[(st.tool==='pen'&&st.pen===c?'● ':'○ ')+'Pen — '+nm,()=>{st.tool='pen';st.pen=c;renderTool()}]),
+    ],'Drawing');
+    else if(a==='view')menu(m.x,m.y,[
+      ['Zoom in',()=>zoomAt(holder.clientWidth/2,holder.clientHeight/2,1.2)],
+      ['Zoom out',()=>zoomAt(holder.clientWidth/2,holder.clientHeight/2,1/1.2)],
+      ['Fit everything',fit],
+      ['Reset to 100%',()=>{const c=cam();c.x=0;c.y=0;c.z=1;applyCam();renderTool();save()}],
+    ],'View');
+    else if(a==='more')menu(m.x,m.y,[
+      ['Check every task',()=>{bd.tasks.forEach(t=>A.setDone(t.id,true));changed('board.changed',{boardId:id})}],
+      ['Uncheck every task',()=>{bd.tasks.forEach(t=>A.setDone(t.id,false));changed('board.changed',{boardId:id})}],
+      ['Clear completed',()=>{const n=bd.tasks.filter(t=>t.done).length;
+        if(!n)return toast('Nothing completed to clear.');
+        confirmBox('Clear completed',\`Remove \${n} completed task\${n>1?'s':''} from this board?\`,()=>{
+          bd.tasks.filter(t=>t.done).forEach(t=>A.delTask(t.id));changed('board.changed',{boardId:id})},'Clear')}],
+      ['Arrange in a grid',()=>{Layout.grid(A.objects(bd));changed('board.changed',{boardId:id})}],
+      '-',
+      ['Projects: '+(bd.projects.length?bd.projects.map(A.projName).join(', '):'none'),()=>tagMenu({clientX:m.x,clientY:m.y},bd)],
+      ['Scripts…',()=>boardScriptsMenu({clientX:m.x,clientY:m.y},id)],
+      ['Rename board…',()=>ask('Rename board','Name',bd.name,v=>{bd.name=v;changed('board.changed',{boardId:id})})],
+    ],A.path(id).map(x=>x.name).join(' › '));
+  }
+  function tagMenu(e,bd){
+    if(!S.projects.length)return menu(e.clientX,e.clientY,[['Create a project first…',()=>openProjects()]],'Projects');
+    menu(e.clientX,e.clientY,S.projects.map(p=>[(bd.projects.includes(p.id)?'● ':'○ ')+p.name,()=>{
+      bd.projects.includes(p.id)?bd.projects=bd.projects.filter(x=>x!==p.id):bd.projects.push(p.id);
+      changed('project.changed',{boardId:id});renderTool();}]),'Tag this board');
+  }
+
+  /* ---------- camera ---------- */
+  function zoomAt(px,py,f){const c=cam();const z=clamp(c.z*f,.2,3);
+    c.x=px-(px-c.x)*(z/c.z);c.y=py-(py-c.y)*(z/c.z);c.z=z;applyCam();renderTool();save();}
+  holder.addEventListener('wheel',e=>{e.preventDefault();
+    const r=holder.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:1/1.12);},{passive:false});
+  function fit(){const b=B(),items=A.objects(b);const c=cam();
+    if(!items.length){c.x=0;c.y=0;c.z=1;applyCam();renderTool();return}
+    const xs=items.map(i=>i.o.x),ys=items.map(i=>i.o.y);
+    const minx=Math.min(...xs)-40,miny=Math.min(...ys)-40,maxx=Math.max(...xs)+250,maxy=Math.max(...ys)+180;
+    const z=clamp(Math.min(holder.clientWidth/(maxx-minx),holder.clientHeight/(maxy-miny)),.2,1.6);
+    c.z=z;c.x=-minx*z+10;c.y=-miny*z+10;applyCam();renderTool();save();}
+
+  /* ---------- canvas interaction: pan / draw / erase ---------- */
+  let panning=null,stroke=null;
+  holder.addEventListener('contextmenu',e=>e.preventDefault());
+  holder.addEventListener('mousedown',e=>{
+    const onItem=e.target.closest('.card,.note,.fcard,.bcard');
+    if(e.button===2||(e.button===0&&!onItem&&st.tool==='select')){
+      const c=cam();panning={sx:e.clientX,sy:e.clientY,cx:c.x,cy:c.y};
+      if(e.button===2&&stroke){stroke=null}
+      return;
+    }
+    if(onItem||e.button!==0)return;
+    const p=toBoard(e);
+    if(st.tool==='pen'){stroke={id:uid('k'),color:st.pen,w:st.penW,pts:[[p.x,p.y]]};B().strokes.push(stroke);drawStrokes();}
+    else if(st.tool==='erase'){eraseAt(p)}
+  });
+  addEventListener('mousemove',e=>{
+    if(panning){const c=cam();c.x=panning.cx+(e.clientX-panning.sx);c.y=panning.cy+(e.clientY-panning.sy);applyCam();return}
+    if(!win.el.isConnected)return;
+    const p=toBoard(e);
+    if(stroke&&(e.buttons&1)){stroke.pts.push([p.x,p.y]);drawStrokes();}
+    else if(st.tool==='erase'&&(e.buttons&1)&&holder.contains(e.target))eraseAt(p);
+  });
+  addEventListener('mouseup',()=>{if(panning){panning=null;save()}if(stroke){stroke=null;save()}});
+  function eraseAt(p){const b=B(),r=16/cam().z;const before=b.strokes.length;
+    b.strokes=b.strokes.filter(s=>!s.pts.some(pt=>Math.hypot(pt[0]-p.x,pt[1]-p.y)<r));
+    if(b.strokes.length!==before){drawStrokes();save()}}
+  function drawStrokes(){
+    svg.innerHTML=B().strokes.map(s=>\`<polyline points="\${s.pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}"
+      fill="none" stroke="\${s.color}" stroke-width="\${s.w}" stroke-linecap="round" stroke-linejoin="round"/>\`).join('');}
+
+  /* ---------- items ---------- */
+  function render(){
+    const b=B();if(!b)return;win.setTitle(b.name);
+    $$('.card,.note,.fcard,.bcard',canvas).forEach(e=>e.remove());
+    b.tasks.forEach(t=>canvas.appendChild(taskEl(t)));
+    b.notes.forEach(n=>canvas.appendChild(noteEl(n)));
+    b.files.forEach(c=>canvas.appendChild(fileEl(c)));
+    A.children(id).forEach((c,i)=>canvas.appendChild(subEl(c,i)));
+    drawStrokes();applyCam();renderTool();
+  }
+  function place(el,o){el.style.left=o.x+'px';el.style.top=o.y+'px'}
+  function makeDraggable(el,o,after){
+    drag(el,(dx,dy)=>{el.style.left=(el._x+dx/cam().z)+'px';el.style.top=(el._y+dy/cam().z)+'px';},
+      ()=>{el._x=o.x;el._y=o.y;el.style.zIndex=++zTop},
+      (moved)=>{if(!moved)return;o.x=Math.round(parseFloat(el.style.left));o.y=Math.round(parseFloat(el.style.top));
+        save();after&&after()});
+  }
+  function editable(el,get,set){
+    el.ondblclick=e=>{e.stopPropagation();el.contentEditable='true';el.focus();
+      document.execCommand&&document.getSelection().selectAllChildren(el);
+      const done=()=>{el.contentEditable='false';const v=el.textContent.trim();if(v&&v!==get())set(v);else el.textContent=get();};
+      el.onblur=done;el.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();el.blur()}if(ev.key==='Escape'){el.textContent=get();el.blur()}};};
+  }
+  function taskEl(t){
+    const el=document.createElement('div');
+    el.className='card '+(t.done?'done ':'')+tiltOf(t.id);el.dataset.tid=t.id;place(el,t);
+    const over=A.isOverdue(t);
+    el.innerHTML=\`<div class="ttl"><button class="chk">\${t.done?'✓':''}</button><div class="tx">\${esc(t.title)}</div></div>
+      <div class="meta">
+        \${t.priority!=='normal'?\`<span class="pill p-\${t.priority}">\${t.priority}</span>\`:''}
+        \${t.status&&t.status!=='todo'?\`<span class="pill">\${t.status}</span>\`:''}
+        \${t.deadline?\`<span class="pill \${over?'over':''}">\${t.deadline.slice(5)}</span>\`:''}
+        \${t.tags.map(g=>\`<span class="pill">#\${esc(g)}</span>\`).join('')}
+        \${t.subtasks.length?\`<span class="pill">\${t.subtasks.filter(s=>s.done).length}/\${t.subtasks.length}</span>\`:''}
+      </div>
+      \${t.desc?\`<div class="dim" style="margin-top:4px">\${esc(t.desc)}</div>\`:''}
+      \${t.subtasks.length?\`<ul class="subs">\${t.subtasks.map(s=>
+        \`<li class="\${s.done?'d':''}" data-sid="\${s.id}"><button class="chk" style="width:15px;height:15px;font-size:11px">\${s.done?'✓':''}</button><span class="stx">\${esc(s.title)}</span></li>\`).join('')}</ul>\`:''}\`;
+    $('.chk',el).onclick=e=>{e.stopPropagation();A.setDone(t.id,!t.done);changed('board.changed',{boardId:id})};
+    $$('.subs li',el).forEach(li=>{const s=t.subtasks.find(x=>x.id===li.dataset.sid);
+      $('.chk',li).onclick=e=>{e.stopPropagation();s.done=!s.done;changed('board.changed',{boardId:id})};
+      $('.stx',li).ondblclick=e=>{e.stopPropagation();ask('Rename subtask','Subtask',s.title,v=>{s.title=v;changed()})};});
+    editable($('.tx',el),()=>t.title,v=>{A.rename(t.id,v);changed('board.changed',{boardId:id})});
+    el.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();taskMenu(e,t)};
+    makeDraggable(el,t,()=>Bus.emit('task.moved',{boardId:id,task:t}));
+    return el;
+  }
+  function taskMenu(e,t){
+    menu(e.clientX,e.clientY,[
+      [t.done?'Mark not done':'Mark done',()=>{A.setDone(t.id,!t.done);changed('board.changed',{boardId:id})}],
+      ['Rename…',()=>ask('Rename task','Title',t.title,v=>{A.rename(t.id,v);changed('board.changed',{boardId:id})})],
+      ['Add subtask…',()=>ask('New subtask','Title','',v=>{A.addSub(t.id,v);changed('board.changed',{boardId:id})})],
+      ['Edit details…',()=>taskDetails(t,id)],
+      ['Priority ▸',()=>menu(e.clientX+40,e.clientY,PRIOS.map(p=>[(t.priority===p?'● ':'○ ')+p,()=>{t.priority=p;changed('board.changed',{boardId:id})}]),'Priority')],
+      ['Status ▸',()=>menu(e.clientX+40,e.clientY,STATUSES.map(p=>[(t.status===p?'● ':'○ ')+p,()=>{t.status=p;if(p==='done')A.setDone(t.id,true);changed('board.changed',{boardId:id})}]),'Status')],
+      '-',
+      ['Duplicate',()=>{const c=JSON.parse(JSON.stringify(t));c.id=uid('t');c.x+=26;c.y+=26;c.subtasks.forEach(s=>s.id=uid('s'));
+        B().tasks.push(c);Bus.emit('task.created',{boardId:id,task:c});changed('board.changed',{boardId:id})}],
+      ['Move to board…',()=>pickBoard('Move task to…',bid=>{A.moveTaskToBoard(t.id,bid);changed('board.changed',{boardId:id})},id)],
+      ['Make subtask of…',()=>pickTask(id,t.id,other=>{
+        other.subtasks.push({id:uid('s'),title:t.title,done:t.done});A.delTask(t.id);changed('board.changed',{boardId:id})})],
+      '-',
+      ['Delete',()=>{A.delTask(t.id);changed('board.changed',{boardId:id})}],
+    ],t.title);
+  }
+  function noteEl(n){
+    const el=document.createElement('div');el.className='note '+tiltOf(n.id);place(el,n);
+    el.style.background=n.color;el.style.width=(n.w||180)+'px';el.style.minHeight=(n.h||110)+'px';el.style.color='#3a3026';
+    el.innerHTML=\`<div class="nx"></div>\`;$('.nx',el).textContent=n.text;
+    const nx=$('.nx',el);
+    nx.ondblclick=()=>{nx.contentEditable='true';nx.focus();
+      nx.onblur=()=>{nx.contentEditable='false';n.text=nx.textContent;changed('board.changed',{boardId:id})}};
+    el.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();
+      menu(e.clientX,e.clientY,[['Edit text',()=>nx.dispatchEvent(new Event('dblclick'))],
+        ['Colour ▸',()=>menu(e.clientX+40,e.clientY,NOTE_COLORS.map((c,i)=>['Colour '+(i+1),()=>{n.color=c;changed()}]))],
+        ['Bigger',()=>{n.w=(n.w||180)+40;n.h=(n.h||110)+30;changed()}],
+        ['Smaller',()=>{n.w=Math.max(110,(n.w||180)-40);n.h=Math.max(70,(n.h||110)-30);changed()}],
+        ['Delete',()=>{B().notes=B().notes.filter(x=>x.id!==n.id);changed('board.changed',{boardId:id})}]],'Note')};
+    makeDraggable(el,n);return el;
+  }
+  function fileEl(c){
+    const f=A.file(c.fileId);const el=document.createElement('div');el.className='fcard '+tiltOf(c.id);place(el,c);
+    const img=f&&f.type.startsWith('image/');
+    el.innerHTML=\`\${img?\`<img src="\${f.data}" alt="">\`:\`<div class="fbadge">\${f?esc((f.name.split('.').pop()||'file').slice(0,4)):'?'}</div>\`}
+      <div class="fname">\${f?esc(f.name):'missing file'}</div>\`;
+    el.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();
+      menu(e.clientX,e.clientY,[['Open',()=>f&&window.open(f.data,'_blank')],
+        ['Rename…',()=>f&&ask('Rename file','Name',f.name,v=>{f.name=v;changed()})],
+        ['Remove from board',()=>{B().files=B().files.filter(x=>x.id!==c.id);changed('board.changed',{boardId:id})}]],f?f.name:'File')};
+    makeDraggable(el,c);return el;
+  }
+  function subEl(sb,i){
+    const el=document.createElement('div');el.className='bcard '+tiltOf(sb.id);
+    if(sb.bx==null){sb.bx=760;sb.by=60+i*130}
+    el.style.left=sb.bx+'px';el.style.top=sb.by+'px';
+    const s=A.stats(sb.id);
+    el.innerHTML=\`<div style="display:flex;align-items:center;gap:6px;font-family:var(--scrawl);font-size:20px">\${appIcon('boards',18)}<span>\${esc(sb.name)}</span></div>
+      <div class="dim">\${s.done}/\${s.total} done</div><div class="bar" style="margin-top:4px"><i style="width:\${s.pct}%"></i></div>\`;
+    el.ondblclick=()=>openBoard(sb.id);
+    el.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();
+      menu(e.clientX,e.clientY,[['Open',()=>openBoard(sb.id)],
+        ['Rename…',()=>ask('Rename board','Name',sb.name,v=>{sb.name=v;changed('board.changed',{boardId:sb.id})})],
+        ['Delete board',()=>confirmBox('Delete board',\`Delete “\${sb.name}” and everything on it?\`,()=>{A.deleteBoard(sb.id);changed()})]],sb.name)};
+    drag(el,(dx,dy)=>{el.style.left=(el._x+dx/cam().z)+'px';el.style.top=(el._y+dy/cam().z)+'px'},
+      ()=>{el._x=sb.bx;el._y=sb.by},m=>{if(!m)return;sb.bx=parseFloat(el.style.left);sb.by=parseFloat(el.style.top);save()});
+    return el;
+  }
+  holder.addEventListener('contextmenu',e=>{
+    if(e.target.closest('.card,.note,.fcard,.bcard'))return;
+    const p=toBoard(e);
+    menu(e.clientX,e.clientY,[
+      ['New task here',()=>{const t=A.addTask(id,'New task');t.x=p.x;t.y=p.y;changed('board.changed',{boardId:id})}],
+      ['New sticky note here',()=>{const n=A.addNote(id,'');n.x=p.x;n.y=p.y;changed('board.changed',{boardId:id})}],
+      ['New sub-board',()=>newBoardDialog(id)],
+      ['Attach file…',()=>pickFiles(fs=>{fs.forEach(f=>{const c=A.addFileCard(id,f.id);c.x=p.x;c.y=p.y});changed('board.changed',{boardId:id})})],
+      '-',
+      ['New script for this board',()=>{const s=newScript(id);openScriptEditor(s.id)}],
+      ['Scripts on this board',()=>boardScriptsMenu(e,id)],
+      '-',['Arrange in a grid',()=>{Layout.grid(A.objects(B()));changed('board.changed',{boardId:id})}],
+      ['Fit to view',fit],
+    ],B().name);
+  });
+
+  win.api={render,flash(oid){const el=$(\`[data-tid="\${oid}"]\`,canvas)||canvas.querySelector('.card');
+      if(el){el.classList.add('hi');setTimeout(()=>el.classList.remove('hi'),900)}},
+    focus(o){const c=cam();c.x=holder.clientWidth/2-o.x*c.z-100;c.y=holder.clientHeight/2-o.y*c.z-60;applyCam();save()},
+    pan(dx,dy){const c=cam();c.x+=dx;c.y+=dy;applyCam()},
+    zoom(z){cam().z=clamp(z,.2,3);applyCam();renderTool()},boardId:id};
+  render();
+}
+
+/* ---------- shared pickers ---------- */
+function newBoardDialog(parent){
+  modal('New board',\`<label class="fld">Name</label><input type="text" id="_n" value="New board">
+    <label class="fld">Lives inside</label><select id="_p">\${Object.values(S.boards).map(b=>
+      \`<option value="\${b.id}" \${b.id===parent?'selected':''}>\${esc(A.path(b.id).map(x=>x.name).join(' › '))}</option>\`).join('')}
+      <option value="">— top level —</option></select>
+    <label class="fld">Projects</label><div class="row" id="_pr">\${S.projects.length?S.projects.map(p=>
+      \`<button class="tag" data-p="\${p.id}">\${esc(p.name)}</button>\`).join(''):'<span class="dim">No projects yet.</span>'}</div>\`,
+    [['Cancel',null],['Create board',b=>{
+      const nm=$('#_n',b).value.trim()||'New board',pa=$('#_p',b).value||null;
+      const pr=$$('#_pr .tag.on',b).map(x=>x.dataset.p);
+      const nb=A.createBoard(nm,pa,pr);changed();openBoard(nb.id);},1]],
+    b=>{$$('#_pr .tag',b).forEach(t=>t.onclick=()=>t.classList.toggle('on'))});
+}
+function pickBoard(title,cb,exclude){
+  menu(innerWidth/2-120,120,Object.values(S.boards).filter(b=>b.id!==exclude)
+    .map(b=>[A.path(b.id).map(x=>x.name).join(' › '),()=>cb(b.id)]),title);
+}
+function pickTask(boardId,exclude,cb){
+  const b=A.board(boardId),list=b.tasks.filter(t=>t.id!==exclude);
+  if(!list.length)return toast('No other tasks on this board.');
+  menu(innerWidth/2-120,120,list.map(t=>[t.title,()=>cb(t)]),'Choose a task');
+}
+function pickFiles(cb){
+  const inp=document.createElement('input');inp.type='file';inp.multiple=true;
+  inp.onchange=()=>{const out=[],list=[...inp.files];let left=list.length;
+    if(!left)return;
+    list.forEach(f=>{
+      if(f.size>1_800_000){toast(\`\${f.name} is too big to store (1.8 MB max).\`);if(!--left&&out.length)cb(out);return}
+      const r=new FileReader();
+      r.onload=()=>{const rec={id:uid('f'),name:f.name,type:f.type||'application/octet-stream',size:f.size,data:r.result,added:Date.now()};
+        S.files.push(rec);out.push(rec);if(!--left)cb(out);};
+      r.readAsDataURL(f);});};
+  inp.click();
+}
+function taskDetails(t,boardId){
+  modal('Task details',\`<label class="fld">Title</label><input type="text" id="_t" value="\${esc(t.title)}">
+    <label class="fld">Description</label><textarea id="_d" rows="3">\${esc(t.desc)}</textarea>
+    <div class="row"><div style="flex:1"><label class="fld">Priority</label>
+      <select id="_p">\${PRIOS.map(p=>\`<option \${t.priority===p?'selected':''}>\${p}</option>\`).join('')}</select></div>
+      <div style="flex:1"><label class="fld">Status</label>
+      <select id="_s">\${STATUSES.map(p=>\`<option \${t.status===p?'selected':''}>\${p}</option>\`).join('')}</select></div></div>
+    <label class="fld">Deadline</label><input type="date" id="_dl" value="\${t.deadline||''}">
+    <label class="fld">Tags (comma separated)</label><input type="text" id="_g" value="\${esc(t.tags.join(', '))}">\`,
+    [['Cancel',null],['Save task',b=>{
+      const nv=$('#_t',b).value.trim();if(nv&&nv!==t.title)A.rename(t.id,nv);
+      t.desc=$('#_d',b).value;t.priority=$('#_p',b).value;t.status=$('#_s',b).value;
+      t.deadline=$('#_dl',b).value;t.tags=$('#_g',b).value.split(',').map(s=>s.trim()).filter(Boolean);
+      if(t.status==='done')A.setDone(t.id,true);
+      changed('board.changed',{boardId});},1]]);
+}
+
+/* ============================ node registry ============================ */
+const NODES={};
+const CATS=['Events','Board','Task','Query','Sort','Layout','Logic','Data','Notes','Files','Projects','Calendar','Ask','Visual','Script'];
+function def(o){o.ins||=[];o.outs||=[];o.params||=[];NODES[o.t]=o;return o}
+const X=(id,l)=>({id,l,x:true});
+const P=(id,l)=>({id,l});
+const toItems=(list,k='task')=>list.map(o=>({o,k}));
+const asArr=v=>Array.isArray(v)?v:(v==null?[]:[v]);
+const num=v=>{const n=parseFloat(v);return isNaN(n)?0:n};
+function tomorrowISO(){const d=new Date();d.setDate(d.getDate()+1);return d.toISOString().slice(0,10)}
+
+/* ---------- events ---------- */
+const EVENTS=[
+  ['ev.boardOpened','Board Opened','board.opened'],['ev.boardChanged','Board Changed','board.changed'],
+  ['ev.taskCreated','Task Created','task.created'],['ev.taskCompleted','Task Completed','task.completed'],
+  ['ev.taskUncompleted','Task Uncompleted','task.uncompleted'],['ev.taskMoved','Task Moved','task.moved'],
+  ['ev.taskRenamed','Task Renamed','task.renamed'],['ev.taskDeleted','Task Deleted','task.deleted'],
+  ['ev.subCreated','Subtask Created','subtask.created'],['ev.noteCreated','Note Created','note.created'],
+  ['ev.fileAttached','File Attached','file.attached'],['ev.boardCreated','Board Created','board.created'],
+  ['ev.projectChanged','Project Changed','project.changed'],['ev.manual','Manual Run','script.manual'],
+  ['ev.enabled','Script Enabled','script.enabled'],['ev.disabled','Script Disabled','script.disabled'],
+  ['ev.eventCreated','Calendar Event Created','cal.created'],['ev.eventStarting','Event Starting','cal.starting'],
+  ['ev.eventFinished','Event Finished','cal.finished'],
+];
+EVENTS.forEach(([t,title,sig])=>def({t,cat:'Events',title,ev:sig,
+  outs:[X('out','when'),P('task','task'),P('board','board')],
+  run:C=>({next:'out'}),data:C=>({task:C.payload.task||null,board:C.payload.boardId?A.board(C.payload.boardId):C.board()})}));
+def({t:'ev.timer',cat:'Events',title:'Timer',ev:'timer',params:[{id:'sec',l:'Every N seconds',k:'num',d:60}],
+  outs:[X('out','when')],run:()=>({next:'out'})});
+def({t:'ev.interval',cat:'Events',title:'Recurring Interval',ev:'interval',params:[{id:'min',l:'Every N minutes',k:'num',d:15}],
+  outs:[X('out','when')],run:()=>({next:'out'})});
+def({t:'ev.at',cat:'Events',title:'Scheduled Time',ev:'at',params:[{id:'time',l:'At time',k:'time',d:'09:00'}],
+  outs:[X('out','when')],run:()=>({next:'out'})});
+def({t:'ev.morning',cat:'Events',title:'Every Morning',ev:'at',params:[{id:'time',l:'At time',k:'time',d:'08:00'}],
+  outs:[X('out','when')],run:()=>({next:'out'})});
+def({t:'ev.weekly',cat:'Events',title:'Every Monday',ev:'weekly',
+  params:[{id:'day',l:'Day',k:'sel',o:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],d:'Monday'},{id:'time',l:'At',k:'time',d:'08:00'}],
+  outs:[X('out','when')],run:()=>({next:'out'})});
+def({t:'ev.custom',cat:'Events',title:'Custom Event',ev:'custom',params:[{id:'name',l:'Event name',k:'text',d:'ping'}],
+  outs:[X('out','when'),P('data','data')],run:()=>({next:'out'}),data:C=>({data:C.payload.data??null})});
+
+/* ---------- board ---------- */
+def({t:'b.current',cat:'Board',title:'Get Current Board',pure:1,outs:[P('board','board'),P('name','name')],
+  run:C=>{const b=C.board();return{board:b,name:b?b.name:''}}});
+def({t:'b.get',cat:'Board',title:'Get Board',pure:1,params:[{id:'name',l:'Board name',k:'text'}],outs:[P('board','board')],
+  run:(C,I,p)=>({board:Object.values(S.boards).find(b=>b.name.toLowerCase()===String(p.name||'').toLowerCase())||null})});
+def({t:'b.create',cat:'Board',title:'Create Board',ins:[X('in'),P('name','name')],outs:[X('out'),P('board','board')],
+  params:[{id:'name',l:'Name',k:'text',d:'New board'},{id:'child',l:'Inside current board',k:'check',d:true}],
+  run:(C,I,p)=>{if(!C.can('boards'))return C.deny('create boards');
+    const b=C.mut(()=>A.createBoard(I.name||p.name,p.child?C.boardId:null),{name:I.name||p.name});
+    C.plan('Create 1 board');return{next:'out',out:{board:b}}}});
+def({t:'b.delete',cat:'Board',title:'Delete Board',ins:[X('in'),P('board','board')],outs:[X('out')],
+  run:(C,I)=>{const b=I.board;if(!b)return{next:'out'};
+    if(!C.can('boards')||!C.can('delete'))return C.deny('delete boards');
+    C.plan('Delete board “'+b.name+'”');C.mut(()=>A.deleteBoard(b.id));return{next:'out'}}});
+def({t:'b.rename',cat:'Board',title:'Rename Board',ins:[X('in'),P('board','board'),P('name','name')],outs:[X('out')],
+  params:[{id:'name',l:'New name',k:'text'}],
+  run:(C,I,p)=>{const b=I.board||C.board();if(b&&C.can('boards')){C.plan('Rename board');C.mut(()=>b.name=String(I.name??p.name??b.name))}return{next:'out'}}});
+def({t:'b.move',cat:'Board',title:'Move Board',ins:[X('in'),P('board','board'),P('parent','into')],outs:[X('out')],
+  run:(C,I)=>{const b=I.board||C.board();if(b&&I.parent&&C.can('boards'))C.mut(()=>b.parent=I.parent.id);return{next:'out'}}});
+def({t:'b.dup',cat:'Board',title:'Duplicate Board',ins:[X('in'),P('board','board')],outs:[X('out'),P('board','copy')],
+  run:(C,I)=>{const b=I.board||C.board();const c=C.can('boards')?C.mut(()=>A.dupBoard(b.id)):null;
+    C.plan('Duplicate a board');return{next:'out',out:{board:c}}}});
+def({t:'b.parent',cat:'Board',title:'Get Parent Board',pure:1,ins:[P('board','board')],outs:[P('board','parent')],
+  run:(C,I)=>({board:A.parent((I.board||C.board()).id)})});
+def({t:'b.children',cat:'Board',title:'Get Child Boards',pure:1,ins:[P('board','board')],outs:[P('list','boards'),P('count','count')],
+  run:(C,I)=>{const l=A.children((I.board||C.board()).id);return{list:l,count:l.length}}});
+def({t:'b.tags',cat:'Board',title:'Get Project Tags',pure:1,ins:[P('board','board')],outs:[P('list','tags')],
+  run:(C,I)=>({list:(I.board||C.board()).projects.map(A.projName)})});
+def({t:'b.addTag',cat:'Board',title:'Add Project Tag',ins:[X('in'),P('board','board')],outs:[X('out')],
+  params:[{id:'name',l:'Project',k:'proj'}],
+  run:(C,I,p)=>{const b=I.board||C.board(),pr=S.projects.find(x=>x.id===p.name||x.name===p.name);
+    if(b&&pr&&!b.projects.includes(pr.id))C.mut(()=>b.projects.push(pr.id));return{next:'out'}}});
+def({t:'b.rmTag',cat:'Board',title:'Remove Project Tag',ins:[X('in'),P('board','board')],outs:[X('out')],
+  params:[{id:'name',l:'Project',k:'proj'}],
+  run:(C,I,p)=>{const b=I.board||C.board(),pr=S.projects.find(x=>x.id===p.name||x.name===p.name);
+    if(b&&pr)C.mut(()=>b.projects=b.projects.filter(x=>x!==pr.id));return{next:'out'}}});
+def({t:'b.stats',cat:'Board',title:'Board Statistics',pure:1,ins:[P('board','board')],
+  outs:[P('done','done'),P('total','total'),P('pct','percent')],
+  run:(C,I)=>{const s=A.stats((I.board||C.board()).id);return{done:s.done,total:s.total,pct:s.pct}}});
+
+/* ---------- task getters ---------- */
+const GETTERS=[
+  ['t.all','All Tasks',ts=>ts],['t.done','Completed Tasks',ts=>ts.filter(t=>t.done)],
+  ['t.open','Incomplete Tasks',ts=>ts.filter(t=>!t.done)],
+  ['t.overdue','Overdue Tasks',ts=>ts.filter(A.isOverdue)],
+  ['t.today','Tasks Due Today',ts=>ts.filter(t=>t.deadline===todayISO())],
+  ['t.tomorrow','Tasks Due Tomorrow',ts=>ts.filter(t=>t.deadline===tomorrowISO())],
+  ['t.nodl','Tasks Without Deadlines',ts=>ts.filter(t=>!t.deadline)],
+];
+GETTERS.forEach(([t,title,fn])=>def({t,cat:'Task',title,pure:1,ins:[P('board','board')],
+  outs:[P('list','tasks'),P('count','count')],
+  run:(C,I)=>{const b=I.board||C.board();const l=fn(b?b.tasks.slice():[]);return{list:l,count:l.length}}}));
+def({t:'t.tagged',cat:'Task',title:'Tasks With Tag',pure:1,ins:[P('board','board')],params:[{id:'tag',l:'Tag',k:'text'}],
+  outs:[P('list','tasks')],run:(C,I,p)=>({list:(I.board||C.board()).tasks.filter(t=>t.tags.includes(p.tag))})});
+def({t:'t.project',cat:'Task',title:'Get Project Tasks',pure:1,params:[{id:'name',l:'Project',k:'proj'}],
+  outs:[P('list','tasks'),P('count','count')],
+  run:(C,I,p)=>{const pr=S.projects.find(x=>x.id===p.name||x.name===p.name);
+    const l=pr?Object.values(S.boards).filter(b=>b.projects.includes(pr.id)).flatMap(b=>b.tasks):[];
+    return{list:l,count:l.length}}});
+def({t:'t.allBoards',cat:'Task',title:'Tasks Across All Boards',pure:1,outs:[P('list','tasks'),P('count','count')],
+  run:()=>{const l=Object.values(S.boards).flatMap(b=>b.tasks);return{list:l,count:l.length}}});
+
+/* ---------- task actions ---------- */
+def({t:'t.create',cat:'Task',title:'Create Task',ins:[X('in'),P('title','title'),P('board','board')],
+  outs:[X('out'),P('task','task')],params:[{id:'title',l:'Title',k:'text',d:'New task'},{id:'prio',l:'Priority',k:'sel',o:PRIOS,d:'normal'}],
+  run:(C,I,p)=>{if(!C.can('tasks'))return C.deny('create tasks');
+    const b=I.board||C.board();C.plan('Create 1 task');
+    const t=C.mut(()=>A.addTask(b.id,String(I.title??p.title),{priority:p.prio}),{title:I.title??p.title});
+    return{next:'out',out:{task:t}}}});
+def({t:'t.delete',cat:'Task',title:'Delete Task',ins:[X('in'),P('task','task')],outs:[X('out')],
+  run:(C,I)=>{const list=asArr(I.task);if(!C.can('tasks')||!C.can('delete'))return C.deny('delete tasks');
+    C.plan(\`Delete \${list.length} task(s)\`);C.mut(()=>list.forEach(t=>t&&A.delTask(t.id)));return{next:'out'}}});
+def({t:'t.dup',cat:'Task',title:'Duplicate Task',ins:[X('in'),P('task','task')],outs:[X('out'),P('task','copy')],
+  run:(C,I)=>{const t=asArr(I.task)[0];let c=null;
+    if(t&&C.can('tasks'))c=C.mut(()=>{const f=A.findTask(t.id);const n=JSON.parse(JSON.stringify(t));n.id=uid('t');n.x+=24;n.y+=24;
+      f.board.tasks.push(n);Bus.emit('task.created',{boardId:f.board.id,task:n});return n});
+    return{next:'out',out:{task:c}}}});
+def({t:'t.rename',cat:'Task',title:'Rename Task',ins:[X('in'),P('task','task'),P('name','name')],outs:[X('out')],
+  params:[{id:'name',l:'New name',k:'text'}],
+  run:(C,I,p)=>{asArr(I.task).forEach(t=>t&&C.can('tasks')&&C.mut(()=>A.rename(t.id,String(I.name??p.name))));
+    C.plan('Rename task(s)');return{next:'out'}}});
+def({t:'t.complete',cat:'Task',title:'Complete Task',ins:[X('in'),P('task','task')],outs:[X('out')],
+  run:(C,I)=>{const l=asArr(I.task);C.plan(\`Complete \${l.length} task(s)\`);
+    if(C.can('tasks'))C.mut(()=>l.forEach(t=>t&&A.setDone(t.id,true)));return{next:'out'}}});
+def({t:'t.uncomplete',cat:'Task',title:'Uncomplete Task',ins:[X('in'),P('task','task')],outs:[X('out')],
+  run:(C,I)=>{const l=asArr(I.task);if(C.can('tasks'))C.mut(()=>l.forEach(t=>t&&A.setDone(t.id,false)));return{next:'out'}}});
+def({t:'t.toBoard',cat:'Task',title:'Move Task to Board',ins:[X('in'),P('task','task'),P('board','board')],outs:[X('out')],
+  params:[{id:'name',l:'Board name (if unlinked)',k:'text'}],
+  run:(C,I,p)=>{const l=asArr(I.task);
+    const to=I.board||Object.values(S.boards).find(b=>b.name.toLowerCase()===String(p.name||'').toLowerCase());
+    if(!to)return{next:'out'};C.plan(\`Move \${l.length} task(s) to “\${to.name}”\`);
+    if(C.can('tasks'))C.mut(()=>l.forEach(t=>t&&A.moveTaskToBoard(t.id,to.id)));return{next:'out'}}});
+def({t:'t.sub',cat:'Task',title:'Create Subtask',ins:[X('in'),P('task','task'),P('title','title')],outs:[X('out')],
+  params:[{id:'title',l:'Title',k:'text',d:'Subtask'}],
+  run:(C,I,p)=>{asArr(I.task).forEach(t=>t&&C.mut(()=>A.addSub(t.id,String(I.title??p.title))));return{next:'out'}}});
+def({t:'t.rmSub',cat:'Task',title:'Remove Subtasks',ins:[X('in'),P('task','task')],outs:[X('out')],
+  params:[{id:'only',l:'Only completed',k:'check',d:true}],
+  run:(C,I,p)=>{asArr(I.task).forEach(t=>t&&C.mut(()=>t.subtasks=p.only?t.subtasks.filter(s=>!s.done):[]));return{next:'out'}}});
+def({t:'t.prio',cat:'Task',title:'Set Priority',ins:[X('in'),P('task','task')],outs:[X('out')],
+  params:[{id:'v',l:'Priority',k:'sel',o:PRIOS,d:'high'}],
+  run:(C,I,p)=>{const l=asArr(I.task);C.plan(\`Set priority on \${l.length} task(s)\`);
+    C.mut(()=>l.forEach(t=>t&&(t.priority=p.v)));return{next:'out'}}});
+def({t:'t.status',cat:'Task',title:'Set Status',ins:[X('in'),P('task','task')],outs:[X('out')],
+  params:[{id:'v',l:'Status',k:'sel',o:STATUSES,d:'doing'}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.task).forEach(t=>t&&(t.status=p.v)));return{next:'out'}}});
+def({t:'t.desc',cat:'Task',title:'Set Description',ins:[X('in'),P('task','task'),P('text','text')],outs:[X('out')],
+  params:[{id:'text',l:'Description',k:'text'}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.task).forEach(t=>t&&(t.desc=String(I.text??p.text??''))));return{next:'out'}}});
+def({t:'t.deadline',cat:'Task',title:'Set Deadline',ins:[X('in'),P('task','task'),P('date','date')],outs:[X('out')],
+  params:[{id:'date',l:'Date',k:'date'},{id:'rel',l:'Or relative',k:'sel',o:['—','today','tomorrow','+7 days'],d:'—'}],
+  run:(C,I,p)=>{let d=I.date||p.date||'';
+    if(p.rel==='today')d=todayISO();else if(p.rel==='tomorrow')d=tomorrowISO();
+    else if(p.rel==='+7 days'){const x=new Date();x.setDate(x.getDate()+7);d=x.toISOString().slice(0,10)}
+    C.mut(()=>asArr(I.task).forEach(t=>t&&(t.deadline=d)));return{next:'out'}}});
+def({t:'t.addTag',cat:'Task',title:'Add Tag',ins:[X('in'),P('task','task')],outs:[X('out')],params:[{id:'tag',l:'Tag',k:'text'}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.task).forEach(t=>t&&!t.tags.includes(p.tag)&&t.tags.push(p.tag)));return{next:'out'}}});
+def({t:'t.rmTag',cat:'Task',title:'Remove Tag',ins:[X('in'),P('task','task')],outs:[X('out')],params:[{id:'tag',l:'Tag',k:'text'}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.task).forEach(t=>t&&(t.tags=t.tags.filter(g=>g!==p.tag))));return{next:'out'}}});
+def({t:'t.sync',cat:'Task',title:'Sync Task States',ins:[X('in'),P('task','task')],outs:[X('out')],
+  params:[{id:'by',l:'Match tasks elsewhere by',k:'sel',o:['same title'],d:'same title'}],
+  run:(C,I)=>{asArr(I.task).forEach(t=>{if(!t)return;
+    Object.values(S.boards).forEach(b=>b.tasks.forEach(o=>{
+      if(o.id!==t.id&&o.title===t.title&&o.done!==t.done)C.mut(()=>A.setDone(o.id,t.done))}))});
+    C.plan('Synchronise matching tasks');return{next:'out'}}});
+
+/* ---------- query ---------- */
+const OPS=['equals','does not equal','greater than','less than','greater or equal','less or equal','contains','starts with','is empty','exists'];
+function cmp(v,op,b){
+  const sv=v==null?'':String(v).toLowerCase(),sb=String(b??'').toLowerCase();
+  switch(op){
+    case 'equals':return sv===sb;case 'does not equal':return sv!==sb;
+    case 'greater than':return num(v)>num(b);case 'less than':return num(v)<num(b);
+    case 'greater or equal':return num(v)>=num(b);case 'less or equal':return num(v)<=num(b);
+    case 'contains':return sv.includes(sb);case 'starts with':return sv.startsWith(sb);
+    case 'is empty':return sv==='';case 'exists':return sv!=='';}
+  return false;
+}
+const FIELDS=['title','done','priority','status','deadline','tags','description','subtask count','overdue'];
+function fieldOf(t,f){switch(f){case 'title':return t.title;case 'done':return t.done?'true':'false';
+  case 'priority':return t.priority;case 'status':return t.status;case 'deadline':return t.deadline;
+  case 'tags':return (t.tags||[]).join(',');case 'description':return t.desc;
+  case 'subtask count':return (t.subtasks||[]).length;case 'overdue':return A.isOverdue(t)?'true':'false';}return ''}
+def({t:'q.filter',cat:'Query',title:'Filter',pure:1,ins:[P('list','list')],outs:[P('list','matches'),P('count','count'),P('rest','rejected')],
+  params:[{id:'f',l:'Field',k:'sel',o:FIELDS,d:'title'},{id:'op',l:'Condition',k:'sel',o:OPS,d:'contains'},{id:'v',l:'Value',k:'text'}],
+  run:(C,I,p)=>{const l=asArr(I.list),m=l.filter(t=>cmp(fieldOf(t,p.f),p.op,p.v));
+    return{list:m,count:m.length,rest:l.filter(t=>!m.includes(t))}}});
+def({t:'q.and',cat:'Query',title:'AND',pure:1,ins:[P('a','a'),P('b','b')],outs:[P('v','result')],
+  run:(C,I)=>({v:!!truthy(I.a)&&!!truthy(I.b)})});
+def({t:'q.or',cat:'Query',title:'OR',pure:1,ins:[P('a','a'),P('b','b')],outs:[P('v','result')],
+  run:(C,I)=>({v:!!truthy(I.a)||!!truthy(I.b)})});
+def({t:'q.not',cat:'Query',title:'NOT',pure:1,ins:[P('a','value')],outs:[P('v','result')],run:(C,I)=>({v:!truthy(I.a)})});
+def({t:'q.compare',cat:'Query',title:'Compare',pure:1,ins:[P('a','a'),P('b','b')],outs:[P('v','result')],
+  params:[{id:'op',l:'Condition',k:'sel',o:OPS,d:'equals'},{id:'b',l:'…value',k:'text'}],
+  run:(C,I,p)=>({v:cmp(I.a,p.op,I.b??p.b)})});
+def({t:'q.intersect',cat:'Query',title:'Both Lists (AND)',pure:1,ins:[P('a','list a'),P('b','list b')],outs:[P('list','list')],
+  run:(C,I)=>({list:asArr(I.a).filter(x=>asArr(I.b).includes(x))})});
+function truthy(v){return Array.isArray(v)?v.length>0:!!v&&v!=='false'}
+
+/* ---------- sort ---------- */
+const SORTK=['name','priority','deadline','creation date','completion status','status','tags','subtask count'];
+function sortKey(t,k){switch(k){case 'name':return (t.title||'').toLowerCase();
+  case 'priority':return PRIOS.indexOf(t.priority);case 'deadline':return t.deadline||'9999';
+  case 'creation date':return t.created||0;case 'completion status':return t.done?1:0;
+  case 'status':return STATUSES.indexOf(t.status);case 'tags':return (t.tags||[]).join(',');
+  case 'subtask count':return (t.subtasks||[]).length;}return 0}
+def({t:'s.sort',cat:'Sort',title:'Sort',pure:1,ins:[P('list','list')],outs:[P('list','sorted')],
+  params:[{id:'k',l:'By',k:'sel',o:SORTK,d:'priority'},{id:'dir',l:'Order',k:'sel',o:['ascending','descending'],d:'descending'}],
+  run:(C,I,p)=>{const l=asArr(I.list).slice().sort((a,b)=>{const x=sortKey(a,p.k),y=sortKey(b,p.k);
+      return x<y?-1:x>y?1:0});if(p.dir==='descending')l.reverse();return{list:l}}});
+def({t:'s.group',cat:'Sort',title:'Group By',pure:1,ins:[P('list','list')],outs:[P('groups','groups'),P('count','groups #')],
+  params:[{id:'k',l:'Field',k:'sel',o:FIELDS,d:'priority'}],
+  run:(C,I,p)=>{const g={};asArr(I.list).forEach(t=>{(g[fieldOf(t,p.k)]||=[]).push(t)});
+    return{groups:Object.entries(g).map(([k,v])=>({key:k,items:v})),count:Object.keys(g).length}}});
+def({t:'s.unique',cat:'Sort',title:'Unique',pure:1,ins:[P('list','list')],outs:[P('list','list')],
+  params:[{id:'k',l:'By field',k:'sel',o:FIELDS,d:'title'}],
+  run:(C,I,p)=>{const seen=new Set(),out=[];asArr(I.list).forEach(t=>{const k=fieldOf(t,p.k);
+    if(!seen.has(k)){seen.add(k);out.push(t)}});return{list:out}}});
+
+/* ---------- layout ---------- */
+const LAYOUTS=[['l.grid','Arrange Grid','grid'],['l.rows','Arrange Rows','rows'],['l.cols','Arrange Columns','columns'],
+ ['l.vert','Arrange Vertically','vertical'],['l.horiz','Arrange Horizontally','horizontal'],
+ ['l.circle','Arrange Circle','circle'],['l.spiral','Arrange Spiral','spiral'],['l.stack','Stack','stack'],['l.pack','Pack','pack']];
+LAYOUTS.forEach(([t,title,fn])=>def({t,cat:'Layout',title,ins:[X('in'),P('list','items')],outs:[X('out')],
+  params:[{id:'x',l:'Start X',k:'num',d:60},{id:'y',l:'Start Y',k:'num',d:60},{id:'cols',l:'Columns / gap',k:'num',d:0}],
+  run:(C,I,p)=>{const l=asArr(I.list);if(!l.length)return{next:'out'};
+    C.plan(\`Rearrange \${l.length} card(s)\`);
+    C.mut(()=>Layout[fn](toItems(l),{x:num(p.x),y:num(p.y),cols:num(p.cols)||undefined,gap:num(p.cols)||undefined}));
+    C.touch();return{next:'out'}}}));
+def({t:'l.align',cat:'Layout',title:'Align',ins:[X('in'),P('list','items')],outs:[X('out')],
+  params:[{id:'how',l:'Edge',k:'sel',o:['left','right','top','bottom','middle'],d:'left'}],
+  run:(C,I,p)=>{C.mut(()=>Layout.align(toItems(asArr(I.list)),{how:p.how}));C.touch();return{next:'out'}}});
+def({t:'l.dist',cat:'Layout',title:'Distribute',ins:[X('in'),P('list','items')],outs:[X('out')],
+  params:[{id:'axis',l:'Axis',k:'sel',o:['x','y'],d:'x'}],
+  run:(C,I,p)=>{C.mut(()=>Layout.distribute(toItems(asArr(I.list)),{axis:p.axis}));C.touch();return{next:'out'}}});
+def({t:'l.move',cat:'Layout',title:'Move Object',ins:[X('in'),P('obj','object')],outs:[X('out')],
+  params:[{id:'x',l:'X',k:'num',d:80},{id:'y',l:'Y',k:'num',d:80},{id:'rel',l:'Relative',k:'check',d:false}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.obj).forEach(o=>{if(!o)return;
+    o.x=p.rel?o.x+num(p.x):num(p.x);o.y=p.rel?o.y+num(p.y):num(p.y)}));C.touch();return{next:'out'}}});
+def({t:'l.resize',cat:'Layout',title:'Resize Note',ins:[X('in'),P('obj','note')],outs:[X('out')],
+  params:[{id:'w',l:'Width',k:'num',d:200},{id:'h',l:'Height',k:'num',d:140}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.obj).forEach(o=>{if(o){o.w=num(p.w);o.h=num(p.h)}}));C.touch();return{next:'out'}}});
+def({t:'l.urgent',cat:'Layout',title:'Move to Urgent Area',ins:[X('in'),P('list','tasks')],outs:[X('out')],
+  run:(C,I)=>{const l=asArr(I.list);C.plan(\`Move \${l.length} task(s) to the urgent corner\`);
+    C.mut(()=>Layout.vertical(toItems(l),{x:-260,y:60,gap:140}));C.touch();return{next:'out'}}});
+
+/* ---------- logic ---------- */
+def({t:'x.if',cat:'Logic',title:'If / Else',ins:[X('in'),P('cond','condition')],outs:[X('then','then'),X('else','else')],
+  run:(C,I)=>({next:truthy(I.cond)?'then':'else'})});
+def({t:'x.switch',cat:'Logic',title:'Switch / Case',ins:[X('in'),P('v','value')],
+  outs:[X('a','case A'),X('b','case B'),X('c','case C'),X('out','default')],
+  params:[{id:'a',l:'Case A',k:'text'},{id:'b',l:'Case B',k:'text'},{id:'c',l:'Case C',k:'text'}],
+  run:(C,I,p)=>{const v=String(I.v??'').toLowerCase();
+    return{next:v===String(p.a??'').toLowerCase()?'a':v===String(p.b??'').toLowerCase()?'b':v===String(p.c??'').toLowerCase()?'c':'out'}}});
+def({t:'x.foreach',cat:'Logic',title:'For Each',ins:[X('in'),P('list','list')],
+  outs:[X('body','each'),X('out','after'),P('item','item'),P('i','index')],loop:'list',
+  run:()=>({next:'out'})});
+def({t:'x.repeat',cat:'Logic',title:'Repeat',ins:[X('in')],outs:[X('body','each'),X('out','after'),P('i','index')],
+  params:[{id:'n',l:'Times',k:'num',d:3}],loop:'count',run:()=>({next:'out'})});
+def({t:'x.while',cat:'Logic',title:'While',ins:[X('in'),P('cond','condition')],outs:[X('body','each'),X('out','after')],
+  loop:'while',run:()=>({next:'out'})});
+def({t:'x.delay',cat:'Logic',title:'Delay',ins:[X('in')],outs:[X('out')],params:[{id:'ms',l:'Milliseconds',k:'num',d:400}],
+  run:async(C,I,p)=>{if(!C.dry)await new Promise(r=>setTimeout(r,clamp(num(p.ms),0,5000)));return{next:'out'}}});
+def({t:'x.wait',cat:'Logic',title:'Wait Seconds',ins:[X('in')],outs:[X('out')],params:[{id:'s',l:'Seconds',k:'num',d:1}],
+  run:async(C,I,p)=>{if(!C.dry)await new Promise(r=>setTimeout(r,clamp(num(p.s)*1000,0,10000)));return{next:'out'}}});
+def({t:'x.stop',cat:'Logic',title:'Stop',ins:[X('in')],outs:[],run:C=>{C.log('Stopped.');return{stop:true}}});
+def({t:'x.log',cat:'Logic',title:'Log Message',ins:[X('in'),P('v','value')],outs:[X('out')],
+  params:[{id:'m',l:'Message',k:'text',d:'…'}],
+  run:(C,I,p)=>{C.log(String(p.m)+(I.v!==undefined?' → '+fmt(I.v):''));return{next:'out'}}});
+
+/* ---------- data ---------- */
+function fmt(v){if(v==null)return '—';if(Array.isArray(v))return \`[\${v.length} item\${v.length===1?'':'s'}]\`;
+  if(typeof v==='object')return v.title||v.name||'{object}';return String(v)}
+def({t:'d.text',cat:'Data',title:'Text',pure:1,outs:[P('v','text')],params:[{id:'v',l:'Value',k:'text',d:''}],run:(C,I,p)=>({v:String(p.v??'')})});
+def({t:'d.num',cat:'Data',title:'Number',pure:1,outs:[P('v','number')],params:[{id:'v',l:'Value',k:'num',d:0}],run:(C,I,p)=>({v:num(p.v)})});
+def({t:'d.bool',cat:'Data',title:'Boolean',pure:1,outs:[P('v','value')],params:[{id:'v',l:'True',k:'check',d:true}],run:(C,I,p)=>({v:!!p.v})});
+def({t:'d.date',cat:'Data',title:'Date',pure:1,outs:[P('v','date')],
+  params:[{id:'mode',l:'Which',k:'sel',o:['today','tomorrow','fixed'],d:'today'},{id:'v',l:'Fixed date',k:'date'}],
+  run:(C,I,p)=>({v:p.mode==='today'?todayISO():p.mode==='tomorrow'?tomorrowISO():(p.v||todayISO())})});
+def({t:'d.time',cat:'Data',title:'Time Now',pure:1,outs:[P('v','time'),P('hour','hour'),P('weekday','weekday')],
+  run:()=>{const d=new Date();return{v:d.toTimeString().slice(0,5),hour:d.getHours(),
+    weekday:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()]}}});
+def({t:'d.get',cat:'Data',title:'Get Property',pure:1,ins:[P('obj','object')],outs:[P('v','value')],
+  params:[{id:'f',l:'Field',k:'sel',o:FIELDS,d:'title'}],
+  run:(C,I,p)=>{const o=Array.isArray(I.obj)?I.obj[0]:I.obj;return{v:o?fieldOf(o,p.f):''}}});
+def({t:'d.var.get',cat:'Data',title:'Get Variable',pure:1,outs:[P('v','value')],params:[{id:'n',l:'Name',k:'text',d:'count'}],
+  run:(C,I,p)=>({v:C.vars[p.n]})});
+def({t:'d.var.set',cat:'Data',title:'Set Variable',ins:[X('in'),P('v','value')],outs:[X('out')],
+  params:[{id:'n',l:'Name',k:'text',d:'count'},{id:'v',l:'Fallback value',k:'text'}],
+  run:(C,I,p)=>{C.vars[p.n]=I.v!==undefined?I.v:p.v;return{next:'out'}}});
+const AGG=[['d.count','Count',l=>l.length],['d.sum','Sum',l=>l.reduce((a,b)=>a+num(b),0)],
+  ['d.avg','Average',l=>l.length?l.reduce((a,b)=>a+num(b),0)/l.length:0],
+  ['d.min','Minimum',l=>l.length?Math.min(...l.map(num)):0],['d.max','Maximum',l=>l.length?Math.max(...l.map(num)):0]];
+AGG.forEach(([t,title,fn])=>def({t,cat:'Data',title,pure:1,ins:[P('list','list')],outs:[P('v','value')],
+  params:t==='d.count'?[]:[{id:'f',l:'Field',k:'sel',o:FIELDS,d:'subtask count'}],
+  run:(C,I,p)=>({v:fn(asArr(I.list).map(x=>p&&p.f?fieldOf(x,p.f):x))})}));
+def({t:'d.math',cat:'Data',title:'Maths',pure:1,ins:[P('a','a'),P('b','b')],outs:[P('v','result')],
+  params:[{id:'op',l:'Operation',k:'sel',o:['+','−','×','÷','%'],d:'+'},{id:'b',l:'…or b',k:'num',d:0}],
+  run:(C,I,p)=>{const a=num(I.a),b=I.b!==undefined?num(I.b):num(p.b);
+    return{v:p.op==='+'?a+b:p.op==='−'?a-b:p.op==='×'?a*b:p.op==='÷'?(b?a/b:0):(b?a%b:0)}}});
+def({t:'d.format',cat:'Data',title:'Format Text',pure:1,ins:[P('a','a'),P('b','b')],outs:[P('v','text')],
+  params:[{id:'tpl',l:'Template ({a} {b})',k:'text',d:'{a} of {b}'}],
+  run:(C,I,p)=>({v:String(p.tpl).replace(/\\{a\\}/g,fmt(I.a)).replace(/\\{b\\}/g,fmt(I.b))})});
+def({t:'d.merge',cat:'Data',title:'Merge Lists',pure:1,ins:[P('a','a'),P('b','b')],outs:[P('list','list')],
+  run:(C,I)=>({list:[...asArr(I.a),...asArr(I.b)]})});
+def({t:'d.split',cat:'Data',title:'Split Text',pure:1,ins:[P('v','text')],outs:[P('list','parts')],
+  params:[{id:'sep',l:'Separator',k:'text',d:','}],
+  run:(C,I,p)=>({list:String(I.v??'').split(p.sep||',').map(s=>s.trim())})});
+def({t:'d.replace',cat:'Data',title:'Replace Text',pure:1,ins:[P('v','text')],outs:[P('v','text')],
+  params:[{id:'a',l:'Find',k:'text'},{id:'b',l:'Replace with',k:'text'}],
+  run:(C,I,p)=>({v:String(I.v??'').split(p.a||'').join(p.b||'')})});
+def({t:'d.first',cat:'Data',title:'First / Nth Item',pure:1,ins:[P('list','list')],outs:[P('v','item')],
+  params:[{id:'i',l:'Index (0 = first)',k:'num',d:0}],run:(C,I,p)=>({v:asArr(I.list)[num(p.i)]??null})});
+
+/* ---------- notes & files ---------- */
+def({t:'n.create',cat:'Notes',title:'Create Note',ins:[X('in'),P('text','text'),P('board','board')],outs:[X('out'),P('note','note')],
+  params:[{id:'text',l:'Text',k:'text',d:'Note'}],
+  run:(C,I,p)=>{if(!C.can('notes'))return C.deny('create notes');
+    C.plan('Create 1 note');const n=C.mut(()=>A.addNote((I.board||C.board()).id,String(I.text??p.text)),{});
+    return{next:'out',out:{note:n}}}});
+def({t:'n.find',cat:'Notes',title:'Find Notes',pure:1,ins:[P('board','board')],outs:[P('list','notes')],
+  params:[{id:'q',l:'Text contains',k:'text'}],
+  run:(C,I,p)=>({list:(I.board||C.board()).notes.filter(n=>!p.q||n.text.toLowerCase().includes(String(p.q).toLowerCase()))})});
+def({t:'n.edit',cat:'Notes',title:'Edit Note',ins:[X('in'),P('note','note'),P('text','text')],outs:[X('out')],
+  params:[{id:'text',l:'New text',k:'text'}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.note).forEach(n=>n&&(n.text=String(I.text??p.text??''))));C.touch();return{next:'out'}}});
+def({t:'n.summary',cat:'Notes',title:'Update Summary Note',ins:[X('in'),P('text','text')],outs:[X('out')],
+  params:[{id:'title',l:'Note starts with',k:'text',d:'Summary'},{id:'text',l:'Fallback text',k:'text'}],
+  run:(C,I,p)=>{const b=C.board();const txt=String(I.text??p.text??'');
+    let n=b.notes.find(x=>x.text.startsWith(p.title));
+    C.plan('Update 1 summary note');
+    C.mut(()=>{if(!n)n=A.addNote(b.id,'');n.text=p.title+'\\n'+txt});C.touch();return{next:'out'}}});
+def({t:'n.color',cat:'Notes',title:'Change Note Colour',ins:[X('in'),P('note','note')],outs:[X('out')],
+  params:[{id:'i',l:'Colour 1–6',k:'num',d:1}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.note).forEach(n=>n&&(n.color=NOTE_COLORS[clamp(num(p.i)-1,0,5)])));C.touch();return{next:'out'}}});
+def({t:'n.delete',cat:'Notes',title:'Delete Notes',ins:[X('in'),P('note','note')],outs:[X('out')],
+  run:(C,I)=>{if(!C.can('delete'))return C.deny('delete notes');const b=C.board();
+    const ids=asArr(I.note).map(n=>n&&n.id);C.plan(\`Delete \${ids.length} note(s)\`);
+    C.mut(()=>b.notes=b.notes.filter(n=>!ids.includes(n.id)));C.touch();return{next:'out'}}});
+def({t:'f.find',cat:'Files',title:'Find Files',pure:1,ins:[P('board','board')],outs:[P('list','file cards'),P('count','count')],
+  params:[{id:'q',l:'Name contains',k:'text'}],
+  run:(C,I,p)=>{const b=I.board||C.board();
+    const l=b.files.filter(c=>{const f=A.file(c.fileId);return f&&(!p.q||f.name.toLowerCase().includes(String(p.q).toLowerCase()))});
+    return{list:l,count:l.length}}});
+def({t:'f.rename',cat:'Files',title:'Rename File',ins:[X('in'),P('file','file card'),P('name','name')],outs:[X('out')],
+  params:[{id:'name',l:'New name',k:'text'}],
+  run:(C,I,p)=>{C.mut(()=>asArr(I.file).forEach(c=>{const f=c&&A.file(c.fileId);if(f)f.name=String(I.name??p.name??f.name)}));return{next:'out'}}});
+def({t:'f.group',cat:'Files',title:'Group Files',ins:[X('in'),P('file','file cards')],outs:[X('out')],
+  params:[{id:'x',l:'X',k:'num',d:820},{id:'y',l:'Y',k:'num',d:60}],
+  run:(C,I,p)=>{C.mut(()=>Layout.grid(toItems(asArr(I.file),'file'),{x:num(p.x),y:num(p.y),cols:2,gx:170,gy:160}));C.touch();return{next:'out'}}});
+def({t:'f.delete',cat:'Files',title:'Remove File Cards',ins:[X('in'),P('file','file cards')],outs:[X('out')],
+  run:(C,I)=>{if(!C.can('delete'))return C.deny('remove files');const b=C.board();
+    const ids=asArr(I.file).map(c=>c&&c.id);C.plan(\`Remove \${ids.length} file card(s)\`);
+    C.mut(()=>b.files=b.files.filter(c=>!ids.includes(c.id)));C.touch();return{next:'out'}}});
+
+/* ---------- projects ---------- */
+def({t:'p.boards',cat:'Projects',title:'Find Project Boards',pure:1,params:[{id:'name',l:'Project',k:'proj'}],
+  outs:[P('list','boards'),P('count','count')],
+  run:(C,I,p)=>{const pr=S.projects.find(x=>x.id===p.name||x.name===p.name);
+    const l=pr?Object.values(S.boards).filter(b=>b.projects.includes(pr.id)):[];return{list:l,count:l.length}}});
+def({t:'p.aggregate',cat:'Projects',title:'Aggregate Across Boards',pure:1,ins:[P('list','boards')],
+  outs:[P('list','tasks'),P('done','done'),P('total','total'),P('pct','percent')],
+  run:(C,I)=>{const bs=asArr(I.list),tasks=bs.flatMap(b=>b.tasks||[]);
+    const done=tasks.filter(t=>t.done).length;
+    return{list:tasks,done,total:tasks.length,pct:tasks.length?Math.round(done/tasks.length*100):0}}});
+def({t:'p.summary',cat:'Projects',title:'Create Project Summary',ins:[X('in'),P('list','boards')],outs:[X('out'),P('text','text')],
+  run:(C,I)=>{const bs=asArr(I.list);
+    const text=bs.map(b=>{const s=A.stats(b.id);return \`\${b.name}: \${s.done}/\${s.total} (\${s.pct}%)\`}).join('\\n');
+    C.plan('Write a project summary');return{next:'out',out:{text}}}});
+
+/* ---------- calendar ---------- */
+def({t:'c.create',cat:'Calendar',title:'Create Calendar Event',ins:[X('in'),P('title','title'),P('date','date')],outs:[X('out')],
+  params:[{id:'title',l:'Title',k:'text',d:'Event'},{id:'date',l:'Date',k:'date'},{id:'time',l:'Time',k:'time',d:'09:00'}],
+  run:(C,I,p)=>{C.plan('Create 1 calendar event');
+    C.mut(()=>{S.events.push({id:uid('e'),title:String(I.title??p.title),date:I.date||p.date||todayISO(),time:p.time,project:null});
+      Bus.emit('cal.created',{})});return{next:'out'}}});
+def({t:'c.upcoming',cat:'Calendar',title:'Upcoming Events',pure:1,outs:[P('list','events'),P('count','count')],
+  params:[{id:'days',l:'Within N days',k:'num',d:7}],
+  run:(C,I,p)=>{const end=new Date();end.setDate(end.getDate()+num(p.days));const e2=end.toISOString().slice(0,10);
+    const l=S.events.filter(e=>e.date>=todayISO()&&e.date<=e2);return{list:l,count:l.length}}});
+
+/* ---------- interaction ---------- */
+def({t:'u.message',cat:'Ask',title:'Show Message',ins:[X('in'),P('v','value')],outs:[X('out')],
+  params:[{id:'m',l:'Message',k:'text',d:'Done.'}],
+  run:async(C,I,p)=>{const msg=String(p.m)+(I.v!==undefined?' '+fmt(I.v):'');
+    C.log(msg);if(!C.dry)await new Promise(r=>modal('Script says',\`<p>\${esc(msg)}</p>\`,[['OK',()=>r(),1]]));return{next:'out'}}});
+def({t:'u.notify',cat:'Ask',title:'Show Notification',ins:[X('in'),P('v','value')],outs:[X('out')],
+  params:[{id:'m',l:'Message',k:'text',d:'Script finished'}],
+  run:(C,I,p)=>{const m=String(p.m)+(I.v!==undefined?' '+fmt(I.v):'');C.log(m);if(!C.dry)toast(m);return{next:'out'}}});
+def({t:'u.confirm',cat:'Ask',title:'Confirm',ins:[X('in')],outs:[X('then','yes'),X('else','no')],
+  params:[{id:'m',l:'Question',k:'text',d:'Continue?'}],
+  run:async(C,I,p)=>{if(C.dry)return{next:'then'};
+    const ok=await new Promise(r=>modal('Script asks',\`<p>\${esc(p.m)}</p>\`,[['No',()=>r(false)],['Yes',()=>r(true),1]]));
+    return{next:ok?'then':'else'}}});
+def({t:'u.input',cat:'Ask',title:'Ask User',ins:[X('in')],outs:[X('out'),P('v','answer')],
+  params:[{id:'m',l:'Question',k:'text',d:'Name?'},{id:'kind',l:'Answer',k:'sel',o:['text','number'],d:'text'}],
+  run:async(C,I,p)=>{if(C.dry)return{next:'out',out:{v:''}};
+    const v=await new Promise(r=>modal('Script asks',
+      \`<label class="fld">\${esc(p.m)}</label><input type="\${p.kind==='number'?'number':'text'}" id="_a">\`,
+      [['Cancel',()=>r(null)],['OK',b=>r($('#_a',b).value),1]]));
+    return{next:'out',out:{v:p.kind==='number'?num(v):v}}}});
+def({t:'u.choose',cat:'Ask',title:'Choose Option',ins:[X('in')],outs:[X('out'),P('v','choice')],
+  params:[{id:'o',l:'Options (comma separated)',k:'text',d:'A, B, C'}],
+  run:async(C,I,p)=>{const opts=String(p.o).split(',').map(s=>s.trim()).filter(Boolean);
+    if(C.dry)return{next:'out',out:{v:opts[0]}};
+    const v=await new Promise(r=>modal('Choose',\`<div class="row">\${opts.map((o,i)=>
+      \`<button class="btn" data-i="\${i}">\${esc(o)}</button>\`).join('')}</div>\`,[['Cancel',()=>r(null)]],
+      b=>$$('[data-i]',b).forEach(x=>x.onclick=()=>{r(opts[+x.dataset.i]);b.closest('#scrim').remove()})));
+    return{next:'out',out:{v}}}});
+def({t:'u.chooseTask',cat:'Ask',title:'Choose Task',ins:[X('in'),P('list','from')],outs:[X('out'),P('task','task')],
+  run:async(C,I)=>{const l=asArr(I.list).length?asArr(I.list):C.board().tasks;
+    if(C.dry||!l.length)return{next:'out',out:{task:l[0]||null}};
+    const t=await new Promise(r=>modal('Choose a task',\`<div class="list">\${l.map((t,i)=>
+      \`<button class="item" data-i="\${i}">\${esc(t.title)}</button>\`).join('')}</div>\`,[['Cancel',()=>r(null)]],
+      b=>$$('[data-i]',b).forEach(x=>x.onclick=()=>{r(l[+x.dataset.i]);b.closest('#scrim').remove()})));
+    return{next:'out',out:{task:t}}}});
+def({t:'u.chooseBoard',cat:'Ask',title:'Choose Board',ins:[X('in')],outs:[X('out'),P('board','board')],
+  run:async(C)=>{const l=Object.values(S.boards);if(C.dry)return{next:'out',out:{board:l[0]}};
+    const b=await new Promise(r=>modal('Choose a board',\`<div class="list">\${l.map((b,i)=>
+      \`<button class="item" data-i="\${i}">\${esc(A.path(b.id).map(x=>x.name).join(' › '))}</button>\`).join('')}</div>\`,
+      [['Cancel',()=>r(null)]],bd=>$$('[data-i]',bd).forEach(x=>x.onclick=()=>{r(l[+x.dataset.i]);bd.closest('#scrim').remove()})));
+    return{next:'out',out:{board:b}}}});
+
+/* ---------- visual ---------- */
+def({t:'v.highlight',cat:'Visual',title:'Highlight Task',ins:[X('in'),P('task','task')],outs:[X('out')],
+  run:(C,I)=>{if(!C.dry)asArr(I.task).forEach(t=>t&&C.view()&&C.view().flash(t.id));return{next:'out'}}});
+def({t:'v.focus',cat:'Visual',title:'Focus Camera',ins:[X('in'),P('obj','object')],outs:[X('out')],
+  run:(C,I)=>{const o=asArr(I.obj)[0];if(o&&!C.dry&&C.view())C.view().focus(o);return{next:'out'}}});
+def({t:'v.zoom',cat:'Visual',title:'Zoom Camera',ins:[X('in')],outs:[X('out')],params:[{id:'z',l:'Zoom %',k:'num',d:100}],
+  run:(C,I,p)=>{if(!C.dry&&C.view())C.view().zoom(num(p.z)/100);return{next:'out'}}});
+def({t:'v.pan',cat:'Visual',title:'Pan Camera',ins:[X('in')],outs:[X('out')],
+  params:[{id:'x',l:'dX',k:'num',d:100},{id:'y',l:'dY',k:'num',d:0}],
+  run:(C,I,p)=>{if(!C.dry&&C.view())C.view().pan(num(p.x),num(p.y));return{next:'out'}}});
+def({t:'v.flash',cat:'Visual',title:'Flash Object',ins:[X('in'),P('obj','object')],outs:[X('out')],
+  run:(C,I)=>{if(!C.dry&&C.view())asArr(I.obj).forEach(o=>o&&C.view().flash(o.id));return{next:'out'}}});
+def({t:'v.open',cat:'Visual',title:'Open Board Window',ins:[X('in'),P('board','board')],outs:[X('out')],
+  run:(C,I)=>{const b=I.board||C.board();if(b&&!C.dry)openBoard(b.id);return{next:'out'}}});
+
+/* ---------- script io ---------- */
+def({t:'sc.input',cat:'Script',title:'Script Input',pure:1,outs:[P('v','value')],params:[{id:'n',l:'Input name',k:'text',d:'Tasks'}],
+  run:(C,I,p)=>({v:C.inputs[p.n]})});
+def({t:'sc.output',cat:'Script',title:'Script Output',ins:[X('in'),P('v','value')],outs:[X('out')],
+  params:[{id:'n',l:'Output name',k:'text',d:'Result'}],
+  run:(C,I,p)=>{C.outputs[p.n]=I.v;C.log('Output '+p.n+' = '+fmt(I.v));return{next:'out'}}});
+def({t:'sc.emit',cat:'Script',title:'Emit Custom Event',ins:[X('in'),P('v','data')],outs:[X('out')],
+  params:[{id:'n',l:'Event name',k:'text',d:'ping'}],
+  run:(C,I,p)=>{C.log('Emitted “'+p.n+'”');if(!C.dry)setTimeout(()=>Bus.emit('custom:'+p.n,{data:I.v}),0);return{next:'out'}}});
+def({t:'sc.run',cat:'Script',title:'Run Another Script',ins:[X('in'),P('v','input')],outs:[X('out'),P('v','outputs')],
+  params:[{id:'n',l:'Script name',k:'text'}],
+  run:async(C,I,p)=>{const s=Object.values(S.scripts).find(x=>x.name===p.n);
+    if(!s||C.dry)return{next:'out',out:{v:null}};
+    const r=await runScript(s,{},{Tasks:I.v});return{next:'out',out:{v:r&&r.outputs}}}});
+
+/* ============================ interpreter ============================ */
+class Ctx{
+  constructor(script,opt,inputs){
+    this.s=script;this.opt=opt||{};this.payload=this.opt.payload||{};
+    this.boardId=this.opt.boardId||this.payload.boardId||script.boardId||'b_home';
+    if(!S.boards[this.boardId])this.boardId='b_home';
+    this.vars={};(script.vars||[]).forEach(v=>this.vars[v.name]=v.value);
+    this.inputs=inputs||{};this.outputs={};this.dry=!!this.opt.dry;
+    this.plans=[];this.logs=[];this.steps=0;this.tick=0;this.outCache={};this.loopVals={};
+    this.counts={};this.errs=0;this.dirtyBoard=false;
+  }
+  board(){return S.boards[this.boardId]}
+  view(){const w=WINS.get('board:'+this.boardId);return w&&w.api}
+  node(id){return this.s.nodes.find(n=>n.id===id)}
+  nextOf(id,port){const e=this.s.edges.find(e=>e.from.n===id&&e.from.port===port);return e?e.to.n:null}
+  paramsOf(n){const d=NODES[n.t],p={};(d.params||[]).forEach(q=>p[q.id]=(n.p&&n.p[q.id]!==undefined)?n.p[q.id]:q.d);return p}
+  inputsOf(n){const d=NODES[n.t],o={};
+    (d.ins||[]).filter(i=>!i.x).forEach(i=>{o[i.id]=this.evalIn(n,i.id)});return o}
+  evalIn(n,port){
+    const e=this.s.edges.find(e=>e.to.n===n.id&&e.to.port===port);
+    if(!e)return undefined;
+    const src=this.node(e.from.n);if(!src)return undefined;
+    return this.outValue(src,e.from.port);
+  }
+  outValue(src,port){
+    const d=NODES[src.t];if(!d)return undefined;
+    if(d.loop){const lv=this.loopVals[src.id]||{};return port==='item'?lv.item:port==='i'?lv.i:undefined}
+    if(d.data)return d.data(this)[port];
+    if(d.pure){
+      this._pc=this._pc||{};
+      const k=src.id+':'+this.tick;
+      if(!(k in this._pc)){
+        let v;try{v=d.run(this,this.inputsOf(src),this.paramsOf(src),src)}catch(e){this.err(src,e);v={}}
+        this._pc[k]=v||{};this.fire(src.id,true);
+      }
+      return this._pc[k][port];
+    }
+    return (this.outCache[src.id]||{})[port];
+  }
+  fire(id,quiet){this.counts[id]=(this.counts[id]||0)+1;if(this.opt.onFire&&!quiet)this.opt.onFire(id)}
+  log(m){const line=m;this.logs.push(line);if(this.opt.onLog)this.opt.onLog(line,false)}
+  err(n,e){this.errs++;const m=(NODES[n.t]?NODES[n.t].title:n.t)+': '+(e&&e.message||e);
+    this.logs.push(m);if(this.opt.onLog)this.opt.onLog(m,true);if(this.opt.onErr)this.opt.onErr(n.id)}
+  can(perm){return (this.s.perms||{})[perm]!==false}
+  deny(what){this.log('Blocked: this script is not allowed to '+what+'.');return{next:'out'}}
+  plan(t){this.plans.push(t)}
+  mut(fn,dryVal){if(this.dry)return dryVal||null;this.dirtyBoard=true;return fn()}
+  touch(){this.dirtyBoard=true}
+  async execChain(id){
+    let guard=0;
+    while(id&&guard++<800&&this.steps<5000){
+      const n=this.node(id);if(!n)break;
+      const d=NODES[n.t];if(!d){this.log('Unknown node '+n.t);break}
+      this.steps++;this.tick++;this._pc={};this.fire(n.id);
+      let res;
+      try{res=d.loop?await this.runLoop(n,d):await d.run(this,this.inputsOf(n),this.paramsOf(n),n)}
+      catch(e){this.err(n,e);break}
+      if(res&&res.out)this.outCache[n.id]=res.out;
+      if(res&&res.stop)return 'stop';
+      id=this.nextOf(n.id,(res&&res.next)||'out');
+    }
+    if(this.steps>=5000)this.log('Stopped: step limit reached.');
+    return 'ok';
+  }
+  async runLoop(n,d){
+    const body=this.nextOf(n.id,'body');
+    if(d.loop==='list'){
+      const items=asArr(this.evalIn(n,'list'));
+      for(let i=0;i<items.length&&i<600;i++){
+        this.loopVals[n.id]={item:items[i],i};this.tick++;
+        if(body&&await this.execChain(body)==='stop')return{stop:true};
+      }
+    }else if(d.loop==='count'){
+      const t=clamp(num(this.paramsOf(n).n),0,500);
+      for(let i=0;i<t;i++){this.loopVals[n.id]={item:i,i};this.tick++;
+        if(body&&await this.execChain(body)==='stop')return{stop:true}}
+    }else{
+      let i=0;
+      while(truthy(this.evalIn(n,'cond'))&&i<500){this.loopVals[n.id]={item:i,i:i++};this.tick++;
+        if(body&&await this.execChain(body)==='stop')return{stop:true}}
+    }
+    return{next:'out'};
+  }
+}
+const RUNNING=new Set();
+async function runScript(script,opt={},inputs={}){
+  if(!script||!script.nodes)return null;
+  const C=new Ctx(script,opt,inputs);
+  const starts=opt.start?[opt.start]:script.nodes.filter(n=>NODES[n.t]&&NODES[n.t].ev).map(n=>n.id);
+  if(!starts.length){C.log('No trigger node — add one from Events.');return C}
+  RUNNING.add(script.id);
+  const t0=performance.now();
+  try{for(const s of starts)await C.execChain(s)}finally{RUNNING.delete(script.id)}
+  C.ms=Math.round(performance.now()-t0);
+  if(!C.dry){
+    script.runs=(script.runs||0)+1;script.lastRun=Date.now();script.lastMs=C.ms;
+    script.err=C.errs>0;
+    script.log=[...(script.log||[]),...C.logs.map(l=>({t:Date.now(),m:l}))].slice(-60);
+    if(C.dirtyBoard){save();refresh()}else save();
+  }
+  return C;
+}
+/* ---------- triggers ---------- */
+const FIRE_GUARD={depth:0,last:{}};
+function scriptsFor(evName,payload){
+  return Object.values(S.scripts).filter(s=>s.enabled&&!RUNNING.has(s.id)&&(s.nodes||[]).some(n=>{
+    const d=NODES[n.t];if(!d||!d.ev)return false;
+    if(d.ev==='custom')return evName==='custom:'+((n.p&&n.p.name)||'ping');
+    if(d.ev!==evName)return false;
+    if(s.boardId&&payload&&payload.boardId&&payload.boardId!==s.boardId)return false;
+    return true;}));
+}
+function triggerNodes(s,evName){
+  return (s.nodes||[]).filter(n=>{const d=NODES[n.t];
+    return d&&d.ev&&(d.ev==='custom'?evName==='custom:'+((n.p&&n.p.name)||'ping'):d.ev===evName)});
+}
+Bus.on('*',(ev,payload)=>{
+  if(ev.startsWith('script.'))return;
+  if(FIRE_GUARD.depth>3)return;
+  const list=scriptsFor(ev,payload);
+  list.forEach(s=>{
+    const key=s.id+ev;const now=Date.now();
+    if(FIRE_GUARD.last[key]&&now-FIRE_GUARD.last[key]<180)return;
+    FIRE_GUARD.last[key]=now;
+    setTimeout(async()=>{
+      FIRE_GUARD.depth++;
+      try{for(const n of triggerNodes(s,ev))
+        await runScript(s,{start:n.id,payload,boardId:payload&&payload.boardId||s.boardId,
+          onFire:id=>liveFire(s.id,id),onLog:(m,e)=>liveLog(s.id,m,e)});}
+      finally{FIRE_GUARD.depth--}
+    },60);
+  });
+});
+/* timers */
+const TIMER_LAST={};
+setInterval(()=>{
+  const now=new Date(),hm=now.toTimeString().slice(0,5),day=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][now.getDay()];
+  Object.values(S.scripts).forEach(s=>{
+    if(!s.enabled||RUNNING.has(s.id))return;
+    (s.nodes||[]).forEach(n=>{
+      const d=NODES[n.t];if(!d||!d.ev)return;const p=n.p||{},k=s.id+n.id;
+      let go=false;
+      if(d.ev==='timer'){const ms=clamp(num(p.sec??60),5,86400)*1000;
+        if(Date.now()-(TIMER_LAST[k]||0)>=ms)go=true}
+      else if(d.ev==='interval'){const ms=clamp(num(p.min??15),1,1440)*60000;
+        if(Date.now()-(TIMER_LAST[k]||0)>=ms)go=true}
+      else if(d.ev==='at'){if(hm===(p.time||'09:00')&&TIMER_LAST[k]!==hm+todayISO())
+        {TIMER_LAST[k]=hm+todayISO();go=true;runScript(s,{start:n.id,onFire:id=>liveFire(s.id,id),onLog:(m,e)=>liveLog(s.id,m,e)});return}}
+      else if(d.ev==='weekly'){if(day===(p.day||'Monday')&&hm===(p.time||'08:00')&&TIMER_LAST[k]!==hm+todayISO())
+        {TIMER_LAST[k]=hm+todayISO();runScript(s,{start:n.id,onFire:id=>liveFire(s.id,id),onLog:(m,e)=>liveLog(s.id,m,e)});return}}
+      if(go){TIMER_LAST[k]=Date.now();
+        runScript(s,{start:n.id,onFire:id=>liveFire(s.id,id),onLog:(m,e)=>liveLog(s.id,m,e)})}
+    });
+  });
+  const hm2=new Date().toTimeString().slice(0,5);
+  S.events.filter(e=>e.date===todayISO()&&e.time===hm2&&!e._fired).forEach(e=>{e._fired=1;Bus.emit('cal.starting',{event:e})});
+},10000);
+
+/* ---------- script helpers ---------- */
+function newScript(boardId,name){
+  const s={id:uid('sc'),name:name||'New script',boardId:boardId||null,enabled:false,
+    nodes:[{id:uid('n'),t:'ev.manual',x:60,y:80,p:{}}],edges:[],vars:[],runs:0,log:[],
+    perms:{tasks:true,boards:true,notes:true,files:true,delete:false}};
+  S.scripts[s.id]=s;save();refresh();return s;
+}
+function previewScript(s,after){
+  runScript(s,{dry:true}).then(C=>{
+    const lines=C.plans.length?C.plans:['Nothing would change — this script only reads.'];
+    modal('Script preview',\`<p class="dim">“\${esc(s.name)}” would:</p>
+      <div class="list" style="margin-top:8px">\${lines.map(l=>\`<div class="item">✓ \${esc(l)}</div>\`).join('')}</div>
+      \${C.errs?\`<p style="color:var(--accent)">\${C.errs} node(s) reported an error during the dry run.</p>\`:''}\`,
+      after?[['Cancel',null],['Enable script',()=>after(),1]]:[['Close',null]]);
+  });
+}
+function scriptStateLabel(s){return s.err?'⚠ Error':RUNNING.has(s.id)?'● Running':s.enabled?'● Enabled':'○ Disabled'}
+function boardScriptsMenu(e,boardId){
+  const list=Object.values(S.scripts).filter(s=>s.boardId===boardId);
+  menu(e.clientX,e.clientY,[
+    ...list.map(s=>[scriptStateLabel(s)+'  '+s.name,()=>openScriptEditor(s.id)]),
+    ...(list.length?['-']:[]),
+    ['+ New script for this board',()=>{const s=newScript(boardId);openScriptEditor(s.id)}],
+    ['Use a template…',()=>templateMenu(boardId)],
+    ['Open Scripts manager',openScripts],
+  ],'Scripts on this board');
+}
+/* ---------- templates ---------- */
+const TEMPLATES={
+  'Automatic Task Organiser':b=>chain(b,[['ev.taskCreated',{}],['t.all',{}],['s.sort',{k:'priority',dir:'descending'}],
+    ['s.sort',{k:'deadline',dir:'ascending'}],['l.grid',{x:60,y:60,cols:4}]],'Keeps every card sorted and laid out.'),
+  'Overdue Task Manager':b=>chain(b,[['ev.morning',{time:'08:00'}],['t.overdue',{}],['t.prio',{v:'urgent'}],
+    ['l.urgent',{}],['u.notify',{m:'Overdue tasks moved to the urgent column'}]],'Sweeps overdue work into one place each morning.'),
+  'Completed Task Cleaner':b=>{
+    if(!Object.values(S.boards).some(x=>x.name==='Archive'))A.createBoard('Archive',b||null,[]);
+    return chain(b,[['ev.weekly',{day:'Sunday',time:'20:00'}],['t.done',{}],
+      ['t.toBoard',{name:'Archive'}]],'Files finished tasks into an Archive board every Sunday.');},
+  'Project Dashboard':b=>{const s=chain(b,[['ev.boardChanged',{}],['b.stats',{}],
+    ['d.format',{tpl:'{a} of {b} tasks done'}],['n.summary',{title:'Summary'}]],'Keeps a live summary note on the board.');
+    const st=s.nodes.find(n=>n.t==='b.stats'),f=s.nodes.find(n=>n.t==='d.format');
+    if(st&&f)s.edges.push({id:uid('e'),from:{n:st.id,port:'total'},to:{n:f.id,port:'b'}});
+    return s;},
+};
+function chain(boardId,steps,desc){
+  const s=newScript(boardId,'');s.nodes=[];s.desc=desc;
+  let prev=null,dataPrev=null,y=70;
+  steps.forEach(([t,p],i)=>{
+    const d=NODES[t];const n={id:uid('n'),t,x:60+i*236,y:y+(i%2)*40,p:Object.assign({},p)};
+    s.nodes.push(n);
+    const hasExecIn=(d.ins||[]).some(x=>x.x);
+    if(prev&&hasExecIn)s.edges.push({id:uid('e'),from:{n:prev,port:'out'},to:{n:n.id,port:'in'}});
+    if(hasExecIn||d.ev)prev=n.id;
+    const dIn=(d.ins||[]).find(x=>!x.x&&(x.id==='list'||x.id==='task'||x.id==='text'||x.id==='a'));
+    if(dataPrev&&dIn)s.edges.push({id:uid('e'),from:{n:dataPrev.n,port:dataPrev.port},to:{n:n.id,port:dIn.id}});
+    const dOut=(d.outs||[]).find(x=>!x.x&&(x.id==='list'||x.id==='task'||x.id==='done'||x.id==='text'||x.id==='v'));
+    if(dOut)dataPrev={n:n.id,port:dOut.id};
+  });
+  save();return s;
+}
+function templateMenu(boardId){
+  menu(innerWidth/2-140,140,Object.keys(TEMPLATES).map(k=>[k,()=>{
+    const s=TEMPLATES[k](boardId);s.name=k;save();refresh();openScriptEditor(s.id);
+    toast('Template added. Check the preview, then enable it.');}]),'Script templates');
+}
+/* live editor hooks */
+const LIVE={};
+function liveFire(sid,nid){const f=LIVE[sid];f&&f.fire&&f.fire(nid)}
+function liveLog(sid,m,e){const f=LIVE[sid];f&&f.log&&f.log(m,e)}
+
+/* ============================ script editor ============================ */
+function openScriptEditor(id){
+  const s=S.scripts[id];if(!s)return toast('That script is gone.');
+  openWin({id:'script:'+id,title:s.name,icon:appIcon('scripts'),w:1040,h:660,render:(b,w)=>buildEditor(b,w,id),
+    onClose:()=>delete LIVE[id],refresh:w=>w.api&&w.api.light()});
+}
+function buildEditor(body,win,id){
+  const s=()=>S.scripts[id];
+  body.innerHTML=\`<div class="sedit">
+    <div class="stool"></div>
+    <div class="smain">
+      <div class="slib"></div>
+      <div class="sholder"><div class="scanvas"><svg class="wires" width="6000" height="4000"></svg></div></div>
+      <div class="sside"></div>
+    </div>
+    <div class="slog"></div></div>\`;
+  const tool=$('.stool',body),lib=$('.slib',body),holder=$('.sholder',body),canvas=$('.scanvas',body),
+        svg=$('.wires',body),side=$('.sside',body),logEl=$('.slog',body);
+  const st={sel:null,cam:s().cam||{x:0,y:0,z:1},link:null,filter:''};
+  s().cam=st.cam;
+
+  /* ---- toolbar ---- */
+  function renderTool(){
+    const sc=s();
+    tool.innerHTML=\`<button class="btn sm" data-a="run">▶ Run</button>
+      <button class="btn sm \${sc.enabled?'on':''}" data-a="toggle">\${sc.enabled?'Enabled':'Disabled'}</button>
+      <button class="btn sm" data-a="more">⋯</button>
+      <div style="flex:1"></div>
+      <span class="dim">\${esc(sc.name)} · \${sc.boardId?esc((A.board(sc.boardId)||{name:'?'}).name):'any board'} · \${sc.runs||0} runs</span>\`;
+    $$('[data-a]',tool).forEach(b=>b.onclick=e=>toolAct(b.dataset.a,e));
+  }
+  function toolAct(a,e){
+    const sc=s();
+    const r=e.currentTarget.getBoundingClientRect(),m={clientX:r.left,clientY:r.bottom+4};
+    if(a==='run')doRun();
+    else if(a==='toggle'){
+      if(!sc.enabled)previewScript(sc,()=>{sc.enabled=true;Bus.emit('script.enabled',{});changed();renderTool();toast('Script enabled.')});
+      else{sc.enabled=false;Bus.emit('script.disabled',{});changed();renderTool()}}
+    else if(a==='more')menu(m.clientX,m.clientY,[
+      ['Preview what it will do',()=>previewScript(sc)],
+      ['Rename…',()=>ask('Rename script','Name',sc.name,v=>{sc.name=v;win.setTitle(v);changed()})],
+      ['Attach to board…',()=>menu(m.clientX+20,m.clientY,[['Any board (global)',()=>{sc.boardId=null;changed();renderTool()}],
+        ...Object.values(S.boards).map(b=>[A.path(b.id).map(x=>x.name).join(' › '),()=>{sc.boardId=b.id;changed();renderTool()}])],'Attach to board')],
+      ['Permissions…',()=>permsDialog(sc,renderTool)],
+      ['Variables ('+(sc.vars||[]).length+')…',()=>varsDialog(sc)],
+      ['Tidy layout',()=>{tidy();render()}],
+      ['Export file',()=>{const blob=new Blob([JSON.stringify(sc,null,2)],{type:'application/json'});
+        const u=URL.createObjectURL(blob),a2=document.createElement('a');a2.href=u;a2.download=sc.name.replace(/\\W+/g,'-')+'.artemis.json';a2.click();
+        setTimeout(()=>URL.revokeObjectURL(u),2000)}],
+      '-',['Delete script',()=>confirmBox('Delete script',\`Delete “\${sc.name}”?\`,()=>{delete S.scripts[id];closeWin(win);changed()})],
+    ],'Script');
+  }
+  function tidy(){
+    const sc=s(),seen=new Set(),cols=[];
+    const starts=sc.nodes.filter(n=>NODES[n.t]&&NODES[n.t].ev);
+    let layer=starts.length?starts:sc.nodes.slice(0,1);
+    while(layer.length&&cols.length<20){
+      cols.push(layer);layer.forEach(n=>seen.add(n.id));
+      const nx=[];layer.forEach(n=>sc.edges.filter(e=>e.from.n===n.id).forEach(e=>{
+        const t=sc.nodes.find(x=>x.id===e.to.n);if(t&&!seen.has(t.id)&&!nx.includes(t))nx.push(t)}));
+      layer=nx;
+    }
+    sc.nodes.filter(n=>!seen.has(n.id)).forEach((n,i)=>{n.x=60;n.y=560+i*80});
+    cols.forEach((c,ci)=>c.forEach((n,ri)=>{n.x=60+ci*250;n.y=60+ri*190}));
+    save();
+  }
+
+  /* ---- library ---- */
+  function renderLib(){
+    // built once; the search input is never recreated, so typing keeps its cursor position.
+    if(!$('#_q',lib)){
+      lib.innerHTML=\`<input type="text" placeholder="Find a node…" id="_q" style="margin-bottom:6px"><div id="_nl"></div>\`;
+      const q=$('#_q',lib);q.value=st.filter;
+      q.oninput=e=>{st.filter=e.target.value;renderNodeList()};
+    }
+    renderNodeList();
+  }
+  function renderNodeList(){
+    $('#_nl',lib).innerHTML=CATS.map(c=>{
+        const list=Object.values(NODES).filter(n=>n.cat===c&&(!st.filter||n.title.toLowerCase().includes(st.filter.toLowerCase())));
+        if(!list.length)return '';
+        return \`<div class="cat">\${c}</div>\`+list.map(n=>\`<button class="nbtn" data-t="\${n.t}">\${esc(n.title)}</button>\`).join('');
+      }).join('')||'<p class="dim" style="padding:4px 7px">No matches.</p>';
+    $$('.nbtn',lib).forEach(b=>b.onclick=()=>addNode(b.dataset.t));
+  }
+  function addNode(t,at){
+    const c=st.cam,r=holder.getBoundingClientRect();
+    const x=at?at.x:(holder.clientWidth/2-c.x)/c.z-90,y=at?at.y:(holder.clientHeight/2-c.y)/c.z-40;
+    const n={id:uid('n'),t,x:Math.round(x),y:Math.round(y),p:{}};
+    s().nodes.push(n);st.sel=n.id;save();render();
+  }
+
+  /* ---- camera ---- */
+  function applyCam(){canvas.style.transform=\`translate(\${st.cam.x}px,\${st.cam.y}px) scale(\${st.cam.z})\`}
+  holder.addEventListener('wheel',e=>{e.preventDefault();const r=holder.getBoundingClientRect();
+    const px=e.clientX-r.left,py=e.clientY-r.top,f=e.deltaY<0?1.1:1/1.1,z=clamp(st.cam.z*f,.3,2);
+    st.cam.x=px-(px-st.cam.x)*(z/st.cam.z);st.cam.y=py-(py-st.cam.y)*(z/st.cam.z);st.cam.z=z;applyCam();drawWires();},{passive:false});
+  let pan=null;
+  holder.addEventListener('contextmenu',e=>{
+    if(e.target.closest('.node'))return;e.preventDefault();
+    const r=holder.getBoundingClientRect();
+    const at={x:(e.clientX-r.left-st.cam.x)/st.cam.z,y:(e.clientY-r.top-st.cam.y)/st.cam.z};
+    menu(e.clientX,e.clientY,[['Add node ▸',()=>catMenu(e,at)],['Tidy layout',()=>{tidy();render()}],
+      ['Run now',doRun],['Fit view',()=>{st.cam={x:20,y:20,z:.8};s().cam=st.cam;applyCam();drawWires()}]],'Script canvas');
+  });
+  function catMenu(e,at){menu(e.clientX+30,e.clientY,CATS.map(c=>[c+' ▸',()=>
+    menu(e.clientX+60,e.clientY,Object.values(NODES).filter(n=>n.cat===c).map(n=>[n.title,()=>addNode(n.t,at)]),c)]),'Add node')}
+  holder.addEventListener('mousedown',e=>{
+    if(e.target.closest('.node')||e.target.classList.contains('dot'))return;
+    if(e.button===0&&!st.link){st.sel=null;renderSide();$$('.node',canvas).forEach(n=>n.classList.remove('sel'))}
+    pan={sx:e.clientX,sy:e.clientY,cx:st.cam.x,cy:st.cam.y};
+  });
+  addEventListener('mousemove',e=>{
+    if(pan){st.cam.x=pan.cx+(e.clientX-pan.sx);st.cam.y=pan.cy+(e.clientY-pan.sy);applyCam();}
+    if(st.link){const p=canvasPt(e);st.link.to=p;drawWires();}
+  });
+  addEventListener('mouseup',e=>{if(pan){pan=null;save()}
+    if(st.link){const dot=e.target.closest&&e.target.closest('.dot');
+      if(dot)finishLink(dot);st.link=null;drawWires();}});
+  function canvasPt(e){const r=holder.getBoundingClientRect();
+    return{x:(e.clientX-r.left-st.cam.x)/st.cam.z,y:(e.clientY-r.top-st.cam.y)/st.cam.z}}
+
+  /* ---- nodes ---- */
+  function render(){
+    const sc=s();if(!sc)return;win.setTitle(sc.name);
+    $$('.node',canvas).forEach(e=>e.remove());
+    sc.nodes.forEach(n=>canvas.appendChild(nodeEl(n)));
+    applyCam();drawWires();renderTool();renderSide();renderLog();
+  }
+  function nodeEl(n){
+    const d=NODES[n.t]||{title:n.t,ins:[],outs:[],params:[]};
+    const el=document.createElement('div');el.className='node'+(st.sel===n.id?' sel':'');
+    el.dataset.n=n.id;el.style.left=n.x+'px';el.style.top=n.y+'px';
+    const pv=(d.params||[]).map(q=>{const v=n.p&&n.p[q.id]!==undefined?n.p[q.id]:q.d;
+      return v===''||v===undefined?'':\`<div class="dim">\${esc(q.l)}: \${esc(q.k==='check'?(v?'yes':'no'):String(v))}</div>\`}).join('');
+    el.innerHTML=\`<div class="nh"><span class="nh-t">\${d.ev?'⚡ ':''}\${esc(d.title)}</span><span class="cnt"></span></div>
+      <div class="nb">
+        \${(d.ins||[]).map(i=>\`<div class="port"><span class="dot \${i.x?'ex':''}" data-dir="in" data-port="\${i.id}"></span><span class="pl">\${esc(i.l||i.id)}</span></div>\`).join('')}
+        \${pv}
+        \${(d.outs||[]).map(o=>\`<div class="port out"><span class="pl">\${esc(o.l||o.id)}</span><span class="dot \${o.x?'ex':''}" data-dir="out" data-port="\${o.id}"></span></div>\`).join('')}
+      </div>\`;
+    drag($('.nh',el),(dx,dy)=>{el.style.left=(el._x+dx/st.cam.z)+'px';el.style.top=(el._y+dy/st.cam.z)+'px';drawWires();},
+      ()=>{el._x=n.x;el._y=n.y;st.sel=n.id;$$('.node',canvas).forEach(x=>x.classList.toggle('sel',x===el));renderSide();},
+      m=>{n.x=Math.round(parseFloat(el.style.left));n.y=Math.round(parseFloat(el.style.top));save();drawWires()});
+    el.addEventListener('mousedown',e=>{if(e.target.classList.contains('dot'))return;
+      st.sel=n.id;$$('.node',canvas).forEach(x=>x.classList.toggle('sel',x===el));renderSide()});
+    $$('.dot',el).forEach(dot=>{
+      dot.addEventListener('mousedown',e=>{e.stopPropagation();e.preventDefault();
+        st.link={from:{n:n.id,port:dot.dataset.port,dir:dot.dataset.dir},to:canvasPt(e)};});
+      dot.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();
+        const sc=s();const before=sc.edges.length;
+        sc.edges=sc.edges.filter(x=>!(x.from.n===n.id&&x.from.port===dot.dataset.port)&&!(x.to.n===n.id&&x.to.port===dot.dataset.port));
+        if(sc.edges.length!==before){save();drawWires()}});
+    });
+    el.oncontextmenu=e=>{if(e.target.classList.contains('dot'))return;
+      e.preventDefault();e.stopPropagation();
+      menu(e.clientX,e.clientY,[['Duplicate',()=>{const c=JSON.parse(JSON.stringify(n));c.id=uid('n');c.x+=30;c.y+=30;s().nodes.push(c);save();render()}],
+        ['Disconnect all',()=>{s().edges=s().edges.filter(x=>x.from.n!==n.id&&x.to.n!==n.id);save();render()}],
+        ['Delete node',()=>{s().edges=s().edges.filter(x=>x.from.n!==n.id&&x.to.n!==n.id);
+          s().nodes=s().nodes.filter(x=>x.id!==n.id);st.sel=null;save();render()}]],d.title)};
+    return el;
+  }
+  function finishLink(dot){
+    const a=st.link.from,b={n:dot.closest('.node').dataset.n,port:dot.dataset.port,dir:dot.dataset.dir};
+    if(a.dir===b.dir||a.n===b.n)return;
+    const from=a.dir==='out'?a:b,to=a.dir==='out'?b:a;
+    const dOut=(NODES[s().nodes.find(n=>n.id===from.n).t].outs||[]).find(o=>o.id===from.port);
+    const dIn=(NODES[s().nodes.find(n=>n.id===to.n).t].ins||[]).find(o=>o.id===to.port);
+    if(!dOut||!dIn||!!dOut.x!==!!dIn.x)return toast('Those two plugs don’t match.');
+    const sc=s();
+    sc.edges=sc.edges.filter(e=>!(e.to.n===to.n&&e.to.port===to.port));
+    if(dOut.x)sc.edges=sc.edges.filter(e=>!(e.from.n===from.n&&e.from.port===from.port));
+    sc.edges.push({id:uid('e'),from:{n:from.n,port:from.port},to:{n:to.n,port:to.port}});
+    save();drawWires();
+  }
+  function dotPos(nid,port,dir){
+    const nEl=canvas.querySelector(\`.node[data-n="\${nid}"]\`);if(!nEl)return null;
+    const d=nEl.querySelector(\`.dot[data-port="\${port}"][data-dir="\${dir}"]\`);if(!d)return null;
+    const cr=canvas.getBoundingClientRect(),dr=d.getBoundingClientRect();
+    return{x:(dr.left+dr.width/2-cr.left)/st.cam.z,y:(dr.top+dr.height/2-cr.top)/st.cam.z};
+  }
+  function drawWires(){
+    const sc=s();if(!sc)return;
+    const segs=sc.edges.map(e=>{
+      const a=dotPos(e.from.n,e.from.port,'out'),b=dotPos(e.to.n,e.to.port,'in');
+      if(!a||!b)return '';
+      const dx=Math.max(40,Math.abs(b.x-a.x)*.5);
+      const ex=sc.nodes.find(n=>n.id===e.from.n);
+      const isExec=(NODES[ex.t].outs||[]).find(o=>o.id===e.from.port&&o.x);
+      return \`<path d="M\${a.x},\${a.y} C\${a.x+dx},\${a.y} \${b.x-dx},\${b.y} \${b.x},\${b.y}" fill="none"
+        stroke="\${isExec?'var(--ink)':'var(--accent2)'}" stroke-width="\${isExec?3:2.4}"
+        \${isExec?'':'stroke-dasharray="7 5"'} stroke-linecap="round"/>\`;
+    }).join('');
+    let tmp='';
+    if(st.link){const a=dotPos(st.link.from.n,st.link.from.port,st.link.from.dir);
+      if(a)tmp=\`<path d="M\${a.x},\${a.y} L\${st.link.to.x},\${st.link.to.y}" stroke="var(--accent)" stroke-width="2.6" fill="none" stroke-dasharray="5 5"/>\`}
+    svg.innerHTML=segs+tmp;
+  }
+
+  /* ---- inspector ---- */
+  function renderSide(){
+    const sc=s(),n=sc.nodes.find(x=>x.id===st.sel);
+    if(!n){side.innerHTML=\`<div class="cat">Script</div><p class="dim">\${esc(sc.desc||'Pick a node to edit it. Drag from a plug to wire nodes together; right-click a plug to unplug it.')}</p>
+      <div class="cat">Trigger</div><p class="dim">\${sc.nodes.filter(x=>NODES[x.t]&&NODES[x.t].ev).map(x=>NODES[x.t].title).join(', ')||'None yet — add one from Events.'}</p>
+      <div class="cat">Nodes</div><p class="dim">\${sc.nodes.length} nodes, \${sc.edges.length} connections</p>\`;return}
+    const d=NODES[n.t];
+    side.innerHTML=\`<div class="cat">\${esc(d.title)}</div>
+      <div id="_pp"></div>
+      <div class="cat">Debug</div>
+      <p class="dim">Ran \${(win.api&&win.api.counts[n.id])||0} time(s) in the last run.<br>
+      Inputs: \${(d.ins||[]).filter(i=>!i.x).map(i=>i.l).join(', ')||'—'}<br>
+      Outputs: \${(d.outs||[]).filter(i=>!i.x).map(i=>i.l).join(', ')||'—'}</p>
+      <button class="btn sm" id="_del">Delete node</button>\`;
+    const pp=$('#_pp',side);
+    (d.params||[]).forEach(q=>{
+      const v=n.p[q.id]!==undefined?n.p[q.id]:q.d;
+      const w=document.createElement('div');
+      if(q.k==='check'){w.innerHTML=\`<label class="fld">\${esc(q.l)}</label>
+        <button class="btn sm \${v?'on':''}" id="c_\${q.id}">\${v?'Yes':'No'}</button>\`;
+        w.querySelector('button').onclick=e=>{n.p[q.id]=!v;save();render()};}
+      else if(q.k==='sel'||q.k==='proj'){
+        const opts=q.k==='proj'?S.projects.map(p=>p.name):q.o;
+        w.innerHTML=\`<label class="fld">\${esc(q.l)}</label><select>\${(opts||[]).map(o=>
+          \`<option \${String(v)===String(o)?'selected':''}>\${esc(o)}</option>\`).join('')}</select>\`;
+        w.querySelector('select').onchange=e=>{n.p[q.id]=e.target.value;save();render()};}
+      else{const type=q.k==='num'?'number':q.k==='date'?'date':q.k==='time'?'time':'text';
+        w.innerHTML=\`<label class="fld">\${esc(q.l)}</label><input type="\${type}" value="\${esc(v??'')}">\`;
+        w.querySelector('input').onchange=e=>{n.p[q.id]=q.k==='num'?num(e.target.value):e.target.value;save();render()};}
+      pp.appendChild(w);
+    });
+    $('#_del',side).onclick=()=>{s().edges=s().edges.filter(x=>x.from.n!==n.id&&x.to.n!==n.id);
+      s().nodes=s().nodes.filter(x=>x.id!==n.id);st.sel=null;save();render()};
+  }
+
+  /* ---- run + log ---- */
+  let lines=[];
+  function renderLog(){
+    logEl.innerHTML=(lines.length?lines:[['Press “Run now” to watch it work. Nodes light up as they fire.',false]])
+      .map(([m,e])=>\`<div class="\${e?'er':''}">\${esc(m)}</div>\`).join('');
+    logEl.scrollTop=logEl.scrollHeight;
+  }
+  function doRun(){
+    lines=[];renderLog();
+    win.api.counts={};
+    runScript(s(),{onFire:nid=>{
+        win.api.counts[nid]=(win.api.counts[nid]||0)+1;
+        const el=canvas.querySelector(\`.node[data-n="\${nid}"]\`);
+        if(el){el.classList.add('fire');const c=$('.cnt',el);if(c)c.textContent='×'+win.api.counts[nid];
+          setTimeout(()=>el.classList.remove('fire'),420)}},
+      onLog:(m,e)=>{lines.push([m,e]);renderLog()},
+      onErr:nid=>{const el=canvas.querySelector(\`.node[data-n="\${nid}"]\`);el&&el.classList.add('err')}})
+    .then(C=>{lines.push([\`Finished in \${C.ms}ms · \${C.steps} steps\${C.errs?\` · \${C.errs} error(s)\`:''}\`,C.errs>0]);
+      renderLog();renderTool();refresh();});
+  }
+  win.api={counts:{},light(){renderTool()},render};
+  LIVE[id]={fire:nid=>{const el=canvas.querySelector(\`.node[data-n="\${nid}"]\`);
+      if(el){el.classList.add('fire');setTimeout(()=>el.classList.remove('fire'),420)}},
+    log:(m,e)=>{lines.push([m,e]);renderLog()}};
+  renderLib();render();
+}
+function permsDialog(sc,after){
+  const P=sc.perms||(sc.perms={tasks:true,boards:true,notes:true,files:true,delete:false});
+  modal('What this script may change',
+    ['tasks','boards','notes','files','delete'].map(k=>
+      \`<div class="row" style="margin:6px 0"><button class="btn sm \${P[k]?'on':''}" data-k="\${k}">\${P[k]?'Allowed':'Blocked'}</button>
+       <span>\${k==='delete'?'Delete things (tasks, notes, boards, files)':'Change '+k}</span></div>\`).join(''),
+    [['Done',()=>after&&after(),1]],
+    b=>$$('[data-k]',b).forEach(x=>x.onclick=()=>{P[x.dataset.k]=!P[x.dataset.k];
+      x.classList.toggle('on',P[x.dataset.k]);x.textContent=P[x.dataset.k]?'Allowed':'Blocked';save()}));
+}
+function varsDialog(sc){
+  sc.vars||=[];
+  const draw=b=>{$('#_vl',b).innerHTML=sc.vars.map((v,i)=>
+    \`<div class="row" style="margin:5px 0"><input type="text" value="\${esc(v.name)}" data-i="\${i}" data-f="name" style="flex:1">
+     <input type="text" value="\${esc(v.value??'')}" data-i="\${i}" data-f="value" style="flex:1">
+     <button class="btn sm" data-x="\${i}">✕</button></div>\`).join('')||'<p class="dim">No variables yet.</p>';
+    $$('[data-f]',b).forEach(inp=>inp.onchange=()=>{sc.vars[+inp.dataset.i][inp.dataset.f]=inp.value;save()});
+    $$('[data-x]',b).forEach(x=>x.onclick=()=>{sc.vars.splice(+x.dataset.x,1);save();draw(b)});};
+  modal('Variables',\`<div id="_vl"></div><button class="btn sm" id="_add" style="margin-top:8px">+ Add variable</button>
+    <p class="dim" style="margin-top:8px">Read them with “Get Variable”, write them with “Set Variable”.</p>\`,
+    [['Done',null,1]],b=>{draw(b);$('#_add',b).onclick=()=>{sc.vars.push({name:'value'+(sc.vars.length+1),value:''});save();draw(b)}});
+}
+
+/* ============================ scripts manager ============================ */
+function openScripts(){
+  openWin({id:'scripts',title:'Scripts',icon:appIcon('scripts'),w:700,h:520,render:drawScripts,refresh:w=>drawScripts(w.body,w)});
+}
+function drawScripts(body,win){
+  const list=Object.values(S.scripts);
+  body.innerHTML=\`<div class="pad">
+    <div class="row"><button class="btn sm" id="_new">+ New script</button>
+      <button class="btn sm" id="_tpl">Start from a template</button>
+      <button class="btn sm" id="_imp">Import script</button></div>
+    <h4 class="sec">All automations</h4>
+    <div class="list" id="_l"></div></div>\`;
+  $('#_new',body).onclick=()=>{const s=newScript(null);openScriptEditor(s.id)};
+  $('#_tpl',body).onclick=()=>templateMenu(null);
+  $('#_imp',body).onclick=()=>{
+    const i=document.createElement('input');i.type='file';i.accept='.json';
+    i.onchange=()=>{const r=new FileReader();r.onload=()=>{
+      try{const o=JSON.parse(r.result);o.id=uid('sc');o.enabled=false;S.scripts[o.id]=o;changed();toast('Script imported (disabled until you enable it).')}
+      catch(e){toast('That file isn’t a script Artemis can read.')}};r.readAsText(i.files[0])};
+    i.click()};
+  $('#_l',body).innerHTML=list.length?list.map(s=>\`<div class="item" data-s="\${s.id}">
+      <span style="width:88px">\${scriptStateLabel(s)}</span>
+      <div style="flex:1"><div>\${esc(s.name)}</div>
+        <div class="dim">\${s.boardId?esc((A.board(s.boardId)||{name:'missing board'}).name):'any board'} · \${s.nodes.length} nodes · \${s.runs||0} runs\${s.lastRun?' · last '+new Date(s.lastRun).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):''}</div></div>
+      <button class="btn sm" data-a="run">▶</button>
+      <button class="btn sm" data-a="edit">Edit</button>
+      <button class="btn sm" data-a="more">…</button></div>\`).join('')
+    :\`<p class="dim">No scripts yet. A script watches a board and does the tidying for you — build the behaviour once, then use the board normally.</p>\`;
+  $$('#_l .item',body).forEach(it=>{
+    const s=S.scripts[it.dataset.s];
+    $('[data-a="edit"]',it).onclick=()=>openScriptEditor(s.id);
+    $('[data-a="run"]',it).onclick=()=>runScript(s).then(C=>toast(\`“\${s.name}” ran \${C.steps} steps\${C.errs?\` with \${C.errs} error(s)\`:''}.\`));
+    $('[data-a="more"]',it).onclick=e=>menu(e.clientX,e.clientY,[
+      [s.enabled?'Disable':'Enable',()=>{if(s.enabled){s.enabled=false;changed()}else previewScript(s,()=>{s.enabled=true;changed()})}],
+      ['Preview actions',()=>previewScript(s)],
+      ['Rename…',()=>ask('Rename script','Name',s.name,v=>{s.name=v;changed()})],
+      ['Duplicate',()=>{const c=JSON.parse(JSON.stringify(s));c.id=uid('sc');c.name=s.name+' copy';c.enabled=false;S.scripts[c.id]=c;changed()}],
+      ['Reuse on another board…',()=>pickBoard('Attach a copy to…',bid=>{
+        const c=JSON.parse(JSON.stringify(s));c.id=uid('sc');c.name=s.name+' ('+A.board(bid).name+')';c.boardId=bid;c.enabled=false;
+        S.scripts[c.id]=c;changed();toast('Copied. Enable it when you’re ready.')})],
+      ['Execution history',()=>modal('History — '+s.name,(s.log||[]).length?
+        \`<div class="list">\${s.log.slice(-25).reverse().map(l=>\`<div class="item"><span class="dim" style="width:70px">\${new Date(l.t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span><span>\${esc(l.m)}</span></div>\`).join('')}</div>\`
+        :'<p class="dim">This script hasn’t run yet.</p>',[['Close',null]])],
+      '-',['Delete',()=>confirmBox('Delete script',\`Delete “\${s.name}”?\`,()=>{delete S.scripts[s.id];changed()})],
+    ],s.name);
+  });
+}
+
+/* ============================ file manager ============================ */
+function openFileManager(){
+  openWin({id:'files-mgr',title:'File Manager',icon:appIcon('files-mgr'),w:720,h:520,render:drawFM,refresh:w=>drawFM(w.body,w)});
+}
+function drawFM(body,win){
+  const boards=Object.values(S.boards);
+  body.innerHTML=\`<div class="pad">
+    <div class="row"><button class="btn sm" id="_new">+ New board</button><span class="dim">\${boards.length} boards</span></div>
+    <h4 class="sec">Boards</h4><div class="grid" id="_g"></div></div>\`;
+  $('#_new',body).onclick=()=>newBoardDialog(null);
+  $('#_g',body).innerHTML=boards.map(b=>{const s=A.stats(b.id),kids=A.children(b.id).length;
+    return \`<button class="tile" data-b="\${b.id}"><div class="gl">\${appIcon('boards',30)}</div>
+      <div class="nm">\${esc(b.name)}</div>
+      <div class="bar"><i style="width:\${s.pct}%"></i></div>
+      <div class="dim">\${s.done}/\${s.total}\${kids?\` · \${kids} inside\`:''}</div>
+      <div class="dim">\${b.projects.map(p=>'#'+esc(A.projName(p))).join(' ')}</div></button>\`}).join('');
+  $$('#_g .tile',body).forEach(t=>{
+    const b=A.board(t.dataset.b);
+    t.onclick=()=>openBoard(b.id);
+    t.oncontextmenu=e=>{e.preventDefault();menu(e.clientX,e.clientY,[
+      ['Open',()=>openBoard(b.id)],
+      ['Rename…',()=>ask('Rename board','Name',b.name,v=>{b.name=v;changed()})],
+      ['Move inside…',()=>pickBoard('Move inside…',id=>{b.parent=id;changed()},b.id)],
+      ['Move to top level',()=>{b.parent=null;changed()}],
+      ['Tag project ▸',()=>menu(e.clientX+30,e.clientY,S.projects.map(p=>[(b.projects.includes(p.id)?'● ':'○ ')+p.name,
+        ()=>{b.projects.includes(p.id)?b.projects=b.projects.filter(x=>x!==p.id):b.projects.push(p.id);changed('project.changed',{boardId:b.id})}]))],
+      ['Duplicate',()=>{A.dupBoard(b.id);changed()}],
+      '-',['Delete',()=>b.id==='b_home'?toast('The Home board stays.'):
+        confirmBox('Delete board',\`Delete “\${b.name}” and everything on it?\`,()=>{A.deleteBoard(b.id);changed()})],
+    ],b.name)};
+  });
+}
+
+/* ============================ projects ============================ */
+function openProjects(){
+  openWin({id:'projects',title:'Projects',icon:appIcon('projects'),w:620,h:480,render:drawProjects,refresh:w=>drawProjects(w.body,w)});
+}
+function drawProjects(body){
+  body.innerHTML=\`<div class="pad"><div class="row"><button class="btn sm" id="_new">+ New project</button></div>
+    <h4 class="sec">Project tags</h4><div class="list" id="_l"></div></div>\`;
+  $('#_new',body).onclick=()=>ask('New project','Name','',v=>{S.projects.push({id:uid('p'),name:v});changed('project.changed',{})});
+  $('#_l',body).innerHTML=S.projects.length?S.projects.map(p=>{
+    const bs=Object.values(S.boards).filter(b=>b.projects.includes(p.id));
+    const tasks=bs.flatMap(b=>b.tasks),done=tasks.filter(t=>t.done).length;
+    return \`<div class="item" data-p="\${p.id}"><div style="flex:1"><div>\${esc(p.name)}</div>
+      <div class="dim">\${bs.length} board(s) · \${done}/\${tasks.length} tasks done</div></div>
+      <button class="btn sm" data-a="view">View</button><button class="btn sm" data-a="open">Open all</button>
+      <button class="btn sm" data-a="ren">✎</button><button class="btn sm" data-a="del">🗑</button></div>\`}).join('')
+    :'<p class="dim">No projects yet. A project is a label you can put on any board, however deeply nested.</p>';
+  $$('#_l .item',body).forEach(it=>{
+    const p=A.project(it.dataset.p);
+    $('[data-a="view"]',it).onclick=()=>openProjectView(p.id);
+    $('[data-a="open"]',it).onclick=()=>Object.values(S.boards).filter(b=>b.projects.includes(p.id)).forEach(b=>openBoard(b.id));
+    $('[data-a="ren"]',it).onclick=()=>ask('Rename project','Name',p.name,v=>{p.name=v;changed('project.changed',{})});
+    $('[data-a="del"]',it).onclick=()=>confirmBox('Delete project',\`Remove the “\${p.name}” tag from every board?\`,()=>{
+      S.projects=S.projects.filter(x=>x.id!==p.id);
+      Object.values(S.boards).forEach(b=>b.projects=b.projects.filter(x=>x!==p.id));changed('project.changed',{})});
+  });
+}
+function openProjectView(pid){
+  const p=A.project(pid);if(!p)return;
+  openWin({id:'proj:'+pid,title:p.name,icon:appIcon('projects'),w:600,h:460,render:draw,refresh:w=>draw(w.body,w)});
+  function draw(body){
+    const bs=Object.values(S.boards).filter(b=>b.projects.includes(pid));
+    const tasks=bs.flatMap(b=>b.tasks),done=tasks.filter(t=>t.done).length;
+    body.innerHTML=\`<div class="pad"><div class="row"><div class="bar" style="flex:1"><i style="width:\${tasks.length?done/tasks.length*100:0}%"></i></div>
+      <span class="dim">\${done}/\${tasks.length}</span></div>
+      <h4 class="sec">Boards in this project</h4><div class="grid">\${bs.map(b=>{const s=A.stats(b.id);
+        return \`<button class="tile" data-b="\${b.id}"><div class="gl">\${appIcon('boards',30)}</div><div class="nm">\${esc(b.name)}</div>
+          <div class="bar"><i style="width:\${s.pct}%"></i></div><div class="dim">\${s.done}/\${s.total}</div></button>\`}).join('')
+        ||'<p class="dim">Tag a board with this project to see it here.</p>'}</div></div>\`;
+    $$('.tile',body).forEach(t=>t.onclick=()=>openBoard(t.dataset.b));
+  }
+}
+
+/* ============================ graph view ============================ */
+function openGraph(){
+  openWin({id:'graph',title:'Graph View',icon:appIcon('graph'),w:680,h:600,render:drawGraph,refresh:w=>drawGraph(w.body,w),onResize:()=>{const w=WINS.get('graph');w&&drawGraph(w.body,w)}});
+}
+function drawGraph(body){
+  const W=body.clientWidth||620,H=body.clientHeight||540,cx=W/2,cy=H/2;
+  const roots=Object.values(S.boards).filter(b=>!b.parent);
+  const pos={},levels=[];
+  (function walk(list,depth,a0,a1){
+    if(!list.length)return;(levels[depth]||=[]).push(...list);
+    const span=(a1-a0)/list.length;
+    list.forEach((b,i)=>{const a=a0+span*(i+.5),r=depth*Math.min(W,H)*.18;
+      pos[b.id]={x:cx+Math.cos(a-Math.PI/2)*r,y:cy+Math.sin(a-Math.PI/2)*r,a};
+      walk(A.children(b.id),depth+1,a0+span*i,a0+span*(i+1));});
+  })(roots,0,0,Math.PI*2);
+  const links=Object.values(S.boards).filter(b=>b.parent&&pos[b.parent]&&pos[b.id])
+    .map(b=>\`<line x1="\${pos[b.parent].x}" y1="\${pos[b.parent].y}" x2="\${pos[b.id].x}" y2="\${pos[b.id].y}"
+      stroke="var(--line)" stroke-width="2" stroke-dasharray="6 5"/>\`).join('');
+  const nodes=Object.values(S.boards).filter(b=>pos[b.id]).map(b=>{
+    const s=A.stats(b.id),r=16+Math.min(26,s.total*2.4),p=pos[b.id];
+    return \`<g data-b="\${b.id}" style="cursor:none">
+      <circle cx="\${p.x}" cy="\${p.y}" r="\${r}" fill="var(--panel)" stroke="var(--ink)" stroke-width="2.5"/>
+      <circle cx="\${p.x}" cy="\${p.y}" r="\${Math.max(3,r*(s.pct/100))}" fill="var(--accent2)" opacity=".85"/>
+      <text x="\${p.x}" y="\${p.y+r+16}" text-anchor="middle" font-family="var(--scrawl)" font-size="17" fill="var(--ink)">\${esc(b.name)}</text>
+      <text x="\${p.x}" y="\${p.y+5}" text-anchor="middle" font-size="13" fill="var(--ink)">\${s.done}/\${s.total}</text></g>\`}).join('');
+  body.innerHTML=\`<div class="graphwrap"><svg width="\${W}" height="\${H}">\${links}\${nodes}</svg>
+    <div class="dim" style="position:absolute;left:12px;bottom:10px">Circle size = tasks · fill = finished</div></div>\`;
+  $$('g[data-b]',body).forEach(g=>g.onclick=()=>openBoard(g.dataset.b));
+}
+
+/* ============================ calendar ============================ */
+function openCalendar(){
+  const st={m:new Date().getMonth(),y:new Date().getFullYear(),sel:todayISO()};
+  openWin({id:'calendar',title:'Calendar',icon:appIcon('calendar'),w:820,h:580,render:(b,w)=>draw(b),refresh:w=>draw(w.body)});
+  function draw(body){
+    const first=new Date(st.y,st.m,1),start=new Date(first);start.setDate(1-first.getDay());
+    const cells=[...Array(42)].map((_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return d});
+    const iso=d=>localISO(d);
+    const dayEv=st.sel?S.events.filter(e=>e.date===st.sel):[];
+    const upcoming=S.events.filter(e=>e.date>=todayISO()).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,8);
+    body.innerHTML=\`<div class="pad" style="display:flex;gap:16px;height:100%;box-sizing:border-box">
+      <div style="flex:1;min-width:0">
+        <div class="row"><button class="btn sm" id="_p">‹</button>
+          <strong style="font-family:var(--scrawl);font-size:23px">\${first.toLocaleString([],{month:'long'})} \${st.y}</strong>
+          <button class="btn sm" id="_n">›</button><button class="btn sm" id="_t">Today</button>
+          <div style="flex:1"></div><button class="btn sm" id="_add">+ Event</button></div>
+        <div class="cal" style="margin-top:10px">\${['S','M','T','W','T','F','S'].map(d=>\`<div class="dim" style="text-align:center">\${d}</div>\`).join('')}
+        \${cells.map(d=>{const k=iso(d),evs=S.events.filter(e=>e.date===k);
+          return \`<div class="cell \${d.getMonth()!==st.m?'oth':''} \${k===todayISO()?'tod':''} \${k===st.sel?'sel':''}" data-d="\${k}">
+            <div class="dn">\${d.getDate()}</div>\${evs.slice(0,3).map(e=>{const p=e.project&&A.project(e.project);
+              return \`<div class="ev" \${p?\`style="background:var(--accent)"\`:''}>\${esc(e.time||'')} \${esc(e.title)}</div>\`}).join('')}
+            \${evs.length>3?\`<div class="dim">+\${evs.length-3}</div>\`:''}</div>\`}).join('')}</div></div>
+      <div style="width:240px;flex:0 0 auto;overflow:auto">
+        <h4 class="sec">\${st.sel||'—'}</h4>
+        <div class="list">\${dayEv.length?dayEv.map(e=>\`<div class="item" data-e="\${e.id}"><div style="flex:1">
+          <div>\${esc(e.title)}</div><div class="dim">\${esc(e.time||'all day')}\${e.project?' · '+esc(A.projName(e.project)):''}</div></div>
+          <button class="btn sm" data-x="\${e.id}">🗑</button></div>\`).join('')
+          :'<p class="dim">Nothing on this day.</p>'}</div>
+        <h4 class="sec">Coming up</h4>
+        <div class="list">\${upcoming.length?upcoming.map(e=>\`<div class="item"><div style="flex:1">
+          <div>\${esc(e.title)}</div><div class="dim">\${e.date} \${esc(e.time||'')}</div></div></div>\`).join('')
+          :'<p class="dim">No reminders ahead.</p>'}</div></div></div>\`;
+    $('#_p',body).onclick=()=>{st.m--;if(st.m<0){st.m=11;st.y--}draw(body)};
+    $('#_n',body).onclick=()=>{st.m++;if(st.m>11){st.m=0;st.y++}draw(body)};
+    $('#_t',body).onclick=()=>{const d=new Date();st.m=d.getMonth();st.y=d.getFullYear();st.sel=todayISO();draw(body)};
+    $('#_add',body).onclick=()=>addEvent(st.sel,()=>draw(body));
+    $$('.cell',body).forEach(c=>{c.onclick=()=>{st.sel=c.dataset.d;draw(body)};
+      c.ondblclick=()=>addEvent(c.dataset.d,()=>draw(body))});
+    $$('[data-x]',body).forEach(b=>b.onclick=()=>{S.events=S.events.filter(e=>e.id!==b.dataset.x);changed();draw(body)});
+  }
+  function addEvent(date,after){
+    modal('New event',\`<label class="fld">Title</label><input type="text" id="_t" value="">
+      <div class="row"><div style="flex:1"><label class="fld">Date</label><input type="date" id="_d" value="\${date||todayISO()}"></div>
+      <div style="flex:1"><label class="fld">Time</label><input type="time" id="_h" value="09:00"></div></div>
+      <label class="fld">Project</label><select id="_p"><option value="">— none —</option>
+        \${S.projects.map(p=>\`<option value="\${p.id}">\${esc(p.name)}</option>\`).join('')}</select>\`,
+      [['Cancel',null],['Add event',b=>{const t=$('#_t',b).value.trim();if(!t)return false;
+        S.events.push({id:uid('e'),title:t,date:$('#_d',b).value,time:$('#_h',b).value,project:$('#_p',b).value||null});
+        changed('cal.created',{});after&&after();},1]]);
+  }
+}
+
+/* ============================ files library ============================ */
+function openFiles(){
+  openWin({id:'files',title:'Files',icon:appIcon('files'),w:640,h:500,render:draw,refresh:w=>draw(w.body)});
+  function draw(body){
+    body.innerHTML=\`<div class="pad"><div class="row"><button class="btn sm" id="_u">+ Upload files</button>
+      <span class="dim">\${S.files.length} file(s)</span></div>
+      <h4 class="sec">Everything you’ve attached</h4><div class="grid" id="_g"></div></div>\`;
+    $('#_u',body).onclick=()=>pickFiles(()=>{changed();draw(body)});
+    $('#_g',body).innerHTML=S.files.length?S.files.map(f=>\`<div class="tile" data-f="\${f.id}">
+      \${f.type.startsWith('image/')?\`<img src="\${f.data}" style="width:100%;height:78px;object-fit:cover;border-radius:6px">\`
+        :\`<div class="gl">📄</div>\`}
+      <div class="nm">\${esc(f.name)}</div><div class="dim">\${Math.round(f.size/1024)} KB</div>
+      <div class="row" style="justify-content:center;margin-top:4px">
+        <button class="btn sm" data-a="open">Open</button><button class="btn sm" data-a="del">🗑</button></div></div>\`).join('')
+      :'<p class="dim">Nothing here yet. Attach a file from any board, or upload one now.</p>';
+    $$('#_g .tile',body).forEach(t=>{const f=A.file(t.dataset.f);
+      $('[data-a="open"]',t).onclick=()=>window.open(f.data,'_blank');
+      $('[data-a="del"]',t).onclick=()=>confirmBox('Delete file',\`Delete “\${f.name}” and remove its cards from every board?\`,()=>{
+        S.files=S.files.filter(x=>x.id!==f.id);
+        Object.values(S.boards).forEach(b=>b.files=b.files.filter(c=>c.fileId!==f.id));changed();draw(body)});});
+  }
+}
+
+/* ============================ search & stats ============================ */
+function openSearch(){
+  const st={q:''};
+  openWin({id:'search',title:'Search & Stats',icon:appIcon('search'),w:660,h:520,render:draw,refresh:w=>draw(w.body)});
+  function draw(body){
+    const boards=Object.values(S.boards),tasks=boards.flatMap(b=>b.tasks.map(t=>({t,b})));
+    const done=tasks.filter(x=>x.t.done).length,pct=tasks.length?Math.round(done/tasks.length*100):0;
+    const hits=st.q?tasks.filter(x=>x.t.title.toLowerCase().includes(st.q.toLowerCase())).slice(0,40):[];
+    body.innerHTML=\`<div class="pad">
+      <input type="text" id="_q" placeholder="Find any task, anywhere…" value="\${esc(st.q)}">
+      \${st.q?\`<h4 class="sec">\${hits.length} match\${hits.length===1?'':'es'}</h4>
+        <div class="list">\${hits.map(h=>\`<div class="item"><button class="chk" data-t="\${h.t.id}">\${h.t.done?'✓':''}</button>
+          <div style="flex:1"><div>\${esc(h.t.title)}</div><div class="dim">\${esc(A.path(h.b.id).map(x=>x.name).join(' › '))}</div></div>
+          <button class="btn sm" data-o="\${h.b.id}">Open</button></div>\`).join('')||'<p class="dim">No task by that name.</p>'}</div>\`
+        :\`<h4 class="sec">System</h4>
+        <div class="list">
+          <div class="item"><span style="flex:1">Boards</span><strong>\${boards.length}</strong></div>
+          <div class="item"><span style="flex:1">Tasks finished</span><div class="bar" style="width:120px"><i style="width:\${pct}%"></i></div><strong>\${done}/\${tasks.length}</strong></div>
+          <div class="item"><span style="flex:1">Sticky notes</span><strong>\${boards.reduce((a,b)=>a+b.notes.length,0)}</strong></div>
+          <div class="item"><span style="flex:1">Attached files</span><strong>\${S.files.length}</strong></div>
+          <div class="item"><span style="flex:1">Projects</span><strong>\${S.projects.length}</strong></div>
+          <div class="item"><span style="flex:1">Scripts (enabled)</span><strong>\${Object.values(S.scripts).filter(s=>s.enabled).length}/\${Object.keys(S.scripts).length}</strong></div>
+          <div class="item"><span style="flex:1">Open windows</span><strong>\${WINS.size}</strong></div>
+        </div>
+        <h4 class="sec">Start over</h4>
+        <p class="dim">Wipes every board, note, file, project and script on this device.</p>
+        <button class="btn" id="_reset">Reset Artemis OS</button>\`}</div>\`;
+    const q=$('#_q',body);q.oninput=e=>{st.q=e.target.value;draw(body);const n=$('#_q',body);n.focus();n.setSelectionRange(n.value.length,n.value.length)};
+    $$('[data-t]',body).forEach(b=>b.onclick=()=>{A.setDone(b.dataset.t,!A.findTask(b.dataset.t).task.done);
+      changed('board.changed',{});draw(body)});
+    $$('[data-o]',body).forEach(b=>b.onclick=()=>openBoard(b.dataset.o));
+    const r=$('#_reset',body);
+    if(r)r.onclick=()=>confirmBox('Reset everything',
+      'This clears all boards, tasks, notes, files, projects and scripts stored in this browser.',()=>{
+        localStorage.removeItem(KEY);S=blankState();[...WINS.values()].forEach(closeWin);
+        document.documentElement.dataset.theme=S.theme;save();refresh();toast('Fresh desk.');openBoard('b_home');},'Reset');
+  }
+}
+
+/* ============================ boot ============================ */
+load();setCursorGlyph(S.cursor);renderDesktop();deskMenu();renderDock();
+Bus.on('board.opened',()=>{});
+(function first(){
+  if(!S.seenIntro){
+    S.seenIntro=true;
+    const b=A.board('b_home');
+    if(!b.tasks.length){
+      const t1=A.addTask('b_home','Drag me anywhere on the board',{x:80,y:90,priority:'normal'});
+      const t2=A.addTask('b_home','Right-click the canvas for everything',{x:80,y:250,priority:'high'});
+      A.addSub(t2.id,'Try the pen and the eraser');
+      A.addTask('b_home','Open Scripts and add a template',{x:340,y:90,deadline:todayISO(),priority:'urgent'});
+      A.addNote('b_home','Double-click a card to rename it.\\nScroll to zoom, drag empty space to pan.',NOTE_COLORS[0]);
+    }
+    save();
+  }
+  openBoard('b_home');
+  Bus.emit('board.opened',{boardId:'b_home'});
+})();
+addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeMenu();const sc=$('#scrim');if(sc)sc.remove()}
+});`;
+// ============================================================
+// Artemis React component
+// ============================================================
+
+function runArtemisScript(source) {
+  const script = document.createElement("script");
+
+  script.type = "text/javascript";
+  script.text = source;
+
+  document.body.appendChild(script);
+  script.remove();
+}
+
+export default function Artemis() {
+  const mounted = useRef(false);
 
   useEffect(() => {
-    const onMove = (e) => {
-      const d = dragRef.current;
-      if (!d) return;
-      const win = state.windows.find((w) => w.id === d.id);
-      if (!win || win.maximized) return;
-      const rect = getRect();
-      const x = clamp(e.clientX - d.offsetX, 0, Math.max(0, rect.width - 120));
-      const y = clamp(e.clientY - d.offsetY, 0, Math.max(0, rect.height - 40));
-      dispatch({ type: "MOVE_WINDOW", id: d.id, x, y });
-    };
-    const onUp = () => { dragRef.current = null; };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    if (mounted.current) {
+      return;
+    }
+
+    mounted.current = true;
+
+    const root = document.getElementById("root");
+
+    if (!root) {
+      return;
+    }
+
+    // Add Artemis styling once.
+    let style = document.getElementById("artemis-styles");
+
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "artemis-styles";
+      style.textContent = ARTEMIS_CSS;
+
+      document.head.appendChild(style);
+    }
+
+    // Mount the original Artemis desktop.
+    root.innerHTML = ARTEMIS_BODY;
+
+    // Execute the original application logic.
+    runArtemisScript(ARTEMIS_SCRIPT);
+
     return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+      // Artemis manages its own DOM and persistent state.
+      // Nothing needs to be removed during normal React cleanup.
     };
-  }, [state.windows]);
+  }, []);
 
-  const topZ = state.windows.reduce((m, w) => Math.max(m, w.z), 0);
-  const themeVars = OS_THEMES[osTheme].vars;
-  const rootVarsCss = `:root { ${Object.entries(themeVars).map(([k, v]) => `${k}: ${v};`).join(" ")} }`;
-
-  return (
-    <div
-      ref={desktopRef}
-      className="fixed inset-0 h-screen w-screen select-none overflow-hidden"
-      style={{
-        cursor: "none",
-        background:
-          "radial-gradient(1400px 800px at 20% -10%, var(--bg-a) 0%, transparent 65%), linear-gradient(160deg, var(--bg-a) 0%, var(--bg-b) 55%, var(--bg-c) 100%)",
-      }}
-    >
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
-        ${rootVarsCss}
-        html, body, #root { height: 100%; margin: 0; }
-        body, button, input, textarea, select { font-family: 'Patrick Hand', 'Segoe UI', sans-serif; }
-        @keyframes winIn { 0% { opacity:0; transform: scale(0.94) translateY(6px);} 100% { opacity:1; transform: scale(1) translateY(0);} }
-        @keyframes terminalIn { 0% { opacity:0; transform: scale(0.96); clip-path: inset(0 0 100% 0);} 45% { opacity:1; clip-path: inset(0 0 0% 0);} 100% { opacity:1; transform: scale(1); clip-path: inset(0 0 0% 0);} }
-        @keyframes popIn { 0% { opacity:0; transform: scale(0.9);} 100% { opacity:1; transform: scale(1);} }
-        @keyframes fadeIn { 0% { opacity:0;} 100% { opacity:1;} }
-        @keyframes slideIn { 0% { opacity:0; transform: translateX(-4px);} 100% { opacity:1; transform: translateX(0);} }
-        @keyframes slideUp { 0% { opacity:0; transform: translateY(10px);} 100% { opacity:1; transform: translateY(0);} }
-        @keyframes lineIn { 0% { opacity:0; transform: translateY(3px);} 100% { opacity:1; transform: translateY(0);} }
-        .line-clamp-1 { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
-        * { cursor: none !important; }
-
-        * {
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-        }
-        *::-webkit-scrollbar {
-          display: none;
-          width: 0;
-          height: 0;
-        }
-
-        @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; cursor: auto !important; } }
-      `}</style>
-
-      <div
-        className="pointer-events-none absolute inset-0 z-[1] mix-blend-multiply"
-        style={{
-          opacity: OS_THEMES[osTheme].mode === "dark" ? 0.18 : 0.35,
-          backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/></svg>\")",
-        }}
-      />
-
-      <div className="absolute left-6 top-6 flex flex-col gap-1">
-        <DesktopIcon icon={<Kanban size={19} />} label="Boards" onOpen={() => openWindow("file-manager")} />
-        <DesktopIcon icon={<TerminalIcon size={19} />} label="Terminal" onOpen={() => openWindow("terminal")} />
-        <DesktopIcon icon={<CalendarIcon size={19} />} label="Calendar" onOpen={() => openWindow("calendar")} />
-        <DesktopIcon icon={<Paperclip size={19} />} label="Files" onOpen={() => openWindow("files")} />
-        <DesktopIcon icon={<Network size={19} />} label="Graph" onOpen={() => openWindow("graph")} />
-      </div>
-
-      {state.windows.map((w) => {
-        const commonProps = {
-          win: w,
-          isTop: w.z === topZ,
-          onClose: () => dispatch({ type: "CLOSE_WINDOW", id: w.id }),
-          onMinimize: () => dispatch({ type: "MINIMIZE_WINDOW", id: w.id }),
-          onToggleMax: () => dispatch({ type: "TOGGLE_MAXIMIZE", id: w.id, rect: getRect() }),
-          onFocus: () => dispatch({ type: "FOCUS_WINDOW", id: w.id }),
-          onDragStart: (e) => startDrag(w, e),
-        };
-        if (w.kind === "terminal") {
-          return (
-            <WindowFrame key={w.id} {...commonProps} title="terminal — artemis" icon={<TerminalIcon size={13} />} dark>
-              <TerminalApp boards={state.boards} projects={state.projects} windows={state.windows} dispatch={dispatch} openWindow={openWindow} theme={theme} setTheme={setTheme} />
-            </WindowFrame>
-          );
-        }
-        if (w.kind === "file-manager") {
-          return (
-            <WindowFrame key={w.id} {...commonProps} title="Boards" icon={<Kanban size={13} />}>
-              <FileManagerApp boards={state.boards} dispatch={dispatch} openWindow={openWindow} />
-            </WindowFrame>
-          );
-        }
-        if (w.kind === "board") {
-          return (
-            <WindowFrame key={w.id} {...commonProps} title={w.boardName} icon={<ListTree size={13} />}>
-              <BoardApp boardName={w.boardName} boards={state.boards} dispatch={dispatch} files={state.files} />
-            </WindowFrame>
-          );
-        }
-        if (w.kind === "graph") {
-          return (
-            <WindowFrame key={w.id} {...commonProps} title="Graph View" icon={<Network size={13} />}>
-              <GraphApp boards={state.boards} openWindow={openWindow} />
-            </WindowFrame>
-          );
-        }
-        if (w.kind === "calendar") {
-          return (
-            <WindowFrame key={w.id} {...commonProps} title="Calendar" icon={<CalendarIcon size={13} />}>
-              <CalendarApp events={state.calendarEvents} projects={state.projects} dispatch={dispatch} />
-            </WindowFrame>
-          );
-        }
-        if (w.kind === "files") {
-          return (
-            <WindowFrame key={w.id} {...commonProps} title="Files" icon={<Paperclip size={13} />}>
-              <FilesApp files={state.files} dispatch={dispatch} />
-            </WindowFrame>
-          );
-        }
-        if (w.kind === "project") {
-          return (
-            <WindowFrame key={w.id} {...commonProps} title={w.projectName} icon={<Rocket size={13} />}>
-              <ProjectApp projectName={w.projectName} boards={state.boards} openWindow={openWindow} />
-            </WindowFrame>
-          );
-        }
-        return null;
-      })}
-
-      <Dock
-        windows={state.windows}
-        openWindow={openWindow}
-        focusWindow={(id) => dispatch({ type: "FOCUS_WINDOW", id })}
-        restoreWindow={(id) => dispatch({ type: "RESTORE_WINDOW", id })}
-        minimizeWindow={(id) => dispatch({ type: "MINIMIZE_WINDOW", id })}
-        osTheme={osTheme}
-        setOsTheme={setOsTheme}
-      />
-
-      <CustomCursor containerRef={desktopRef} />
-    </div>
-  );
+  return null;
 }
