@@ -246,13 +246,13 @@ h4.sec{font-family:var(--flourish);font-weight:700;font-size:22px;margin:17px 0 
 h4.sec:first-child{margin-top:0}
 .tag{padding:2px 10px;border:1.6px solid var(--line);border-radius:var(--rt);font-size:14.5px;transition:background .1s}
 .tag.on{background:var(--accent);color:var(--panel);border-color:var(--accent)}
-.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(64px,auto);gap:5px;min-width:0}
-.cal>*{min-width:0}
-.cell{min-width:0;min-height:64px;padding:4px;border:1.8px solid var(--line);border-radius:9px;background:var(--panel);transition:background .1s;overflow:hidden}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:auto repeat(6,minmax(64px,1fr));gap:5px;min-width:0;overflow:hidden}
+.cell{min-width:0;min-height:64px;height:100%;padding:4px;overflow:hidden;border:1.8px solid var(--line);border-radius:9px;background:var(--panel);transition:background .1s}
 .cell.oth{opacity:.42}.cell.tod{border-color:var(--accent);border-style:dashed}
 .cell.sel{background:var(--sel);border-color:var(--accent)}
-.cell .dn{font-size:13.5px;color:var(--soft)}
-.ev{display:block;min-width:0;max-width:100%;font-size:12.5px;line-height:1.2;margin-top:2px;padding:1px 5px;border-radius:5px;background:var(--accent2);color:var(--panel);
+.cell .dn{font-size:13.5px;color:var(--soft);line-height:1.1;white-space:nowrap}
+.cell .ev{min-width:0;max-width:100%}
+.ev{font-size:12.5px;line-height:1.2;margin-top:2px;padding:1px 5px;border-radius:5px;background:var(--accent2);color:var(--panel);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ---------- script editor ---------- */
@@ -325,11 +325,8 @@ const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelect
 const uid=p=>(p||'i')+Math.random().toString(36).slice(2,9);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function localISO(d=new Date()){
-  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
-  return '${y}-${m}-${day}';
-}
-const todayISO=()=>localISO();
+const localISO=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return '${y}-${m}-${day}'};
+const todayISO=()=>localISO(new Date());
 const TILT=['tiltA','tiltB','tiltC','tiltD'];
 const tiltOf=id=>TILT[[...String(id)].reduce((a,c)=>a+c.charCodeAt(0),0)%4];
 const THEMES=[['parchment','Parchment'],['kraft','Kraft'],['cotton','Cotton'],['sage','Sage'],['chalkboard','Chalkboard'],['blueprint','Blueprint'],['charcoal','Charcoal'],['inkwell','Inkwell']];
@@ -595,13 +592,33 @@ function renderDock(){
   $('#clock').textContent=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
 }
 function renderChips(){
-  const c=$('#chips');if(!c)return;c.innerHTML='';
-  WINS.forEach(w=>{const b=document.createElement('button');
+  const c=$('#chips');if(!c)return;
+  const wanted=new Set();
+
+  WINS.forEach(w=>{
+    const key=String(w.id);
+    wanted.add(key);
+    let b=c.querySelector('[data-winid="${CSS.escape(key)}"]');
+    if(!b){
+      b=document.createElement('button');
+      b.className='chip';
+      b.dataset.winid=key;
+      // Only newly-created chips get the chipIn animation. Existing chips
+      // stay in the DOM, so board changes/focus changes do not replay it.
+      b.onclick=()=>{
+        if(w.min||!w.el.classList.contains('on')) focusWin(w);
+        else {w.min=true;w.el.style.display='none';renderChips()}
+      };
+      b.oncontextmenu=e=>{e.preventDefault();menu(e.clientX,e.clientY,[['Close',()=>closeWin(w)]])};
+      c.appendChild(b);
+    }
     b.className='chip'+(w.el.classList.contains('on')&&!w.min?' on':'');
     b.textContent=w.opt.title||'';
-    b.onclick=()=>{w.min||!w.el.classList.contains('on')?focusWin(w):(w.min=true,w.el.style.display='none',renderChips())};
-    b.oncontextmenu=e=>{e.preventDefault();menu(e.clientX,e.clientY,[['Close',()=>closeWin(w)]])};
-    c.appendChild(b);});
+  });
+
+  [...c.children].forEach(b=>{
+    if(!wanted.has(b.dataset.winid)) b.remove();
+  });
 }
 function themeMenu(x,y){
   menu(x,y,THEMES.map(([id,nm])=>[(S.theme===id?'● ':'○ ')+nm,()=>{S.theme=id;document.documentElement.dataset.theme=id;save();}]),'Themes');
@@ -1013,7 +1030,7 @@ const P=(id,l)=>({id,l});
 const toItems=(list,k='task')=>list.map(o=>({o,k}));
 const asArr=v=>Array.isArray(v)?v:(v==null?[]:[v]);
 const num=v=>{const n=parseFloat(v);return isNaN(n)?0:n};
-function tomorrowISO(){const d=new Date();d.setDate(d.getDate()+1);return d.toISOString().slice(0,10)}
+function tomorrowISO(){const d=new Date();d.setDate(d.getDate()+1);return localISO(d)}
 
 /* ---------- events ---------- */
 const EVENTS=[
@@ -1157,7 +1174,7 @@ def({t:'t.deadline',cat:'Task',title:'Set Deadline',ins:[X('in'),P('task','task'
   params:[{id:'date',l:'Date',k:'date'},{id:'rel',l:'Or relative',k:'sel',o:['—','today','tomorrow','+7 days'],d:'—'}],
   run:(C,I,p)=>{let d=I.date||p.date||'';
     if(p.rel==='today')d=todayISO();else if(p.rel==='tomorrow')d=tomorrowISO();
-    else if(p.rel==='+7 days'){const x=new Date();x.setDate(x.getDate()+7);d=x.toISOString().slice(0,10)}
+    else if(p.rel==='+7 days'){const x=new Date();x.setDate(x.getDate()+7);d=localISO(x)}
     C.mut(()=>asArr(I.task).forEach(t=>t&&(t.deadline=d)));return{next:'out'}}});
 def({t:'t.addTag',cat:'Task',title:'Add Tag',ins:[X('in'),P('task','task')],outs:[X('out')],params:[{id:'tag',l:'Tag',k:'text'}],
   run:(C,I,p)=>{C.mut(()=>asArr(I.task).forEach(t=>t&&!t.tags.includes(p.tag)&&t.tags.push(p.tag)));return{next:'out'}}});
@@ -1382,7 +1399,7 @@ def({t:'c.create',cat:'Calendar',title:'Create Calendar Event',ins:[X('in'),P('t
       Bus.emit('cal.created',{})});return{next:'out'}}});
 def({t:'c.upcoming',cat:'Calendar',title:'Upcoming Events',pure:1,outs:[P('list','events'),P('count','count')],
   params:[{id:'days',l:'Within N days',k:'num',d:7}],
-  run:(C,I,p)=>{const end=new Date();end.setDate(end.getDate()+num(p.days));const e2=end.toISOString().slice(0,10);
+  run:(C,I,p)=>{const end=new Date();end.setDate(end.getDate()+num(p.days));const e2=localISO(end);
     const l=S.events.filter(e=>e.date>=todayISO()&&e.date<=e2);return{list:l,count:l.length}}});
 
 /* ---------- interaction ---------- */
@@ -2130,7 +2147,7 @@ function openCalendar(){
   function draw(body){
     const first=new Date(st.y,st.m,1),start=new Date(first);start.setDate(1-first.getDay());
     const cells=[...Array(42)].map((_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return d});
-    const iso=d=>d.toISOString().slice(0,10);
+    const iso=d=>localISO(d);
     const dayEv=st.sel?S.events.filter(e=>e.date===st.sel):[];
     const upcoming=S.events.filter(e=>e.date>=todayISO()).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,8);
     body.innerHTML=\`<div class="pad" style="display:flex;gap:16px;height:100%;box-sizing:border-box">
@@ -2270,11 +2287,8 @@ const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelect
 const uid=p=>(p||'i')+Math.random().toString(36).slice(2,9);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function localISO(d=new Date()){
-  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
-  return '${y}-${m}-${day}';
-}
-const todayISO=()=>localISO();
+const localISO=d=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return '${y}-${m}-${day}'};
+const todayISO=()=>localISO(new Date());
 const TILT=['tiltA','tiltB','tiltC','tiltD'];
 const tiltOf=id=>TILT[[...String(id)].reduce((a,c)=>a+c.charCodeAt(0),0)%4];
 const THEMES=[['parchment','Parchment'],['kraft','Kraft'],['cotton','Cotton'],['sage','Sage'],['chalkboard','Chalkboard'],['blueprint','Blueprint'],['charcoal','Charcoal'],['inkwell','Inkwell']];
@@ -2513,15 +2527,7 @@ function deskMenu(){
 }
 function appMenu(x,y){menu(x,y,APPS.map(a=>[a.name,a.run]),'Apps')}
 const DOCK_QUICK=['boards','scripts','calendar','search'];
-let dockInitialized=false;
-let dockClockTimer=null;
 function renderDock(){
-  if(dockInitialized){
-    renderChips();
-    return;
-  }
-  dockInitialized=true;
-
   const quick=DOCK_QUICK.map(id=>APPS.find(a=>a.id===id)).filter(Boolean);
   $('#dock').innerHTML=
     \`<button class="dk" id="startb" title="Artemis OS">\${ICON_BOW}</button>
@@ -2544,49 +2550,36 @@ function renderDock(){
       ['Close all windows',()=>[...WINS.values()].forEach(closeWin)]],'Artemis OS');
   };
   renderChips();
-  if(!dockClockTimer){
-    dockClockTimer=setInterval(()=>{
-      const clock=$('#clock');
-      if(clock){
-        const d=new Date();
-        clock.textContent=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-      }
-    },1000);
-  }
+  setInterval(()=>{const d=new Date();$('#clock').textContent=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})},1000);
   $('#clock').textContent=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
 }
 function renderChips(){
   const c=$('#chips');if(!c)return;
-
-  // Keep existing chips alive. Rebuilding them on every board change caused
-  // their entrance animation to replay and made the dock look like it refreshed.
   const wanted=new Set();
 
   WINS.forEach(w=>{
-    const key=w.id;
+    const key=String(w.id);
     wanted.add(key);
-
-    let b=c.querySelector('[data-win-id="${CSS.escape(key)}"]');
+    let b=c.querySelector('[data-winid="${CSS.escape(key)}"]');
     if(!b){
       b=document.createElement('button');
       b.className='chip';
-      b.dataset.winId=key;
-      b.onclick=()=>{w.min||!w.el.classList.contains('on')
-        ?focusWin(w)
-        :(w.min=true,w.el.style.display='none',renderChips())};
-      b.oncontextmenu=e=>{
-        e.preventDefault();
-        menu(e.clientX,e.clientY,[['Close',()=>closeWin(w)]]);
+      b.dataset.winid=key;
+      // Only newly-created chips get the chipIn animation. Existing chips
+      // stay in the DOM, so board changes/focus changes do not replay it.
+      b.onclick=()=>{
+        if(w.min||!w.el.classList.contains('on')) focusWin(w);
+        else {w.min=true;w.el.style.display='none';renderChips()}
       };
+      b.oncontextmenu=e=>{e.preventDefault();menu(e.clientX,e.clientY,[['Close',()=>closeWin(w)]])};
       c.appendChild(b);
     }
-
-    b.classList.toggle('on',w.el.classList.contains('on')&&!w.min);
+    b.className='chip'+(w.el.classList.contains('on')&&!w.min?' on':'');
     b.textContent=w.opt.title||'';
   });
 
   [...c.children].forEach(b=>{
-    if(!wanted.has(b.dataset.winId))b.remove();
+    if(!wanted.has(b.dataset.winid)) b.remove();
   });
 }
 function themeMenu(x,y){
@@ -2996,7 +2989,7 @@ const P=(id,l)=>({id,l});
 const toItems=(list,k='task')=>list.map(o=>({o,k}));
 const asArr=v=>Array.isArray(v)?v:(v==null?[]:[v]);
 const num=v=>{const n=parseFloat(v);return isNaN(n)?0:n};
-function tomorrowISO(){const d=new Date();d.setDate(d.getDate()+1);return d.toISOString().slice(0,10)}
+function tomorrowISO(){const d=new Date();d.setDate(d.getDate()+1);return localISO(d)}
 
 /* ---------- events ---------- */
 const EVENTS=[
@@ -3140,7 +3133,7 @@ def({t:'t.deadline',cat:'Task',title:'Set Deadline',ins:[X('in'),P('task','task'
   params:[{id:'date',l:'Date',k:'date'},{id:'rel',l:'Or relative',k:'sel',o:['—','today','tomorrow','+7 days'],d:'—'}],
   run:(C,I,p)=>{let d=I.date||p.date||'';
     if(p.rel==='today')d=todayISO();else if(p.rel==='tomorrow')d=tomorrowISO();
-    else if(p.rel==='+7 days'){const x=new Date();x.setDate(x.getDate()+7);d=x.toISOString().slice(0,10)}
+    else if(p.rel==='+7 days'){const x=new Date();x.setDate(x.getDate()+7);d=localISO(x)}
     C.mut(()=>asArr(I.task).forEach(t=>t&&(t.deadline=d)));return{next:'out'}}});
 def({t:'t.addTag',cat:'Task',title:'Add Tag',ins:[X('in'),P('task','task')],outs:[X('out')],params:[{id:'tag',l:'Tag',k:'text'}],
   run:(C,I,p)=>{C.mut(()=>asArr(I.task).forEach(t=>t&&!t.tags.includes(p.tag)&&t.tags.push(p.tag)));return{next:'out'}}});
@@ -3365,7 +3358,7 @@ def({t:'c.create',cat:'Calendar',title:'Create Calendar Event',ins:[X('in'),P('t
       Bus.emit('cal.created',{})});return{next:'out'}}});
 def({t:'c.upcoming',cat:'Calendar',title:'Upcoming Events',pure:1,outs:[P('list','events'),P('count','count')],
   params:[{id:'days',l:'Within N days',k:'num',d:7}],
-  run:(C,I,p)=>{const end=new Date();end.setDate(end.getDate()+num(p.days));const e2=end.toISOString().slice(0,10);
+  run:(C,I,p)=>{const end=new Date();end.setDate(end.getDate()+num(p.days));const e2=localISO(end);
     const l=S.events.filter(e=>e.date>=todayISO()&&e.date<=e2);return{list:l,count:l.length}}});
 
 /* ---------- interaction ---------- */
@@ -4239,6 +4232,7 @@ Bus.on('board.opened',()=>{});
 addEventListener('keydown',e=>{
   if(e.key==='Escape'){closeMenu();const sc=$('#scrim');if(sc)sc.remove()}
 });`;
+
 // ============================================================
 // Artemis React component
 // ============================================================
@@ -4257,39 +4251,22 @@ export default function Artemis() {
   const mounted = useRef(false);
 
   useEffect(() => {
-    if (mounted.current) {
-      return;
-    }
-
+    if (mounted.current) return;
     mounted.current = true;
 
     const root = document.getElementById("root");
+    if (!root) return;
 
-    if (!root) {
-      return;
-    }
-
-    // Add Artemis styling once.
     let style = document.getElementById("artemis-styles");
-
     if (!style) {
       style = document.createElement("style");
       style.id = "artemis-styles";
       style.textContent = ARTEMIS_CSS;
-
       document.head.appendChild(style);
     }
 
-    // Mount the original Artemis desktop.
     root.innerHTML = ARTEMIS_BODY;
-
-    // Execute the original application logic.
     runArtemisScript(ARTEMIS_SCRIPT);
-
-    return () => {
-      // Artemis manages its own DOM and persistent state.
-      // Nothing needs to be removed during normal React cleanup.
-    };
   }, []);
 
   return null;
